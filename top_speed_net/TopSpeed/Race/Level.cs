@@ -29,6 +29,11 @@ namespace TopSpeed.Race
         protected const float SteerAlignToleranceDegrees = 2.0f;
         protected const float SteerHoldStepDegrees = 10.0f;
         protected const float SteerAlignGain = 0.6f;
+        protected const float SteerAlignSpeedReferenceKph = 120.0f;
+        protected const float SteerAlignResponseDegrees = 30.0f;
+        protected const float SteerAlignResponseSpeedDegrees = 30.0f;
+        protected const float SteerAlignSlowdownDegrees = 20.0f;
+        protected const float SteerAlignSlowdownSpeedDegrees = 20.0f;
         private static readonly float[] SteerSnapHeadings =
         {
             0f,
@@ -472,6 +477,27 @@ namespace TopSpeed.Race
             }
         }
 
+        protected void HandleCoordinateReportRequest()
+        {
+            if (!_started || !_acceptCurrentRaceInfo || _lap > _nrOfLaps)
+                return;
+
+            if (_input.GetCoordinateZReport())
+            {
+                _acceptCurrentRaceInfo = false;
+                SpeakText($"Z {Math.Round(_car.WorldPosition.Z, 2):0.##} meters");
+                PushEvent(RaceEventType.AcceptCurrentRaceInfo, 0.5f);
+                return;
+            }
+
+            if (_input.GetCoordinateXReport())
+            {
+                _acceptCurrentRaceInfo = false;
+                SpeakText($"X {Math.Round(_car.WorldPosition.X, 2):0.##} meters");
+                PushEvent(RaceEventType.AcceptCurrentRaceInfo, 0.5f);
+            }
+        }
+
         protected void HandleSteerAssistInput()
         {
             if (_input.TryGetSteerStep(out var stepDirection))
@@ -525,7 +551,15 @@ namespace TopSpeed.Race
                 }
 
                 var steerLimit = Math.Max(1f, _car.SteerLimitDegrees);
-                var desiredAngle = Clamp(delta * SteerAlignGain, -steerLimit, steerLimit);
+                var speedKph = Math.Max(0f, _car.SpeedKmh);
+                var speedT = Clamp(speedKph / SteerAlignSpeedReferenceKph, 0f, 1f);
+                var response = SteerAlignResponseDegrees + (speedT * SteerAlignResponseSpeedDegrees);
+                var normalized = delta / Math.Max(1f, response);
+                var desiredAngle = steerLimit * (float)Math.Tanh(normalized) * SteerAlignGain;
+                var slowdownWindow = SteerAlignSlowdownDegrees + (speedT * SteerAlignSlowdownSpeedDegrees);
+                var approachFactor = Math.Min(1f, Math.Abs(delta) / Math.Max(1f, slowdownWindow));
+                desiredAngle *= approachFactor;
+                desiredAngle = Clamp(desiredAngle, -steerLimit, steerLimit);
                 var command = (int)Math.Round((desiredAngle / steerLimit) * 100f);
                 _car.SetSteeringOverride(command);
                 return;
@@ -554,7 +588,8 @@ namespace TopSpeed.Race
                 return;
             }
 
-            if (guidance.DistanceMeters <= 0f || guidance.DistanceMeters > TurnGuidanceRangeMeters)
+            var guidanceRange = guidance.GuidanceRangeMeters > 0f ? guidance.GuidanceRangeMeters : TurnGuidanceRangeMeters;
+            if (guidance.DistanceMeters < 0f || guidance.DistanceMeters > guidanceRange)
             {
                 _lastTurnPortalId = null;
                 return;
@@ -574,6 +609,15 @@ namespace TopSpeed.Race
             }
 
             var headingText = FormatTurnDirection(guidance.TurnHeadingDegrees);
+            if (guidance.DistanceMeters <= 1f)
+            {
+                SpeakText($"Turn {headingText} now");
+                _lastTurnPortalId = portalKey;
+                _lastTurnAnnouncementTime = _elapsedTotal;
+                _lastTurnAnnouncementDistance = 0;
+                return;
+            }
+
             SpeakText($"Turn {headingText} in {roundedDistance} meters");
             _lastTurnPortalId = portalKey;
             _lastTurnAnnouncementTime = _elapsedTotal;

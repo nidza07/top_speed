@@ -22,6 +22,7 @@ namespace TopSpeed.Tracks.Map
             string? exitPortalId,
             float turnHeadingDegrees,
             float distanceMeters,
+            float guidanceRangeMeters,
             bool passed)
         {
             SectorId = sectorId;
@@ -29,6 +30,7 @@ namespace TopSpeed.Tracks.Map
             ExitPortalId = exitPortalId;
             TurnHeadingDegrees = turnHeadingDegrees;
             DistanceMeters = distanceMeters;
+            GuidanceRangeMeters = guidanceRangeMeters;
             Passed = passed;
         }
 
@@ -37,6 +39,7 @@ namespace TopSpeed.Tracks.Map
         public string? ExitPortalId { get; }
         public float TurnHeadingDegrees { get; }
         public float DistanceMeters { get; }
+        public float GuidanceRangeMeters { get; }
         public bool Passed { get; }
     }
 
@@ -279,42 +282,50 @@ namespace TopSpeed.Tracks.Map
         public bool TryGetTurnGuidance(Vector3 worldPosition, float headingDegrees, out TrackTurnGuidance guidance)
         {
             guidance = default;
-            if (_approachBeacon == null || _approachManager == null)
-                return false;
-            if (!_approachBeacon.TryGetCue(worldPosition, headingDegrees, out var cue))
-                return false;
-            if (!_approachManager.TryGetApproach(cue.SectorId, out var approach))
+            if (_approachManager == null)
                 return false;
 
             var position = new Vector2(worldPosition.X, worldPosition.Z);
-            var entryPortalId = approach.EntryPortalId;
-            var exitPortalId = approach.ExitPortalId;
-            var turnHeading = approach.ExitHeadingDegrees ?? cue.TargetHeadingDegrees;
-            var distance = cue.DistanceMeters;
-            var passed = cue.Passed;
+            var best = default(TurnCandidate);
+            var hasBest = false;
 
-            var useEntry = cue.Side == TrackApproachSide.Entry;
-            var portalId = useEntry ? entryPortalId : exitPortalId;
-            var portalHeading = useEntry ? approach.EntryHeadingDegrees : approach.ExitHeadingDegrees;
-
-            if (!string.IsNullOrWhiteSpace(portalId) && _portalManager.TryGetPortal(portalId!, out var portal))
+            foreach (var approach in _approachManager.Approaches)
             {
-                var portalPos = new Vector2(portal.X, portal.Z);
-                distance = Vector2.Distance(position, portalPos);
-                if (portalHeading.HasValue)
+                if (approach == null)
+                    continue;
+
+                var guidanceRange = 0f;
+                if (approach.Metadata != null && approach.Metadata.Count > 0 &&
+                    TryGetMetadataFloat(approach.Metadata, out var rangeValue, "turn_range", "guidance_range", "turn_guidance_range"))
                 {
-                    var forward = HeadingToVector(portalHeading.Value);
-                    var toPlayer = position - portalPos;
-                    passed = Vector2.Dot(forward, toPlayer) > 0f;
+                    guidanceRange = Math.Max(1f, rangeValue);
                 }
+
+                if (IsApproachSideEnabled(approach, TrackApproachSide.Entry))
+                    TryBuildTurnCandidate(approach, TrackApproachSide.Entry, position, guidanceRange, ref best, ref hasBest);
+                if (IsApproachSideEnabled(approach, TrackApproachSide.Exit))
+                    TryBuildTurnCandidate(approach, TrackApproachSide.Exit, position, guidanceRange, ref best, ref hasBest);
             }
 
+            if (!hasBest)
+                return false;
+
+            var passed = false;
+            if (best.PortalHeadingDegrees.HasValue)
+            {
+                var forward = HeadingToVector(best.PortalHeadingDegrees.Value);
+                var toPlayer = position - best.PortalPosition;
+                passed = Vector2.Dot(forward, toPlayer) > 0f;
+            }
+
+            var sectorId = best.SectorId ?? string.Empty;
             guidance = new TrackTurnGuidance(
-                cue.SectorId,
-                entryPortalId,
-                exitPortalId,
-                turnHeading,
-                distance,
+                sectorId,
+                best.EntryPortalId,
+                best.ExitPortalId,
+                best.TurnHeadingDegrees,
+                best.DistanceMeters,
+                best.GuidanceRangeMeters,
                 passed);
             return true;
         }
@@ -414,14 +425,12 @@ namespace TopSpeed.Tracks.Map
 
         public void Run(MapMovementState state, float elapsed)
         {
-            if (!_map.TryGetCell(state.CellX, state.CellZ, out var cell))
-                return;
-
-            var noise = cell.Noise;
-            var surface = cell.Surface;
-            var safeZone = cell.IsSafeZone;
+            var hasCell = _map.TryGetCell(state.CellX, state.CellZ, out var cell);
+            var noise = hasCell ? cell.Noise : _map.DefaultNoise;
+            var surface = hasCell ? cell.Surface : _map.DefaultSurface;
+            var safeZone = hasCell && cell.IsSafeZone;
             var length = _map.CellSizeMeters;
-            var width = Math.Max(0.5f, cell.WidthMeters);
+            var width = Math.Max(0.5f, hasCell ? cell.WidthMeters : _map.DefaultWidthMeters);
             ApplyAreaOverrides(state.WorldPosition, state.Heading, ref width, ref length, ref surface, ref noise, ref safeZone);
             if (noise != _currentNoise)
             {
@@ -665,6 +674,257 @@ namespace TopSpeed.Tracks.Map
             }
 
             return TrackType.Straight;
+        }
+
+        private void TryBuildTurnCandidate(
+            TrackApproachDefinition approach,
+            TrackApproachSide side,
+            Vector2 position,
+            float guidanceRangeMeters,
+            ref TurnCandidate best,
+            ref bool hasBest)
+        {
+            var portalId = side == TrackApproachSide.Entry ? approach.EntryPortalId : approach.ExitPortalId;
+            var portalHeading = side == TrackApproachSide.Entry ? approach.EntryHeadingDegrees : approach.ExitHeadingDegrees;
+            if (string.IsNullOrWhiteSpace(portalId) || !portalHeading.HasValue)
+                return;
+            if (!_portalManager.TryGetPortal(portalId!, out var portal))
+                return;
+
+            var portalPos = new Vector2(portal.X, portal.Z);
+            var distance = Vector2.Distance(position, portalPos);
+            if (TryGetTurnShape(approach, out var turnShape))
+                distance = DistanceToShape(turnShape, position, approach.WidthMeters);
+
+            if (!hasBest || distance < best.DistanceMeters)
+            {
+                best = new TurnCandidate
+                {
+                    SectorId = approach.SectorId,
+                    EntryPortalId = approach.EntryPortalId,
+                    ExitPortalId = approach.ExitPortalId,
+                    TurnHeadingDegrees = portalHeading.Value,
+                    DistanceMeters = distance,
+                    PortalPosition = portalPos,
+                    PortalHeadingDegrees = portalHeading,
+                    GuidanceRangeMeters = guidanceRangeMeters
+                };
+                hasBest = true;
+            }
+        }
+
+        private static bool IsApproachSideEnabled(TrackApproachDefinition approach, TrackApproachSide side)
+        {
+            if (approach?.Metadata == null || approach.Metadata.Count == 0)
+                return true;
+
+            if (TryGetMetadataString(approach.Metadata, out var raw, "approach_side", "approach_sides", "side"))
+            {
+                var trimmed = raw.Trim().ToLowerInvariant();
+                if (trimmed.Contains("none") || trimmed.Contains("off") || trimmed.Contains("disabled"))
+                    return false;
+                var hasEntry = trimmed.Contains("entry");
+                var hasExit = trimmed.Contains("exit");
+                if (hasEntry || hasExit)
+                    return side == TrackApproachSide.Entry ? hasEntry : hasExit;
+            }
+
+            if (TryGetMetadataBool(approach.Metadata, out var entryEnabled, "approach_entry", "entry_enabled", "entry_beacon"))
+            {
+                if (side == TrackApproachSide.Entry)
+                    return entryEnabled;
+            }
+            if (TryGetMetadataBool(approach.Metadata, out var exitEnabled, "approach_exit", "exit_enabled", "exit_beacon"))
+            {
+                if (side == TrackApproachSide.Exit)
+                    return exitEnabled;
+            }
+
+            return true;
+        }
+
+        private static bool TryGetMetadataBool(
+            IReadOnlyDictionary<string, string> metadata,
+            out bool value,
+            params string[] keys)
+        {
+            value = false;
+            foreach (var key in keys)
+            {
+                if (!metadata.TryGetValue(key, out var raw))
+                    continue;
+                if (bool.TryParse(raw, out value))
+                    return true;
+                var trimmed = raw.Trim().ToLowerInvariant();
+                if (trimmed is "1" or "yes" or "true" or "on" or "enabled")
+                {
+                    value = true;
+                    return true;
+                }
+                if (trimmed is "0" or "no" or "false" or "off" or "disabled")
+                {
+                    value = false;
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private struct TurnCandidate
+        {
+            public string SectorId;
+            public string? EntryPortalId;
+            public string? ExitPortalId;
+            public float TurnHeadingDegrees;
+            public float DistanceMeters;
+            public Vector2 PortalPosition;
+            public float? PortalHeadingDegrees;
+            public float GuidanceRangeMeters;
+        }
+
+        private bool TryGetTurnShape(TrackApproachDefinition approach, out ShapeDefinition shape)
+        {
+            shape = null!;
+            if (approach?.Metadata == null || approach.Metadata.Count == 0)
+                return false;
+            if (!TryGetMetadataString(approach.Metadata, out var shapeId, "turn_shape", "beacon_shape", "approach_shape"))
+                return false;
+            return _areaManager.TryGetShape(shapeId, out shape);
+        }
+
+        private static bool TryGetMetadataString(
+            IReadOnlyDictionary<string, string> metadata,
+            out string value,
+            params string[] keys)
+        {
+            value = string.Empty;
+            foreach (var key in keys)
+            {
+                if (metadata.TryGetValue(key, out var raw) && !string.IsNullOrWhiteSpace(raw))
+                {
+                    value = raw.Trim();
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        private static float DistanceToShape(ShapeDefinition shape, Vector2 position, float? widthOverride)
+        {
+            switch (shape.Type)
+            {
+                case ShapeType.Rectangle:
+                    return DistanceToRectangle(shape, position);
+                case ShapeType.Circle:
+                    return DistanceToCircle(shape, position);
+                case ShapeType.Polyline:
+                    var width = widthOverride ?? 0f;
+                    return Math.Max(0f, DistanceToPolyline(shape.Points, position) - (width * 0.5f));
+                case ShapeType.Polygon:
+                    return DistanceToPolygon(shape.Points, position);
+                default:
+                    var center = new Vector2(shape.X, shape.Z);
+                    return Vector2.Distance(position, center);
+            }
+        }
+
+        private static float DistanceToRectangle(ShapeDefinition shape, Vector2 position)
+        {
+            var minX = shape.X;
+            var maxX = shape.X + shape.Width;
+            var minZ = shape.Z;
+            var maxZ = shape.Z + shape.Height;
+
+            var dx = 0f;
+            if (position.X < minX)
+                dx = minX - position.X;
+            else if (position.X > maxX)
+                dx = position.X - maxX;
+
+            var dz = 0f;
+            if (position.Y < minZ)
+                dz = minZ - position.Y;
+            else if (position.Y > maxZ)
+                dz = position.Y - maxZ;
+
+            return (float)Math.Sqrt((dx * dx) + (dz * dz));
+        }
+
+        private static float DistanceToCircle(ShapeDefinition shape, Vector2 position)
+        {
+            var center = new Vector2(shape.X, shape.Z);
+            var distance = Vector2.Distance(center, position);
+            return Math.Max(0f, distance - shape.Radius);
+        }
+
+        private static float DistanceToPolyline(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+            if (points.Count == 1)
+                return Vector2.Distance(points[0], position);
+
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count - 1; i++)
+            {
+                var distance = DistanceToSegment(points[i], points[i + 1], position);
+                if (distance < best)
+                    best = distance;
+            }
+            return best;
+        }
+
+        private static float DistanceToPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+
+            if (IsPointInPolygon(points, position))
+                return 0f;
+
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var a = points[i];
+                var b = points[(i + 1) % points.Count];
+                var distance = DistanceToSegment(a, b, position);
+                if (distance < best)
+                    best = distance;
+            }
+            return best;
+        }
+
+        private static bool IsPointInPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            var inside = false;
+            var j = points.Count - 1;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var pi = points[i];
+                var pj = points[j];
+                var intersect = ((pi.Y > position.Y) != (pj.Y > position.Y)) &&
+                                (position.X < (pj.X - pi.X) * (position.Y - pi.Y) / (pj.Y - pi.Y + float.Epsilon) + pi.X);
+                if (intersect)
+                    inside = !inside;
+                j = i;
+            }
+            return inside;
+        }
+
+        private static float DistanceToSegment(Vector2 a, Vector2 b, Vector2 position)
+        {
+            var ab = b - a;
+            var ap = position - a;
+            var abLenSq = Vector2.Dot(ab, ab);
+            if (abLenSq <= float.Epsilon)
+                return Vector2.Distance(a, position);
+            var t = Vector2.Dot(ap, ab) / abLenSq;
+            if (t <= 0f)
+                return Vector2.Distance(a, position);
+            if (t >= 1f)
+                return Vector2.Distance(b, position);
+            var closest = a + (ab * t);
+            return Vector2.Distance(closest, position);
         }
 
         private static int CountExits(MapExits exits)

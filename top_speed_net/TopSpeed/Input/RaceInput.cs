@@ -530,6 +530,8 @@ namespace TopSpeed.Input
         public bool GetDistanceReport() => WasPressed(_kbReportDistance) || AxisPressed(_reportDistance);
         public bool GetWheelAngleReport() => WasPressed(_kbReportWheelAngle) || AxisPressed(_reportWheelAngle);
         public bool GetHeadingReport() => WasPressed(_kbReportHeading) || AxisPressed(_reportHeading);
+        public bool GetCoordinateXReport() => WasPressed(Key.L);
+        public bool GetCoordinateZReport() => WasPressed(Key.K);
 
         public bool TryGetSteerStep(out int direction)
         {

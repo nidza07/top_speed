@@ -51,6 +51,7 @@ namespace TopSpeed.Tracks.Guidance
     {
         private readonly TrackPortalManager _portalManager;
         private readonly TrackApproachManager _approachManager;
+        private readonly Dictionary<string, ShapeDefinition> _shapesById;
         private readonly float _rangeMeters;
 
         public TrackApproachBeacon(TrackMap map, float rangeMeters = 50f)
@@ -60,6 +61,13 @@ namespace TopSpeed.Tracks.Guidance
 
             _portalManager = map.BuildPortalManager();
             _approachManager = new TrackApproachManager(map.Sectors, map.Approaches, _portalManager);
+            _shapesById = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var shape in map.Shapes)
+            {
+                if (shape == null || string.IsNullOrWhiteSpace(shape.Id))
+                    continue;
+                _shapesById[shape.Id.Trim()] = shape;
+            }
             _rangeMeters = Math.Max(1f, rangeMeters);
         }
 
@@ -131,11 +139,14 @@ namespace TopSpeed.Tracks.Guidance
                 return false;
 
             var portalPos = new Vector2(portal.X, portal.Z);
-            var distance = Vector2.Distance(position, portalPos);
-            if (distance > rangeMeters)
+            var portalDistance = Vector2.Distance(position, portalPos);
+            var rangeDistance = portalDistance;
+            if (TryGetBeaconShape(approach, out var beaconShape))
+                rangeDistance = DistanceToShape(beaconShape, position, approach.WidthMeters);
+            if (rangeDistance > rangeMeters)
                 return false;
 
-            if (!hasBest || distance < best.DistanceMeters)
+            if (!hasBest || portalDistance < best.DistanceMeters)
             {
                 best = new Candidate
                 {
@@ -144,7 +155,7 @@ namespace TopSpeed.Tracks.Guidance
                     PortalId = portal.Id,
                     PortalPosition = portalPos,
                     TargetHeadingDegrees = heading.Value,
-                    DistanceMeters = distance,
+                    DistanceMeters = portalDistance,
                     WidthMeters = approach.WidthMeters,
                     LengthMeters = approach.LengthMeters,
                     ToleranceDegrees = approach.AlignmentToleranceDegrees
@@ -158,12 +169,12 @@ namespace TopSpeed.Tracks.Guidance
         private static float GetApproachRange(TrackApproachDefinition approach, float defaultRange)
         {
             if (approach?.Metadata == null || approach.Metadata.Count == 0)
-                return defaultRange;
+                return Math.Max(0f, defaultRange);
 
             if (TryGetFloat(approach.Metadata, out var range, "approach_range", "beacon_range", "range"))
-                return Math.Max(1f, range);
+                return Math.Max(0f, range);
 
-            return defaultRange;
+            return Math.Max(0f, defaultRange);
         }
 
         private static bool IsSideEnabled(TrackApproachDefinition approach, TrackApproachSide side)
@@ -194,6 +205,136 @@ namespace TopSpeed.Tracks.Guidance
             }
 
             return true;
+        }
+
+        private bool TryGetBeaconShape(TrackApproachDefinition approach, out ShapeDefinition shape)
+        {
+            shape = null!;
+            if (approach?.Metadata == null || approach.Metadata.Count == 0)
+                return false;
+
+            if (!TryGetString(approach.Metadata, out var shapeId, "beacon_shape", "beacon_zone", "approach_shape"))
+                return false;
+
+            return _shapesById.TryGetValue(shapeId.Trim(), out shape!);
+        }
+
+        private static float DistanceToShape(ShapeDefinition shape, Vector2 position, float? widthOverride)
+        {
+            switch (shape.Type)
+            {
+                case ShapeType.Rectangle:
+                    return DistanceToRectangle(shape, position);
+                case ShapeType.Circle:
+                    return DistanceToCircle(shape, position);
+                case ShapeType.Polyline:
+                    var width = widthOverride ?? 0f;
+                    return Math.Max(0f, DistanceToPolyline(shape.Points, position) - (width * 0.5f));
+                case ShapeType.Polygon:
+                    return DistanceToPolygon(shape.Points, position);
+                default:
+                    var center = new Vector2(shape.X, shape.Z);
+                    return Vector2.Distance(position, center);
+            }
+        }
+
+        private static float DistanceToRectangle(ShapeDefinition shape, Vector2 position)
+        {
+            var minX = shape.X;
+            var maxX = shape.X + shape.Width;
+            var minZ = shape.Z;
+            var maxZ = shape.Z + shape.Height;
+
+            var dx = 0f;
+            if (position.X < minX)
+                dx = minX - position.X;
+            else if (position.X > maxX)
+                dx = position.X - maxX;
+
+            var dz = 0f;
+            if (position.Y < minZ)
+                dz = minZ - position.Y;
+            else if (position.Y > maxZ)
+                dz = position.Y - maxZ;
+
+            return (float)Math.Sqrt((dx * dx) + (dz * dz));
+        }
+
+        private static float DistanceToCircle(ShapeDefinition shape, Vector2 position)
+        {
+            var center = new Vector2(shape.X, shape.Z);
+            var distance = Vector2.Distance(center, position);
+            return Math.Max(0f, distance - shape.Radius);
+        }
+
+        private static float DistanceToPolyline(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+            if (points.Count == 1)
+                return Vector2.Distance(points[0], position);
+
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count - 1; i++)
+            {
+                var distance = DistanceToSegment(points[i], points[i + 1], position);
+                if (distance < best)
+                    best = distance;
+            }
+            return best;
+        }
+
+        private static float DistanceToPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+
+            if (IsPointInPolygon(points, position))
+                return 0f;
+
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var a = points[i];
+                var b = points[(i + 1) % points.Count];
+                var distance = DistanceToSegment(a, b, position);
+                if (distance < best)
+                    best = distance;
+            }
+            return best;
+        }
+
+        private static bool IsPointInPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        {
+            var inside = false;
+            var j = points.Count - 1;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var pi = points[i];
+                var pj = points[j];
+                var intersect = ((pi.Y > position.Y) != (pj.Y > position.Y)) &&
+                                (position.X < (pj.X - pi.X) * (position.Y - pi.Y) / (pj.Y - pi.Y + float.Epsilon) + pi.X);
+                if (intersect)
+                    inside = !inside;
+                j = i;
+            }
+            return inside;
+        }
+
+        private static float DistanceToSegment(Vector2 a, Vector2 b, Vector2 position)
+        {
+            var ab = b - a;
+            var ap = position - a;
+            var abLenSq = Vector2.Dot(ab, ab);
+            if (abLenSq <= float.Epsilon)
+                return Vector2.Distance(a, position);
+            var t = Vector2.Dot(ap, ab) / abLenSq;
+            if (t <= 0f)
+                return Vector2.Distance(a, position);
+            if (t >= 1f)
+                return Vector2.Distance(b, position);
+            var closest = a + (ab * t);
+            return Vector2.Distance(closest, position);
         }
 
         private static bool TryGetFloat(

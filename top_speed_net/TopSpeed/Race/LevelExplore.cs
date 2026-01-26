@@ -143,9 +143,9 @@ namespace TopSpeed.Race
         private void HandleCoordinateKeys()
         {
             if (_input.WasPressed(Key.K))
-                _speech.Speak($"X {Math.Round(_worldPosition.X, 2):0.##} meters.");
-            if (_input.WasPressed(Key.L))
                 _speech.Speak($"Z {Math.Round(_worldPosition.Z, 2):0.##} meters.");
+            if (_input.WasPressed(Key.L))
+                _speech.Speak($"X {Math.Round(_worldPosition.X, 2):0.##} meters.");
         }
 
         private void HandleMovement()

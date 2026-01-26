@@ -167,10 +167,24 @@ height=14
 
 [shape: east_turn_zone]
 type=rectangle
-x=235
+x=205
 z=0
-width=15
-height=30
+width=30
+height=60
+
+[shape: east_turn_path_zone]
+type=rectangle
+x=190
+z=0
+width=80
+height=250
+
+[shape: east_turn_beacon_zone]
+type=rectangle
+x=205
+z=0
+width=45
+height=250
 
 [shape: start_zone]
 type=rectangle
@@ -244,6 +258,7 @@ name=East corner turn
 shape=east_turn_zone
 surface=asphalt
 noise=trackside
+width=80
 
 [area: start_area]
 type=start
@@ -292,7 +307,10 @@ branch_entry=p_east_entry
 branch_exits=p_east_north
 preferred_exit=p_east_north
 approach_side=exit
-approach_range=15
+turn_range=60
+beacon_range=0
+beacon_shape=east_turn_beacon_zone
+turn_shape=east_turn_beacon_zone
 
 # Portals (entry/exit geometry)
 [portal: p_loop_entry]
@@ -387,6 +405,12 @@ type=connector
 shape=corner_sw_zone
 width=40
 name=SW corner zone
+
+[path: east_turn_path]
+type=connector
+shape=east_turn_path_zone
+width=60
+name=East turn zone
 
 # Beacons / markers
 [beacon: b_center]
