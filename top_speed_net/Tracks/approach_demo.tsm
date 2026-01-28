@@ -89,12 +89,6 @@ z=0
 width=40
 height=30
 
-[shape: finish_zone]
-type=rectangle
-x=190
-z=0
-width=40
-height=30
 
 [shape: east_branch_path]
 type=polyline
@@ -176,12 +170,6 @@ grid_col_spacing=4
 grid_margin=2
 grid_max_vehicles=8
 
-[area: finish_area]
-type=finish
-name=Finish zone
-shape=finish_zone
-surface=asphalt
-noise=trackside
 
 # Sector (track-native)
 [sector: main_loop]

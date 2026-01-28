@@ -163,22 +163,17 @@ namespace TopSpeed.Tracks.Topology
             var centerZ = (minZ + maxZ) * 0.5f;
             var lengthX = Math.Abs(shape.Width);
             var lengthZ = Math.Abs(shape.Height);
-
-            Vector2 a;
-            Vector2 b;
+            var halfWidth = widthMeters * 0.5f;
             if (lengthX >= lengthZ)
             {
-                a = new Vector2(minX, centerZ);
-                b = new Vector2(maxX, centerZ);
-            }
-            else
-            {
-                a = new Vector2(centerX, minZ);
-                b = new Vector2(centerX, maxZ);
+                if (position.X < minX || position.X > maxX)
+                    return false;
+                return Math.Abs(position.Y - centerZ) <= halfWidth;
             }
 
-            var radius = widthMeters * 0.5f;
-            return DistanceToSegmentSquared(a, b, position) <= (radius * radius);
+            if (position.Y < minZ || position.Y > maxZ)
+                return false;
+            return Math.Abs(position.X - centerX) <= halfWidth;
         }
 
         private static bool ContainsCirclePath(ShapeDefinition shape, Vector2 position, float widthMeters)
