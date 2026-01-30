@@ -79,8 +79,12 @@ namespace TopSpeed.Tracks.Map
         public TrackWeather Weather { get; set; } = TrackWeather.Sunny;
         public TrackAmbience Ambience { get; set; } = TrackAmbience.NoAmbience;
         public string DefaultMaterialId { get; set; } = "asphalt";
+        public bool DefaultMaterialDefined { get; set; }
         public TrackNoise DefaultNoise { get; set; } = TrackNoise.NoNoise;
         public float DefaultWidthMeters { get; set; } = 12f;
+        public float? BaseHeightMeters { get; set; }
+        public float? DefaultAreaHeightMeters { get; set; }
+        public float? DefaultCeilingHeightMeters { get; set; }
         public float StartX { get; set; }
         public float StartZ { get; set; }
         public float StartHeadingDegrees { get; set; }
@@ -184,6 +188,10 @@ namespace TopSpeed.Tracks.Map
             "material",
             "noise",
             "width",
+            "elevation",
+            "height",
+            "ceiling",
+            "ceiling_height",
             "flags",
             "flag",
             "caps",
@@ -351,7 +359,7 @@ namespace TopSpeed.Tracks.Map
                         ApplyJunction(sectors, block, issues);
                         break;
                     case "area":
-                        ApplyArea(areas, block, issues);
+                        ApplyArea(metadata, areas, block, issues);
                         break;
                     case "shape":
                         ApplyShape(shapes, block, issues);
@@ -385,7 +393,7 @@ namespace TopSpeed.Tracks.Map
                         branchBlocks.Add(block);
                         break;
                     case "wall":
-                        ApplyWall(walls, block, issues);
+                        ApplyWall(metadata, walls, block, issues);
                         break;
                     case "material":
                         ApplyMaterial(materials, block, issues);
@@ -571,7 +579,15 @@ namespace TopSpeed.Tracks.Map
 
             if (TryGetValue(block, "default_material", out var defaultMaterial) &&
                 !string.IsNullOrWhiteSpace(defaultMaterial))
+            {
                 metadata.DefaultMaterialId = defaultMaterial.Trim();
+                metadata.DefaultMaterialDefined = true;
+            }
+            else if (block.Values.ContainsKey("default_material"))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "default_material cannot be empty.", block.StartLine));
+                return;
+            }
 
             if (TryGetValue(block, "default_noise", out var defaultNoise) &&
                 Enum.TryParse(defaultNoise, true, out TrackNoise noise))
@@ -579,6 +595,17 @@ namespace TopSpeed.Tracks.Map
 
             if (TryGetValue(block, "default_width", out var defaultWidth) && TryFloat(defaultWidth, out var width))
                 metadata.DefaultWidthMeters = Math.Max(0.5f, width);
+
+            if (TryGetValue(block, "base_height", out var baseHeightRaw) && TryFloat(baseHeightRaw, out var baseHeight))
+                metadata.BaseHeightMeters = baseHeight;
+
+            if (TryGetValue(block, "default_area_height", out var defaultAreaHeightRaw) &&
+                TryFloat(defaultAreaHeightRaw, out var defaultAreaHeight))
+                metadata.DefaultAreaHeightMeters = defaultAreaHeight;
+
+            if (TryGetValue(block, "default_ceiling_height", out var defaultCeilingRaw) &&
+                TryFloat(defaultCeilingRaw, out var defaultCeilingHeight))
+                metadata.DefaultCeilingHeightMeters = defaultCeilingHeight;
 
             if (TryGetValue(block, "weather", out var weatherRaw) &&
                 Enum.TryParse(weatherRaw, true, out TrackWeather weather))
@@ -652,6 +679,14 @@ namespace TopSpeed.Tracks.Map
             if (TryGetValue(block, "outer_ring_flags", out var outerFlagsRaw) &&
                 TryParseAreaFlags(outerFlagsRaw, out var outerFlags))
                 metadata.OuterRingFlags = outerFlags;
+
+            if (metadata.DefaultAreaHeightMeters.HasValue && metadata.DefaultAreaHeightMeters.Value <= 0f)
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "default_area_height must be greater than zero.", block.StartLine));
+
+            if (metadata.DefaultCeilingHeightMeters.HasValue &&
+                metadata.BaseHeightMeters.HasValue &&
+                metadata.DefaultCeilingHeightMeters.Value <= metadata.BaseHeightMeters.Value)
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "default_ceiling_height must be above base_height.", block.StartLine));
         }
 
         private static void ApplyShape(
@@ -816,6 +851,7 @@ namespace TopSpeed.Tracks.Map
         }
 
         private static void ApplyArea(
+            TrackMapMetadata metadata,
             List<TrackAreaDefinition> areas,
             SectionBlock block,
             List<TrackMapIssue> issues)
@@ -868,17 +904,71 @@ namespace TopSpeed.Tracks.Map
 
             var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
             var materialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
+            if (string.IsNullOrWhiteSpace(materialId))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' requires material.", block.StartLine));
+                return;
+            }
             var noise = TryNoise(block, "noise", out var noiseValue) ? noiseValue : (TrackNoise?)null;
             var width = TryFloat(block, "width", out var widthValue) ? Math.Max(0.1f, widthValue) : (float?)null;
             var flags = TryAreaFlags(block, out var areaFlags) ? areaFlags : TrackAreaFlags.None;
-            var metadata = CollectAreaMetadata(block);
+            var areaMetadata = CollectAreaMetadata(block);
+
+            var hasElevation = TryFloatAny(block, out var elevationValue, "elevation");
+            if (!hasElevation && !metadata.BaseHeightMeters.HasValue)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' requires elevation or meta base_height.", block.StartLine));
+                return;
+            }
+
+            var elevationMeters = hasElevation ? elevationValue : metadata.BaseHeightMeters!.Value;
+
+            var hasHeight = TryFloatAny(block, out var heightValue, "height");
+            if (!hasHeight && !metadata.DefaultAreaHeightMeters.HasValue)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' requires height or meta default_area_height.", block.StartLine));
+                return;
+            }
+
+            var heightMeters = hasHeight ? heightValue : metadata.DefaultAreaHeightMeters!.Value;
+            if (heightMeters <= 0f)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' height must be greater than zero.", block.StartLine));
+                return;
+            }
+
+            var ceilingMeters = (float?)null;
+            if (TryFloatAny(block, out var ceilingValue, "ceiling_height", "ceiling"))
+                ceilingMeters = ceilingValue;
+            else if (metadata.DefaultCeilingHeightMeters.HasValue)
+                ceilingMeters = metadata.DefaultCeilingHeightMeters.Value;
+
+            if (ceilingMeters.HasValue && ceilingMeters.Value <= elevationMeters)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' ceiling_height must be above elevation.", block.StartLine));
+                return;
+            }
+
+            if (ceilingMeters.HasValue &&
+                TryFloatAny(block, out var wallHeightValue, "wall_height", "wall_height_m"))
+            {
+                var expectedWallHeight = ceilingMeters.Value - elevationMeters;
+                if (Math.Abs(wallHeightValue - expectedWallHeight) > 0.01f)
+                {
+                    issues.Add(new TrackMapIssue(
+                        TrackMapIssueSeverity.Error,
+                        $"Area '{id}' has ceiling_height; wall_height must match {expectedWallHeight.ToString(CultureInfo.InvariantCulture)}.",
+                        block.StartLine));
+                    return;
+                }
+            }
 
             if (HasGuideKeys(block))
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' contains guide keys. Use a [guide] section instead.", block.StartLine));
             if (HasBranchKeys(block))
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' contains branch keys. Use a [branch] section instead.", block.StartLine));
 
-            areas.Add(new TrackAreaDefinition(id, areaType, shapeId, name, materialId, noise, width, flags, metadata));
+            areas.Add(new TrackAreaDefinition(id, areaType, shapeId, elevationMeters, heightMeters, ceilingMeters, name, materialId, noise, width, flags, areaMetadata));
         }
 
         private static bool HasGuideKeys(SectionBlock block)
@@ -1832,6 +1922,15 @@ namespace TopSpeed.Tracks.Map
             }
 
             var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
+            var turnMaterialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
+            var turnWallMaterialId = TryMaterialId(block, "wall_material_id", out var wallMaterialValue) ? wallMaterialValue : null;
+            var hasTurnWallHeight = TryFloatAny(block, out var turnWallHeight, "wall_height", "wall_height_m");
+            var turnNoise = TryNoise(block, "noise", out var noiseValue) ? noiseValue : (TrackNoise?)null;
+            var turnWidth = TryFloatAny(block, out var turnWidthValue, "area_width", "corridor_width", "area_width_m") ? Math.Max(0.1f, turnWidthValue) : (float?)null;
+            var turnFlags = TryAreaFlags(block, out var parsedTurnFlags) ? parsedTurnFlags : TrackAreaFlags.None;
+            var hasTurnElevation = TryFloatAny(block, out var turnElevationValue, "elevation");
+            var hasTurnHeight = TryFloatAny(block, out var turnHeightValue, "height");
+            var hasTurnCeiling = TryFloatAny(block, out var turnCeilingValue, "ceiling_height", "ceiling");
 
             if (!TryReadHeading(block, "from", out var fromHeading) &&
                 !TryReadHeading(block, "entry", out fromHeading) &&
@@ -1896,7 +1995,7 @@ namespace TopSpeed.Tracks.Map
 
             if (!TryFloatAny(block, out var sideSpace, "side_space", "turn_space", "space", "side_length", "turn_length") &&
                 !TryDirectionalSpace(block, toDir, out sideSpace) &&
-                !TryFloatAny(block, out sideSpace, "turn_width", "width", "path_width"))
+                !TryFloatAny(block, out sideSpace, "turn_width", "width"))
             {
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires side_space (or north/south/east/west_space).", block.StartLine));
                 return;
@@ -1939,7 +2038,60 @@ namespace TopSpeed.Tracks.Map
             var exitPortalId = $"{id}_exit";
 
             shapes.Add(new ShapeDefinition(shapeId, ShapeType.Rectangle, minX, minZ, width, height));
-            areas.Add(new TrackAreaDefinition(areaId, TrackAreaType.Curve, shapeId, name, null, null, null, TrackAreaFlags.None, new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)));
+            if (!metadata.BaseHeightMeters.HasValue || !metadata.DefaultAreaHeightMeters.HasValue)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires meta base_height and default_area_height for auto-generated areas.", block.StartLine));
+                return;
+            }
+            if (string.IsNullOrWhiteSpace(turnMaterialId) &&
+                (!metadata.DefaultMaterialDefined || string.IsNullOrWhiteSpace(metadata.DefaultMaterialId)))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires meta default_material for auto-generated areas.", block.StartLine));
+                return;
+            }
+
+            var turnElevation = hasTurnElevation ? turnElevationValue : metadata.BaseHeightMeters.Value;
+            var turnHeight = hasTurnHeight ? turnHeightValue : metadata.DefaultAreaHeightMeters.Value;
+            if (turnHeight <= 0f)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn height must be greater than 0.", block.StartLine));
+                return;
+            }
+
+            var turnCeiling = hasTurnCeiling
+                ? (float?)turnCeilingValue
+                : metadata.DefaultCeilingHeightMeters;
+            if (turnCeiling.HasValue && turnCeiling.Value <= turnElevation)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn ceiling_height must be above elevation.", block.StartLine));
+                return;
+            }
+            if (turnCeiling.HasValue && hasTurnWallHeight)
+            {
+                var expectedWallHeight = turnCeiling.Value - turnElevation;
+                if (Math.Abs(turnWallHeight - expectedWallHeight) > 0.01f)
+                {
+                    issues.Add(new TrackMapIssue(
+                        TrackMapIssueSeverity.Error,
+                        $"Turn wall_height must match {expectedWallHeight.ToString(CultureInfo.InvariantCulture)} when a ceiling is defined.",
+                        block.StartLine));
+                    return;
+                }
+            }
+
+            areas.Add(new TrackAreaDefinition(
+                areaId,
+                TrackAreaType.Curve,
+                shapeId,
+                turnElevation,
+                turnHeight,
+                turnCeiling,
+                name,
+                string.IsNullOrWhiteSpace(turnMaterialId) ? metadata.DefaultMaterialId : turnMaterialId,
+                turnNoise,
+                turnWidth,
+                turnFlags,
+                BuildTurnAreaMetadata(block, turnWallMaterialId, hasTurnWallHeight, turnWallHeight)));
 
             var metadataMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
             {
@@ -1958,7 +2110,7 @@ namespace TopSpeed.Tracks.Map
             sectors.Add(new TrackSectorDefinition(id, TrackSectorType.Curve, name, areaId, null, null, null, TrackSectorFlags.None, metadataMap));
 
             var pathWidth = metadata.DefaultWidthMeters;
-            TryFloatAny(block, out pathWidth, "path_width", "lane_width", "portal_width");
+            TryFloatAny(block, out pathWidth, "lane_width", "portal_width");
             pathWidth = Math.Max(0.5f, pathWidth);
 
             var entryPos = alongAxisX ? new Vector2(start, baseCoord) : new Vector2(baseCoord, start);
@@ -2068,6 +2220,7 @@ namespace TopSpeed.Tracks.Map
         }
 
         private static void ApplyWall(
+            TrackMapMetadata metadata,
             List<TrackWallDefinition> walls,
             SectionBlock block,
             List<TrackMapIssue> issues)
@@ -2112,6 +2265,11 @@ namespace TopSpeed.Tracks.Map
             var height = TryFloatAny(block, out var heightValue, "height", "wall_height") ? Math.Max(0f, heightValue) : 2f;
             var materialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
             var material = TrackWallMaterial.Hard;
+            if (string.IsNullOrWhiteSpace(materialId) && !metadata.DefaultMaterialDefined)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Wall '{id}' requires material or meta default_material.", block.StartLine));
+                return;
+            }
 
             var collisionMode = TrackWallCollisionMode.Block;
             if (TryGetValue(block, "collision", out var collisionRaw) ||
@@ -2126,8 +2284,8 @@ namespace TopSpeed.Tracks.Map
                 }
             }
 
-            var metadata = CollectWallMetadata(block);
-            walls.Add(new TrackWallDefinition(id, shapeId, width, material, collisionMode, name, metadata, height, materialId));
+            var wallMetadata = CollectWallMetadata(block);
+            walls.Add(new TrackWallDefinition(id, shapeId, width, material, collisionMode, name, wallMetadata, height, materialId));
         }
 
         private static void ApplyMaterial(
@@ -2385,6 +2543,40 @@ namespace TopSpeed.Tracks.Map
                     return TryFloatAny(block, out value, "west_space", "west_extent");
                 default:
                     return false;
+            }
+        }
+
+        private static IReadOnlyDictionary<string, string> BuildTurnAreaMetadata(
+            SectionBlock block,
+            string? wallMaterialId,
+            bool hasWallHeight,
+            float wallHeight)
+        {
+            var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            AddTurnMetadataValue(block, metadata, "auto_walls", "auto_walls", "auto_wall", "walls_auto", "auto_wall_enabled");
+            AddTurnMetadataValue(block, metadata, "wall_edges", "wall_edges", "wall_edge", "wall_sides", "wall_side");
+            AddTurnMetadataValue(block, metadata, "wall_width", "wall_width", "wall_thickness", "wall_size");
+            AddTurnMetadataValue(block, metadata, "wall_collision", "wall_collision", "wall_collision_mode", "collision", "collision_mode", "wall_mode");
+            if (!string.IsNullOrWhiteSpace(wallMaterialId))
+                metadata["wall_material_id"] = wallMaterialId!;
+            if (hasWallHeight)
+                metadata["wall_height"] = wallHeight.ToString(CultureInfo.InvariantCulture);
+            return metadata;
+        }
+
+        private static void AddTurnMetadataValue(
+            SectionBlock block,
+            Dictionary<string, string> metadata,
+            string key,
+            params string[] aliases)
+        {
+            foreach (var alias in aliases)
+            {
+                if (TryGetValue(block, alias, out var raw) && !string.IsNullOrWhiteSpace(raw))
+                {
+                    metadata[key] = raw.Trim();
+                    return;
+                }
             }
         }
 

@@ -62,6 +62,9 @@ namespace TopSpeed.Tracks.Map
         public string DefaultMaterialId { get; set; } = "asphalt";
         public TrackNoise DefaultNoise { get; set; } = TrackNoise.NoNoise;
         public float DefaultWidthMeters { get; set; } = 12f;
+        public float BaseHeightMeters { get; set; } = 0f;
+        public float DefaultAreaHeightMeters { get; set; } = 5f;
+        public float? DefaultCeilingHeightMeters { get; set; }
         public float StartX { get; set; }
         public float StartZ { get; set; }
         public float StartHeadingDegrees { get; set; } = 0f;

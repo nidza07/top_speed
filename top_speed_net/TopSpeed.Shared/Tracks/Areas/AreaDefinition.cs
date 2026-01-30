@@ -13,6 +13,9 @@ namespace TopSpeed.Tracks.Areas
             string id,
             TrackAreaType type,
             string shapeId,
+            float elevationMeters,
+            float heightMeters,
+            float? ceilingHeightMeters,
             string? name = null,
             string? materialId = null,
             TrackNoise? noise = null,
@@ -28,6 +31,13 @@ namespace TopSpeed.Tracks.Areas
             Id = id.Trim();
             Type = type;
             ShapeId = shapeId.Trim();
+            if (heightMeters <= 0f)
+                throw new ArgumentOutOfRangeException(nameof(heightMeters), "Area height must be greater than zero.");
+            if (ceilingHeightMeters.HasValue && ceilingHeightMeters.Value <= elevationMeters)
+                throw new ArgumentOutOfRangeException(nameof(ceilingHeightMeters), "Ceiling height must be above the elevation.");
+            ElevationMeters = elevationMeters;
+            HeightMeters = heightMeters;
+            CeilingHeightMeters = ceilingHeightMeters;
             var trimmedName = name?.Trim();
             Name = string.IsNullOrWhiteSpace(trimmedName) ? null : trimmedName;
             var trimmedMaterial = materialId?.Trim();
@@ -41,6 +51,9 @@ namespace TopSpeed.Tracks.Areas
         public string Id { get; }
         public TrackAreaType Type { get; }
         public string ShapeId { get; }
+        public float ElevationMeters { get; }
+        public float HeightMeters { get; }
+        public float? CeilingHeightMeters { get; }
         public string? Name { get; }
         public string? MaterialId { get; }
         public TrackNoise? Noise { get; }

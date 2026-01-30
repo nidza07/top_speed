@@ -61,6 +61,9 @@ namespace TopSpeed.Tracks.Map
                 DefaultMaterialId = definition.Metadata.DefaultMaterialId,
                 DefaultNoise = definition.Metadata.DefaultNoise,
                 DefaultWidthMeters = definition.Metadata.DefaultWidthMeters,
+                BaseHeightMeters = definition.Metadata.BaseHeightMeters ?? 0f,
+                DefaultAreaHeightMeters = definition.Metadata.DefaultAreaHeightMeters ?? 0f,
+                DefaultCeilingHeightMeters = definition.Metadata.DefaultCeilingHeightMeters,
                 StartX = definition.Metadata.StartX,
                 StartZ = definition.Metadata.StartZ,
                 StartHeadingDegrees = definition.Metadata.StartHeadingDegrees,
@@ -90,7 +93,6 @@ namespace TopSpeed.Tracks.Map
 
             AddSafeZoneRing(map, definition.Metadata);
             AddOuterRing(map, definition.Metadata);
-            AddPresetMaterials(map, definition);
             AddExplicitWalls(map, definition);
             AddAutoWalls(map, definition);
             AddPresetMaterials(map, definition);
@@ -135,7 +137,25 @@ namespace TopSpeed.Tracks.Map
             var noise = metadata.SafeZoneNoise;
             var flags = TrackAreaFlags.SafeZone;
 
-            AddRingShapeArea(map, "__safe_zone", innerMinX, innerMinZ, innerMaxX - innerMinX, innerMaxZ - innerMinZ, ringMeters, name, materialId, noise, TrackAreaType.SafeZone, flags);
+            if (!metadata.BaseHeightMeters.HasValue || !metadata.DefaultAreaHeightMeters.HasValue)
+                return;
+
+            AddRingShapeArea(
+                map,
+                "__safe_zone",
+                innerMinX,
+                innerMinZ,
+                innerMaxX - innerMinX,
+                innerMaxZ - innerMinZ,
+                ringMeters,
+                name,
+                materialId,
+                noise,
+                metadata.BaseHeightMeters.Value,
+                metadata.DefaultAreaHeightMeters.Value,
+                metadata.DefaultCeilingHeightMeters,
+                TrackAreaType.SafeZone,
+                flags);
         }
 
         private static void AddOuterRing(TrackMap map, TrackMapMetadata metadata)
@@ -161,7 +181,25 @@ namespace TopSpeed.Tracks.Map
             var flags = metadata.OuterRingFlags;
             var areaType = metadata.OuterRingType;
 
-            AddRingShapeArea(map, "__outer_ring", innerMinX, innerMinZ, innerMaxX - innerMinX, innerMaxZ - innerMinZ, ringMeters, name, materialId, noise, areaType, flags);
+            if (!metadata.BaseHeightMeters.HasValue || !metadata.DefaultAreaHeightMeters.HasValue)
+                return;
+
+            AddRingShapeArea(
+                map,
+                "__outer_ring",
+                innerMinX,
+                innerMinZ,
+                innerMaxX - innerMinX,
+                innerMaxZ - innerMinZ,
+                ringMeters,
+                name,
+                materialId,
+                noise,
+                metadata.BaseHeightMeters.Value,
+                metadata.DefaultAreaHeightMeters.Value,
+                metadata.DefaultCeilingHeightMeters,
+                areaType,
+                flags);
         }
 
         private static void AddAutoWalls(TrackMap map, TrackMapDefinition definition)
@@ -204,9 +242,13 @@ namespace TopSpeed.Tracks.Map
                 var wallWidth = TryGetMetadataFloat(area.Metadata, out var widthValue, "wall_width", "wall_thickness", "wall_size")
                     ? Math.Max(0.1f, widthValue)
                     : 2f;
-                var wallHeight = TryGetMetadataFloat(area.Metadata, out var heightValue, "wall_height", "wall_height_m")
+                var defaultWallHeight = TryGetMetadataFloat(area.Metadata, out var heightValue, "wall_height", "wall_height_m")
                     ? Math.Max(0f, heightValue)
                     : 2f;
+                var ceilingHeight = area.CeilingHeightMeters ?? (area.ElevationMeters + area.HeightMeters);
+                var wallHeight = area.CeilingHeightMeters.HasValue
+                    ? Math.Max(0f, ceilingHeight - area.ElevationMeters)
+                    : defaultWallHeight;
                 var wallMaterialId = TryGetMetadataValue(area.Metadata, out var acousticValue, "wall_material_id")
                     ? acousticValue
                     : area.MaterialId;
@@ -283,7 +325,10 @@ namespace TopSpeed.Tracks.Map
             {
                 if (wall == null)
                     continue;
-                var collisionMaterial = ResolveCollisionMaterial(map, wall.MaterialId);
+                var resolvedMaterialId = string.IsNullOrWhiteSpace(wall.MaterialId)
+                    ? map.DefaultMaterialId
+                    : wall.MaterialId!;
+                var collisionMaterial = ResolveCollisionMaterial(map, resolvedMaterialId);
                 var resolvedWall = new TrackWallDefinition(
                     wall.Id,
                     wall.ShapeId,
@@ -293,7 +338,7 @@ namespace TopSpeed.Tracks.Map
                     wall.Name,
                     wall.Metadata,
                     wall.HeightMeters,
-                    wall.MaterialId);
+                    resolvedMaterialId);
                 map.AddWall(resolvedWall);
             }
         }
@@ -642,6 +687,9 @@ namespace TopSpeed.Tracks.Map
             string name,
             string materialId,
             TrackNoise noise,
+            float elevationMeters,
+            float heightMeters,
+            float? ceilingHeightMeters,
             TrackAreaType areaType,
             TrackAreaFlags flags)
         {
@@ -651,7 +699,7 @@ namespace TopSpeed.Tracks.Map
             var shapeId = idPrefix + "_shape";
             var areaId = idPrefix + "_area";
             map.AddShape(new ShapeDefinition(shapeId, ShapeType.Ring, innerMinX, innerMinZ, innerWidth, innerHeight, ringWidth: ringWidth));
-            map.AddArea(new TrackAreaDefinition(areaId, areaType, shapeId, name, materialId, noise, null, flags));
+            map.AddArea(new TrackAreaDefinition(areaId, areaType, shapeId, elevationMeters, heightMeters, ceilingHeightMeters, name, materialId, noise, null, flags));
         }
 
         private static void ApplyStartFromAreas(TrackMap map, TrackMapDefinition definition)

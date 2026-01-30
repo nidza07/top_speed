@@ -16,6 +16,8 @@ The meta section contains global settings such as the track name, default materi
 
 Meta can also define a safe zone ring or an outer ring. These create a band around the drivable track so players can recover when they leave the main road. If you do not want an automatic ring, leave the ring values at zero and define the safe zone as a normal area instead.
 
+Meta can also define vertical defaults. Use base_height for the default floor level, default_area_height for the default vertical thickness of areas, and default_ceiling_height if you want a closed space by default. Areas can override any of these per section.
+
 ## Shapes
 
 Shapes define geometry without meaning. They are the raw outlines you attach to areas, portals, guides, or walls. The most common shape is a rectangle because it is easy to author by coordinates. A rectangle is defined by a top-left corner (X,Z) plus width and height. If you say X 0, Z 0, width 40, height 30, the shape covers X 0 to 40 and Z 0 to 30.
@@ -30,7 +32,9 @@ Areas turn shapes into drivable or non-drivable regions. An area is what the car
 
 Area types control meaning. A normal zone is drivable. Start, finish, checkpoint, and intersection are special types that do not change movement but are used by race logic and guidance. Boundary and off-track are not drivable and are used to mark unsafe regions. Safe zones are drivable but often have different material or noise so you can hear that you left the main track.
 
-Areas can also contain metadata. This is how you enable auto-walls for a specific edge, define grid placement for starting positions, or add guidance-related flags without cluttering the sector. The material on an area defines both the surface sound (if a sound file exists) and the acoustic properties used later for occlusion and reverb.
+Areas can also contain metadata. This is how you enable auto-walls for a specific edge, define grid placement for starting positions, or add guidance-related flags without cluttering the sector. A material is required on every area. The material defines both the surface sound (if a sound file exists) and the acoustic properties used later for occlusion and reverb.
+
+Areas also define vertical space. Each area has a floor elevation and a height. Set elevation and height on the area, or define base_height and default_area_height in [meta] so areas inherit them. A ceiling can be optional; use ceiling_height (or ceiling) to define a closed space. If no ceiling is defined, the area is treated as open.
 
 ## Sectors and movement rules
 
@@ -76,15 +80,17 @@ You can use presets such as concrete, asphalt, brick, metal, wood, glass, plaste
 
 To define a custom material, create a section like [material: my_asphalt] and provide absorption, scattering, and transmission. Each value is a number between 0 and 1. You can provide one number or three numbers for low, mid, and high frequencies. Then use material=my_asphalt in an area or wall section. If a sound file named my_asphalt.wav exists under Sounds\\Legacy\\Materials, it will be used as the surface sound when driving on that area.
 
+Materials can also extend a preset. For example, you can set preset=asphalt and then override only transmission or absorption to create a variant without redefining everything.
+
 If you want walls made of a specific material to behave as soft or hard collisions, set collision or collision_material in the [material] section. Valid values are hard, soft, rubber, metal, concrete, wood, dirt, grass, or sand. Walls then use the collision behavior of their material automatically.
 
 ## Walls
 
 Walls prevent movement into empty space. They are separate from areas. A wall has a shape and a width, and it blocks movement when the player reaches it. Auto-walls can be generated per area using metadata. They place a wall along specific edges and only where the edge borders empty space, so connections between areas stay open.
 
-If you want a wall to block a specific gap, enable auto-walls on that edge and make sure the neighboring areas do not touch that edge. If you want a custom wall, define it explicitly with a wall shape. In either case, walls should be used to make the boundary feel intentional, so a blind player understands the road is blocked rather than simply "missing". For auto-walls, you can set wall_material_id in the area metadata to override the material used by the generated walls.
+If you want a wall to block a specific gap, enable auto-walls on that edge and make sure the neighboring areas do not touch that edge. If you want a custom wall, define it explicitly with a wall shape. In either case, walls should be used to make the boundary feel intentional, so a blind player understands the road is blocked rather than simply "missing". For auto-walls, you can set wall_material_id in the area metadata to override the material used by the generated walls. If a wall does not specify material and you did not set default_material in [meta], the file is invalid.
 
-Walls can also define a height. Height does not affect driving today, but it is important for acoustics and occlusion later, because taller walls block more sound. Collision hardness is defined by the material itself (see the collision option in a [material] section).
+Walls can also define a height. Height does not affect driving today, but it is important for acoustics and occlusion later, because taller walls block more sound. If a wall does not specify a material, it will use the default material (or the parent area material for auto-walls). Collision hardness is defined by the material itself (see the collision option in a [material] section).
 
 ## A concrete example you can imagine
 

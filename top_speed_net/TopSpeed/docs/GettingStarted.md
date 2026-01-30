@@ -14,7 +14,7 @@ This layout is large enough for turning, and the numbers are easy to remember. Y
 
 ## Step 1: Meta section
 
-Start with the [meta] section. Give the track a name and a start position. Use the same coordinate system you will use for the shapes. If you want the player to start on the south straight facing east, set start_x to a point on that straight and set start_z to a value between 0 and 40. Use start_heading=east or a degree value like 90.
+Start with the [meta] section. Give the track a name and a start position. Use the same coordinate system you will use for the shapes. If you want the player to start on the south straight facing east, set start_x to a point on that straight and set start_z to a value between 0 and 40. Use start_heading=east or a degree value like 90. Also set base_height and default_area_height here so every area gets a floor and thickness unless you override it per area.
 
 ## Step 2: Define the shapes
 
@@ -63,6 +63,8 @@ This is the smallest useful structure for a track file. It is not a full loop, b
 ```
 [meta]
 name=My First Track
+base_height=0
+default_area_height=8
 start_x=10
 start_z=10
 start_heading=90
