@@ -360,8 +360,8 @@ namespace TS.Audio
             }
             else if (hasRoom)
             {
-                var scale = Volatile.Read(ref spatial.RoomOcclusionScale);
-                occlusion = Clamp01(occlusion * scale);
+                var scale = Clamp01(Volatile.Read(ref spatial.RoomOcclusionScale));
+                occlusion = Lerp(1f, occlusion, scale);
             }
 
             var transOverrideLow = Volatile.Read(ref spatial.RoomTransmissionOverrideLow);
@@ -375,10 +375,10 @@ namespace TS.Audio
             }
             else if (hasRoom)
             {
-                var scale = Volatile.Read(ref spatial.RoomTransmissionScale);
-                transLow = Clamp01(transLow * scale);
-                transMid = Clamp01(transMid * scale);
-                transHigh = Clamp01(transHigh * scale);
+                var scale = Clamp01(Volatile.Read(ref spatial.RoomTransmissionScale));
+                transLow = Lerp(1f, transLow, scale);
+                transMid = Lerp(1f, transMid, scale);
+                transHigh = Lerp(1f, transHigh, scale);
             }
 
             var airOverrideLow = Volatile.Read(ref spatial.RoomAirAbsorptionOverrideLow);
@@ -392,10 +392,10 @@ namespace TS.Audio
             }
             else if (hasRoom)
             {
-                var scale = Volatile.Read(ref spatial.RoomAirAbsorptionScale);
-                airLow = Clamp01(airLow * scale);
-                airMid = Clamp01(airMid * scale);
-                airHigh = Clamp01(airHigh * scale);
+                var scale = Clamp01(Volatile.Read(ref spatial.RoomAirAbsorptionScale));
+                airLow = Lerp(1f, airLow, scale);
+                airMid = Lerp(1f, airMid, scale);
+                airHigh = Lerp(1f, airHigh, scale);
             }
 
             handle.ApplyDirectSimulation(occlusion, airLow, airMid, airHigh, transLow, transMid, transHigh);
@@ -442,6 +442,11 @@ namespace TS.Audio
             if (value < 0f) return 0f;
             if (value > 1f) return 1f;
             return value;
+        }
+
+        private static float Lerp(float from, float to, float t)
+        {
+            return from + (to - from) * t;
         }
 
         private static ListenerState CreateIdentityState()

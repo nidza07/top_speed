@@ -23,6 +23,7 @@ namespace TS.Audio
         private readonly List<OggStreamHandle> _streams;
         private readonly SteamAudioContext? _steamAudio;
         private RoomAcoustics _roomAcoustics;
+        private readonly object _sourceLock = new object();
 
         public string Name => _config.Name;
         public int SampleRate => (int)_config.SampleRate;
@@ -164,7 +165,8 @@ namespace TS.Audio
                 source.SetDistanceModel(_systemConfig.DistanceModel, _systemConfig.MinDistance, _systemConfig.MaxDistance, _systemConfig.RollOff);
             source.SetDopplerFactor(_systemConfig.DopplerFactor);
             source.SetRoomAcoustics(_roomAcoustics);
-            _sources.Add(source);
+            lock (_sourceLock)
+                _sources.Add(source);
             return source;
         }
 
@@ -190,7 +192,8 @@ namespace TS.Audio
                 source.SetDistanceModel(_systemConfig.DistanceModel, _systemConfig.MinDistance, _systemConfig.MaxDistance, _systemConfig.RollOff);
             source.SetDopplerFactor(_systemConfig.DopplerFactor);
             source.SetRoomAcoustics(_roomAcoustics);
-            _sources.Add(source);
+            lock (_sourceLock)
+                _sources.Add(source);
             return source;
         }
 
@@ -203,7 +206,8 @@ namespace TS.Audio
 
         public void RemoveSource(AudioSourceHandle source)
         {
-            _sources.Remove(source);
+            lock (_sourceLock)
+                _sources.Remove(source);
         }
 
         internal void RemoveStream(OggStreamHandle stream)
@@ -235,9 +239,12 @@ namespace TS.Audio
         public void SetRoomAcoustics(RoomAcoustics acoustics)
         {
             _roomAcoustics = acoustics;
-            for (int i = 0; i < _sources.Count; i++)
+            lock (_sourceLock)
             {
-                _sources[i].SetRoomAcoustics(_roomAcoustics);
+                for (int i = 0; i < _sources.Count; i++)
+                {
+                    _sources[i].SetRoomAcoustics(_roomAcoustics);
+                }
             }
         }
 
@@ -249,6 +256,10 @@ namespace TS.Audio
 
         public void Update(double deltaTime)
         {
+            AudioSourceHandle[] sourceSnapshot;
+            lock (_sourceLock)
+                sourceSnapshot = _sources.ToArray();
+
             for (int i = _streams.Count - 1; i >= 0; i--)
             {
                 _streams[i].Update();
@@ -257,21 +268,24 @@ namespace TS.Audio
             if (!_systemConfig.UseHrtf)
                 return;
 
-            for (int i = 0; i < _sources.Count; i++)
+            for (int i = 0; i < sourceSnapshot.Length; i++)
             {
-                _sources[i].UpdateDoppler(_listenerPosition, _listenerVelocity, _systemConfig);
+                sourceSnapshot[i].UpdateDoppler(_listenerPosition, _listenerVelocity, _systemConfig);
             }
 
-            _steamAudio?.UpdateSimulation(_sources);
+            _steamAudio?.UpdateSimulation(sourceSnapshot);
         }
 
         public void Dispose()
         {
-            for (int i = _sources.Count - 1; i >= 0; i--)
+            lock (_sourceLock)
             {
-                _sources[i].Dispose();
+                for (int i = _sources.Count - 1; i >= 0; i--)
+                {
+                    _sources[i].Dispose();
+                }
+                _sources.Clear();
             }
-            _sources.Clear();
 
             for (int i = _streams.Count - 1; i >= 0; i--)
             {

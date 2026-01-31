@@ -110,8 +110,8 @@ height=30
 
 # Rooms
 [room: demo_room]
-preset=tunnel_short
-reflection_wet=0.6
+preset=tunnel_long
+reflection_wet=0.1
 
 # Areas
 [area: loop_area]
