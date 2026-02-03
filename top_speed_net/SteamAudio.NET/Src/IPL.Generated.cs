@@ -947,8 +947,7 @@ namespace SteamAudio
             /// If @c IPL_TRUE, then the GPU device must support TrueAudio Next. It is not necessary to set this
             /// to @c IPL_TRUE if @c numCUsToReserve or @c fractionCUsForIRUpdate are set to non-zero values.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool RequiresTAN;
+            public int RequiresTAN;
         }
         
         /// <summary>
@@ -1980,8 +1979,7 @@ namespace SteamAudio
             /// <summary>
             /// Whether to use binaural rendering or panning.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Binaural;
+            public int Binaural;
         }
         
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -2244,8 +2242,7 @@ namespace SteamAudio
             /// the Ambisonic audio before spatialization. If you plan to immediately spatialize the output of the path
             /// effect, setting this value to @c IPL_TRUE can result in significant performance improvements.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Spatialize;
+            public int Spatialize;
             
             /// <summary>
             /// The speaker layout to use when spatializing. Only used if @c spatialize is @c IPL_TRUE.
@@ -2287,8 +2284,7 @@ namespace SteamAudio
             /// If @c IPL_TRUE, spatialize using HRTF-based binaural rendering. Only used if @c spatialize was set to
             /// @c IPL_TRUE in @c IPLPathEffectSettings.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Binaural;
+            public int Binaural;
             
             /// <summary>
             /// The HRTF to use when spatializing. Only used if @c spatialize was set to @c IPL_TRUE in
@@ -2308,8 +2304,7 @@ namespace SteamAudio
             /// filtering due to a physics-based deviation model. If @c IPL_FALSE, the values in @c eqCoeffs will be
             /// used as-is.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool NormalizeEQ;
+            public int NormalizeEQ;
         }
         
         [StructLayout(LayoutKind.Sequential, CharSet = CharSet.Ansi)]
@@ -2834,8 +2829,7 @@ namespace SteamAudio
             /// curve defined in a GUI. If the user is editing the curve in real-time, set this to @c IPL_TRUE whenever
             /// the curve changes, so Steam Audio can update simulation results to match.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Dirty;
+            public int Dirty;
         }
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -2876,8 +2870,7 @@ namespace SteamAudio
             /// curves defined in a GUI. If the user is editing the curves in real-time, set this to @c IPL_TRUE whenever
             /// the curves change, so Steam Audio can update simulation results to match.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Dirty;
+            public int Dirty;
         }
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
@@ -3154,8 +3147,7 @@ namespace SteamAudio
             /// <summary>
             /// If @c IPL_TRUE, this source will used baked data for reflections simulation.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool Baked;
+            public int Baked;
             
             /// <summary>
             /// The identifier used to specify which layer of baked data to use for simulating reflections
@@ -3197,16 +3189,14 @@ namespace SteamAudio
             /// If @c IPL_TRUE, baked paths are tested for visibility. This is useful if your scene has dynamic
             /// objects that might occlude baked paths.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool EnableValidation;
+            public int EnableValidation;
             
             /// <summary>
             /// If @c IPL_TRUE, and @c enableValidation is @c IPL_TRUE, then if a baked path is occluded by dynamic
             /// geometry, path finding is re-run in real-time to find alternate paths that take into account the
             /// dynamic geometry.
             /// </summary>
-            [MarshalAs(UnmanagedType.U1)]
-            public bool FindAlternatePaths;
+            public int FindAlternatePaths;
             
             /// <summary>
             /// If simulating transmission, this is the maximum number of surfaces, starting from the closest
@@ -3281,7 +3271,7 @@ namespace SteamAudio
         }
         
         [UnmanagedFunctionPointer(CallingConvention.Cdecl)]
-        public delegate void PathingVisualizationCallback(IPL.Vector3 from, IPL.Vector3 to, [MarshalAs(UnmanagedType.U1)] bool occluded, IntPtr userData);
+        public delegate void PathingVisualizationCallback(IPL.Vector3 from, IPL.Vector3 to, int occluded, IntPtr userData);
         
         /// <summary>
         /// Simulation results for a source.

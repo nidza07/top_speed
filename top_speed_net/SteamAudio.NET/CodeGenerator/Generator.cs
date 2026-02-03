@@ -135,7 +135,7 @@ namespace CodeGenerator
 						}
 					}),
 
-					// Replace the bool enum with an actual bool.
+					// Replace the bool enum with a 32-bit int to match C enum size.
 					e => e.Map<CppEnum>("IPLbool").Discard(),
 					e => e.MapAll<CppDeclaration>().CSharpAction((converter, element) => {
 						CSharpType type;
@@ -152,16 +152,8 @@ namespace CodeGenerator
 						}
 
 						if (type is CSharpFreeType freeType && freeType.Text == "unsupported_type /* enum IPLbool {...} */") {
-							var boolean = converter.GetCSharpType(CppPrimitiveType.Bool, element);
-
-							setType(boolean);
-
-							if (boolean is CSharpTypeWithAttributes typeWithAttributes) {
-								foreach(var attribute in typeWithAttributes.Attributes.Where(a => a is CSharpMarshalAttribute).Cast<CSharpMarshalAttribute>()) {
-									// The enum's size depends on the used compilers.
-									attribute.UnmanagedType = CSharpUnmanagedKind.U1; //CSharpUnmanagedKind.U4;
-								}
-							}
+							var int32Type = converter.GetCSharpType(CppPrimitiveType.Int, element);
+							setType(int32Type);
 						}
 					}),
 

@@ -53,7 +53,7 @@ namespace TS.Audio
             FrameSize = frameSize;
             ReflectionOrder = 1;
             ReflectionChannels = (ReflectionOrder + 1) * (ReflectionOrder + 1);
-            ReflectionDurationSeconds = 0.4f;
+            ReflectionDurationSeconds = 0.5f;
             ReflectionIrSize = Math.Max(1, (int)Math.Ceiling(ReflectionDurationSeconds * SampleRate));
             ReflectionType = IPL.ReflectionEffectType.Hybrid;
             _listenerState = CreateIdentityState();
@@ -360,13 +360,13 @@ namespace TS.Audio
                 OcclusionType = IPL.OcclusionType.Raycast,
                 OcclusionRadius = 0.5f,
                 NumOcclusionSamples = 8,
-                HybridReverbTransitionTime = 1.0f,
+                HybridReverbTransitionTime = 0.25f,
                 HybridReverbOverlapPercent = 0.25f,
                 NumTransmissionRays = 4,
-                Baked = useReflections && _hasBakedReflections && handle.UseBakedReflections
+                Baked = useReflections && _hasBakedReflections && handle.UseBakedReflections ? 1 : 0
             };
 
-            if (inputs.Baked)
+            if (inputs.Baked != 0)
             {
                 if (TryGetBakedIdentifierOverride(spatial, out var bakedOverride))
                     inputs.BakedDataIdentifier = bakedOverride;
