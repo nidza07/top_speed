@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using TopSpeed.Tracks.Areas;
 
 namespace TopSpeed.Tracks.Guidance
 {
@@ -18,10 +19,20 @@ namespace TopSpeed.Tracks.Guidance
             float? widthMeters = null,
             float? lengthMeters = null,
             float? alignmentToleranceDegrees = null,
-            IReadOnlyDictionary<string, string>? metadata = null)
+            IReadOnlyDictionary<string, string>? metadata = null,
+            float? volumeThicknessMeters = null,
+            float? volumeOffsetMeters = null,
+            float? volumeMinY = null,
+            float? volumeMaxY = null,
+            TrackAreaVolumeMode volumeMode = TrackAreaVolumeMode.LocalBand,
+            TrackAreaVolumeOffsetMode volumeOffsetMode = TrackAreaVolumeOffsetMode.Bottom,
+            TrackAreaVolumeSpace volumeOffsetSpace = TrackAreaVolumeSpace.Inherit,
+            TrackAreaVolumeSpace volumeMinMaxSpace = TrackAreaVolumeSpace.Inherit)
         {
             if (string.IsNullOrWhiteSpace(sectorId))
                 throw new ArgumentException("Sector id is required.", nameof(sectorId));
+            if (volumeMinY.HasValue && volumeMaxY.HasValue && volumeMaxY.Value <= volumeMinY.Value)
+                throw new ArgumentOutOfRangeException(nameof(volumeMaxY), "Approach volume max_y must be greater than min_y.");
 
             SectorId = sectorId.Trim();
             var trimmedName = name?.Trim();
@@ -34,6 +45,14 @@ namespace TopSpeed.Tracks.Guidance
             LengthMeters = lengthMeters;
             AlignmentToleranceDegrees = alignmentToleranceDegrees;
             Metadata = NormalizeMetadata(metadata);
+            VolumeThicknessMeters = volumeThicknessMeters;
+            VolumeOffsetMeters = volumeOffsetMeters;
+            VolumeMinY = volumeMinY;
+            VolumeMaxY = volumeMaxY;
+            VolumeMode = volumeMode;
+            VolumeOffsetMode = volumeOffsetMode;
+            VolumeOffsetSpace = volumeOffsetSpace;
+            VolumeMinMaxSpace = volumeMinMaxSpace;
         }
 
         public string SectorId { get; }
@@ -46,6 +65,14 @@ namespace TopSpeed.Tracks.Guidance
         public float? LengthMeters { get; }
         public float? AlignmentToleranceDegrees { get; }
         public IReadOnlyDictionary<string, string> Metadata { get; }
+        public float? VolumeThicknessMeters { get; }
+        public float? VolumeOffsetMeters { get; }
+        public float? VolumeMinY { get; }
+        public float? VolumeMaxY { get; }
+        public TrackAreaVolumeMode VolumeMode { get; }
+        public TrackAreaVolumeOffsetMode VolumeOffsetMode { get; }
+        public TrackAreaVolumeSpace VolumeOffsetSpace { get; }
+        public TrackAreaVolumeSpace VolumeMinMaxSpace { get; }
 
         private static IReadOnlyDictionary<string, string> NormalizeMetadata(IReadOnlyDictionary<string, string>? metadata)
         {

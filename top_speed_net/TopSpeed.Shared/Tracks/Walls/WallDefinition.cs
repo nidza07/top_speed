@@ -10,7 +10,7 @@ namespace TopSpeed.Tracks.Walls
 
         public TrackWallDefinition(
             string id,
-            string shapeId,
+            string geometryId,
             float widthMeters,
             float elevationMeters,
             TrackWallMaterial collisionMaterial,
@@ -22,11 +22,11 @@ namespace TopSpeed.Tracks.Walls
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Wall id is required.", nameof(id));
-            if (string.IsNullOrWhiteSpace(shapeId))
-                throw new ArgumentException("Wall shape id is required.", nameof(shapeId));
+            if (string.IsNullOrWhiteSpace(geometryId))
+                throw new ArgumentException("Wall geometry id is required.", nameof(geometryId));
 
             Id = id.Trim();
-            ShapeId = shapeId.Trim();
+            GeometryId = geometryId.Trim();
             WidthMeters = widthMeters;
             ElevationMeters = elevationMeters;
             CollisionMaterial = collisionMaterial;
@@ -40,7 +40,7 @@ namespace TopSpeed.Tracks.Walls
         }
 
         public string Id { get; }
-        public string ShapeId { get; }
+        public string GeometryId { get; }
         public float WidthMeters { get; }
         public float ElevationMeters { get; }
         public float HeightMeters { get; }

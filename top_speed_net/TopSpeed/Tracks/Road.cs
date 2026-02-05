@@ -1,3 +1,4 @@
+using System.Numerics;
 using TopSpeed.Data;
 
 namespace TopSpeed.Tracks
@@ -6,6 +7,9 @@ namespace TopSpeed.Tracks
     {
         public float Left;
         public float Right;
+        public Vector3 ForwardAxis;
+        public Vector3 RightAxis;
+        public Vector3 UpAxis;
         public string MaterialId;
         public TrackType Type;
         public float Length;

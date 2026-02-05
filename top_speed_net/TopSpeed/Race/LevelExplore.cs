@@ -91,7 +91,7 @@ namespace TopSpeed.Race
             _sectorManager = new TrackSectorManager(_map.Sectors, _areaManager, _portalManager);
             _sectorRuleManager = new TrackSectorRuleManager(_map.Sectors, _portalManager);
             _branchManager = _map.BuildBranchManager();
-            _wallManager = new TrackWallManager(_map.Shapes, _map.Walls);
+            _wallManager = new TrackWallManager(_map.Geometries, _map.Walls);
             var steam = _audio.SteamAudio;
             if (steam != null)
             {
@@ -287,7 +287,7 @@ namespace TopSpeed.Race
 
         private void UpdateRoomAcoustics(Vector3 worldPosition)
         {
-            var acoustics = ResolveRoomAcoustics(new Vector2(worldPosition.X, worldPosition.Z));
+            var acoustics = ResolveRoomAcoustics(worldPosition);
             if (!_hasRoomAcoustics || !RoomAcousticsEquals(_currentRoomAcoustics, acoustics))
             {
                 _audio.SetRoomAcoustics(acoustics);
@@ -302,8 +302,7 @@ namespace TopSpeed.Race
             if (_areaManager == null)
                 return false;
 
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return false;
 
@@ -324,12 +323,12 @@ namespace TopSpeed.Race
             return true;
         }
 
-        private RoomAcoustics ResolveRoomAcoustics(Vector2 position)
+        private RoomAcoustics ResolveRoomAcoustics(Vector3 worldPosition)
         {
             if (_areaManager == null)
                 return RoomAcoustics.Default;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return RoomAcoustics.Default;
 
@@ -469,28 +468,26 @@ namespace TopSpeed.Race
 
         private MapSnapshot BuildMapSnapshot(Vector3 worldPosition, float headingDegrees)
         {
-            var position2D = new Vector2(worldPosition.X, worldPosition.Z);
-
             var snapshot = new MapSnapshot
             {
                 MaterialId = _map.DefaultMaterialId,
                 Noise = _map.DefaultNoise,
                 WidthMeters = Math.Max(0.5f, _map.DefaultWidthMeters),
-                IsSafeZone = IsSafeZone(position2D),
+                IsSafeZone = IsSafeZone(worldPosition),
                 Zone = string.Empty
             };
 
-            ApplyAreaSnapshotOverrides(position2D, headingDegrees, ref snapshot);
-            ApplySectorSnapshotOverrides(position2D, headingDegrees, ref snapshot);
+            ApplyAreaSnapshotOverrides(worldPosition, headingDegrees, ref snapshot);
+            ApplySectorSnapshotOverrides(worldPosition, headingDegrees, ref snapshot);
             return snapshot;
         }
 
-        private void ApplySectorSnapshotOverrides(Vector2 position, float headingDegrees, ref MapSnapshot snapshot)
+        private void ApplySectorSnapshotOverrides(Vector3 worldPosition, float headingDegrees, ref MapSnapshot snapshot)
         {
             if (_sectorManager == null)
                 return;
 
-            if (!_sectorManager.TryLocate(position, headingDegrees, out var sector, out _, out _))
+            if (!_sectorManager.TryLocate(worldPosition, headingDegrees, out var sector, out _, out _))
                 return;
 
             snapshot.SectorId = sector.Id;
@@ -521,16 +518,17 @@ namespace TopSpeed.Race
                                       branch.Role == TrackBranchRole.Split ||
                                       branch.Role == TrackBranchRole.Branch;
 
+            var position = new Vector2(worldPosition.X, worldPosition.Z);
             snapshot.BranchSummary = BuildBranchSummary(branch, position, headingDegrees);
             snapshot.BranchSuggestion = BuildBranchSuggestion(branch, position, headingDegrees);
         }
 
-        private void ApplyAreaSnapshotOverrides(Vector2 position, float headingDegrees, ref MapSnapshot snapshot)
+        private void ApplyAreaSnapshotOverrides(Vector3 worldPosition, float headingDegrees, ref MapSnapshot snapshot)
         {
             if (_areaManager == null)
                 return;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return;
 
@@ -549,8 +547,7 @@ namespace TopSpeed.Race
             else if (!string.IsNullOrWhiteSpace(area.Id))
                 snapshot.Zone = area.Id;
 
-            if (!TryApplyAreaWidthFromMetadata(area, ref snapshot.WidthMeters))
-                TryApplyAreaWidthFromShape(area, headingDegrees, ref snapshot.WidthMeters);
+            TryApplyAreaWidthFromMetadata(area, ref snapshot.WidthMeters);
         }
 
         private static bool TryApplyAreaWidthFromMetadata(TrackAreaDefinition area, ref float widthMeters)
@@ -565,31 +562,6 @@ namespace TopSpeed.Race
             }
 
             return false;
-        }
-
-        private void TryApplyAreaWidthFromShape(TrackAreaDefinition area, float headingDegrees, ref float widthMeters)
-        {
-            if (_areaManager == null)
-                return;
-            if (!_areaManager.TryGetShape(area.ShapeId, out var shape))
-                return;
-
-            var heading = MapMovement.ToCardinal(headingDegrees);
-            switch (shape.Type)
-            {
-                case ShapeType.Rectangle:
-                    var rectWidth = Math.Abs(shape.Width);
-                    var rectHeight = Math.Abs(shape.Height);
-                    if (rectWidth <= 0f || rectHeight <= 0f)
-                        return;
-                    widthMeters = heading == MapDirection.East || heading == MapDirection.West
-                        ? Math.Max(widthMeters, rectHeight)
-                        : Math.Max(widthMeters, rectWidth);
-                    break;
-                case ShapeType.Circle:
-                    widthMeters = Math.Max(widthMeters, shape.Radius * 2f);
-                    break;
-            }
         }
 
         private static bool TryGetMetadataFloat(
@@ -681,7 +653,7 @@ namespace TopSpeed.Race
             var headingDegrees = _headingDegrees;
             if (_approachBeacon.TryGetCue(_worldPosition, headingDegrees, out var cue) && !cue.Passed)
             {
-                var position = AudioWorld.ToMeters(new Vector3(cue.BeaconPosition.X, 0f, cue.BeaconPosition.Y));
+                var position = AudioWorld.ToMeters(cue.BeaconPosition);
                 _soundBeacon.SetPosition(position);
                 _soundBeacon.SetVelocity(Vector3.Zero);
                 ApplyBeaconBakedIdentifier(cue.PortalId);
@@ -731,24 +703,32 @@ namespace TopSpeed.Race
 
         private bool IsWithinTrack(Vector3 worldPosition)
         {
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            var safeZone = IsSafeZone(position);
+            var safeZone = IsSafeZone(worldPosition);
 
-            if (_areaManager != null && _areaManager.ContainsTrackArea(position))
+            if (_map.MinX.HasValue && worldPosition.X <= _map.MinX.Value)
+                return false;
+            if (_map.MinZ.HasValue && worldPosition.Z <= _map.MinZ.Value)
+                return false;
+            if (_map.MaxX.HasValue && worldPosition.X >= _map.MaxX.Value)
+                return false;
+            if (_map.MaxZ.HasValue && worldPosition.Z >= _map.MaxZ.Value)
+                return false;
+
+            if (_areaManager != null && _areaManager.ContainsTrackArea(worldPosition))
                 return true;
 
             if (safeZone)
-                return !IsBlockedBySectorRules(position);
+                return !IsBlockedBySectorRules(worldPosition);
 
             return false;
         }
 
-        private bool IsBlockedBySectorRules(Vector2 position)
+        private bool IsBlockedBySectorRules(Vector3 worldPosition)
         {
             if (_sectorManager == null || _sectorRuleManager == null)
                 return false;
 
-            var sectors = _sectorManager.FindSectorsContaining(position);
+            var sectors = _sectorManager.FindSectorsContaining(worldPosition);
             if (sectors.Count == 0)
                 return false;
 
@@ -768,11 +748,8 @@ namespace TopSpeed.Race
             if (_sectorManager == null || _sectorRuleManager == null)
                 return true;
 
-            var fromPos = new Vector2(fromPosition.X, fromPosition.Z);
-            var toPos = new Vector2(toPosition.X, toPosition.Z);
-
-            var hasFrom = _sectorManager.TryLocate(fromPos, headingDegrees, out var fromSector, out var fromPortal, out _);
-            var hasTo = _sectorManager.TryLocate(toPos, headingDegrees, out var toSector, out var toPortal, out _);
+            var hasFrom = _sectorManager.TryLocate(fromPosition, headingDegrees, out var fromSector, out var fromPortal, out _);
+            var hasTo = _sectorManager.TryLocate(toPosition, headingDegrees, out var toSector, out var toPortal, out _);
             if (!hasTo)
                 return true;
 
@@ -808,12 +785,12 @@ namespace TopSpeed.Race
             return true;
         }
 
-        private bool IsSafeZone(Vector2 position)
+        private bool IsSafeZone(Vector3 worldPosition)
         {
             if (_areaManager == null)
                 return false;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return false;
 

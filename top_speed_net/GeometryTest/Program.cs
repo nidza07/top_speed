@@ -4,8 +4,8 @@ using System.IO;
 using System.Linq;
 using System.Numerics;
 using TopSpeed.Tracks.Areas;
+using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Map;
-using TopSpeed.Tracks.Topology;
 using TopSpeed.Tracks.Walls;
 
 namespace TopSpeed.GeometryTest
@@ -145,8 +145,8 @@ namespace TopSpeed.GeometryTest
                 return WriteLog(path, lines, out logPath) && false;
             }
 
-            var areaManager = new TrackAreaManager(map.Shapes, map.Areas);
-            var wallManager = new TrackWallManager(map.Shapes, map.Walls);
+            var areaManager = new TrackAreaManager(map.Geometries, map.Areas, map.Volumes);
+            var wallManager = new TrackWallManager(map.Geometries, map.Walls);
 
             if (!TryGetDrivableBounds(map, out var minX, out var minZ, out var maxX, out var maxZ))
             {
@@ -255,15 +255,15 @@ namespace TopSpeed.GeometryTest
         private static bool TryGetDrivableBounds(TrackMapDefinition map, out float minX, out float minZ, out float maxX, out float maxZ)
         {
             minX = minZ = maxX = maxZ = 0f;
-            if (map.Areas.Count == 0 || map.Shapes.Count == 0)
+            if (map.Areas.Count == 0 || map.Geometries.Count == 0)
                 return false;
 
-            var shapes = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
-            foreach (var shape in map.Shapes)
+            var geometries = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var geometry in map.Geometries)
             {
-                if (shape == null || string.IsNullOrWhiteSpace(shape.Id))
+                if (geometry == null || string.IsNullOrWhiteSpace(geometry.Id))
                     continue;
-                shapes[shape.Id] = shape;
+                geometries[geometry.Id] = geometry;
             }
 
             var hasBounds = false;
@@ -271,10 +271,10 @@ namespace TopSpeed.GeometryTest
             {
                 if (area == null || !IsDrivableArea(area))
                     continue;
-                if (!shapes.TryGetValue(area.ShapeId, out var shape))
+                if (!geometries.TryGetValue(area.GeometryId, out var geometry))
                     continue;
                 var width = area.WidthMeters.GetValueOrDefault();
-                if (!TryGetShapeBoundsExpanded(shape, width, out var sMinX, out var sMinZ, out var sMaxX, out var sMaxZ))
+                if (!TryGetGeometryBoundsExpanded(geometry, width, out var sMinX, out var sMinZ, out var sMaxX, out var sMaxZ))
                     continue;
                 if (!hasBounds)
                 {
@@ -296,8 +296,8 @@ namespace TopSpeed.GeometryTest
             return hasBounds;
         }
 
-        private static bool TryGetShapeBoundsExpanded(
-            ShapeDefinition shape,
+        private static bool TryGetGeometryBoundsExpanded(
+            GeometryDefinition geometry,
             float widthMeters,
             out float minX,
             out float minZ,
@@ -305,70 +305,28 @@ namespace TopSpeed.GeometryTest
             out float maxZ)
         {
             minX = minZ = maxX = maxZ = 0f;
-            if (shape == null)
+            if (geometry == null || geometry.Points == null || geometry.Points.Count == 0)
                 return false;
 
-            var expand = Math.Abs(widthMeters) * 0.5f;
-            switch (shape.Type)
+            minX = geometry.Points[0].X;
+            maxX = geometry.Points[0].X;
+            minZ = geometry.Points[0].Z;
+            maxZ = geometry.Points[0].Z;
+            for (var i = 1; i < geometry.Points.Count; i++)
             {
-                case ShapeType.Rectangle:
-                    minX = Math.Min(shape.X, shape.X + shape.Width) - expand;
-                    maxX = Math.Max(shape.X, shape.X + shape.Width) + expand;
-                    minZ = Math.Min(shape.Z, shape.Z + shape.Height) - expand;
-                    maxZ = Math.Max(shape.Z, shape.Z + shape.Height) + expand;
-                    return true;
-                case ShapeType.Circle:
-                    {
-                        var radius = Math.Abs(shape.Radius) + expand;
-                        minX = shape.X - radius;
-                        maxX = shape.X + radius;
-                        minZ = shape.Z - radius;
-                        maxZ = shape.Z + radius;
-                        return true;
-                    }
-                case ShapeType.Ring:
-                    {
-                        var ringWidth = Math.Abs(widthMeters) > 0f ? Math.Abs(widthMeters) : Math.Abs(shape.RingWidth);
-                        if (shape.Radius > 0f)
-                        {
-                            var outer = Math.Abs(shape.Radius) + ringWidth;
-                            minX = shape.X - outer;
-                            maxX = shape.X + outer;
-                            minZ = shape.Z - outer;
-                            maxZ = shape.Z + outer;
-                            return true;
-                        }
-
-                        minX = Math.Min(shape.X, shape.X + shape.Width) - ringWidth;
-                        maxX = Math.Max(shape.X, shape.X + shape.Width) + ringWidth;
-                        minZ = Math.Min(shape.Z, shape.Z + shape.Height) - ringWidth;
-                        maxZ = Math.Max(shape.Z, shape.Z + shape.Height) + ringWidth;
-                        return true;
-                    }
-                case ShapeType.Polygon:
-                case ShapeType.Polyline:
-                    if (shape.Points == null || shape.Points.Count == 0)
-                        return false;
-                    minX = shape.Points[0].X;
-                    maxX = shape.Points[0].X;
-                    minZ = shape.Points[0].Y;
-                    maxZ = shape.Points[0].Y;
-                    for (var i = 1; i < shape.Points.Count; i++)
-                    {
-                        var point = shape.Points[i];
-                        if (point.X < minX) minX = point.X;
-                        if (point.X > maxX) maxX = point.X;
-                        if (point.Y < minZ) minZ = point.Y;
-                        if (point.Y > maxZ) maxZ = point.Y;
-                    }
-                    minX -= expand;
-                    maxX += expand;
-                    minZ -= expand;
-                    maxZ += expand;
-                    return true;
-                default:
-                    return false;
+                var point = geometry.Points[i];
+                if (point.X < minX) minX = point.X;
+                if (point.X > maxX) maxX = point.X;
+                if (point.Z < minZ) minZ = point.Z;
+                if (point.Z > maxZ) maxZ = point.Z;
             }
+
+            var expand = Math.Abs(widthMeters) * 0.5f;
+            minX -= expand;
+            maxX += expand;
+            minZ -= expand;
+            maxZ += expand;
+            return true;
         }
 
         private static bool IsBlockedByWall(TrackWallManager wallManager, Vector2 position)

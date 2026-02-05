@@ -2,7 +2,9 @@ using System;
 using System.Collections.Generic;
 using System.Numerics;
 using TopSpeed.Tracks.Map;
+using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Volumes;
 
 namespace TopSpeed.Tracks.Guidance
 {
@@ -12,8 +14,8 @@ namespace TopSpeed.Tracks.Guidance
             string sectorId,
             TrackApproachSide side,
             string portalId,
-            Vector2 portalPosition,
-            Vector2 beaconPosition,
+            Vector3 portalPosition,
+            Vector3 beaconPosition,
             float targetHeadingDegrees,
             float deltaDegrees,
             float distanceMeters,
@@ -39,8 +41,8 @@ namespace TopSpeed.Tracks.Guidance
         public string SectorId { get; }
         public TrackApproachSide Side { get; }
         public string PortalId { get; }
-        public Vector2 PortalPosition { get; }
-        public Vector2 BeaconPosition { get; }
+        public Vector3 PortalPosition { get; }
+        public Vector3 BeaconPosition { get; }
         public float TargetHeadingDegrees { get; }
         public float DeltaDegrees { get; }
         public float DistanceMeters { get; }
@@ -54,7 +56,7 @@ namespace TopSpeed.Tracks.Guidance
     {
         private readonly TrackPortalManager _portalManager;
         private readonly TrackApproachManager _approachManager;
-        private readonly Dictionary<string, ShapeDefinition> _shapesById;
+        private readonly Dictionary<string, GeometryDefinition> _geometriesById;
         private readonly float _rangeMeters;
 
         public TrackApproachBeacon(TrackMap map, float rangeMeters = 50f)
@@ -64,12 +66,12 @@ namespace TopSpeed.Tracks.Guidance
 
             _portalManager = map.BuildPortalManager();
             _approachManager = new TrackApproachManager(map.Sectors, map.Approaches, _portalManager);
-            _shapesById = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
-            foreach (var shape in map.Shapes)
+            _geometriesById = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var geometry in map.Geometries)
             {
-                if (shape == null || string.IsNullOrWhiteSpace(shape.Id))
+                if (geometry == null || string.IsNullOrWhiteSpace(geometry.Id))
                     continue;
-                _shapesById[shape.Id.Trim()] = shape;
+                _geometriesById[geometry.Id.Trim()] = geometry;
             }
             _rangeMeters = Math.Max(1f, rangeMeters);
         }
@@ -82,7 +84,8 @@ namespace TopSpeed.Tracks.Guidance
             if (_approachManager.Approaches.Count == 0)
                 return false;
 
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
+            var position = worldPosition;
+            var position2D = new Vector2(worldPosition.X, worldPosition.Z);
             var best = default(Candidate);
             var hasBest = false;
 
@@ -106,11 +109,11 @@ namespace TopSpeed.Tracks.Guidance
 
             var delta = DeltaDegrees(headingDegrees, best.TargetHeadingDegrees);
             var forward = HeadingToVector(best.TargetHeadingDegrees);
-            var toPlayer = position - best.PortalPosition;
+            var toPlayer = position2D - new Vector2(best.PortalPosition.X, best.PortalPosition.Z);
             var passed = Vector2.Dot(forward, toPlayer) > 0f;
             var beaconPosition = best.PortalPosition;
             if (best.UseHeadingBeacon)
-                beaconPosition = ResolveBeaconPosition(position, best.TargetHeadingDegrees, best.BeaconShape);
+                beaconPosition = ResolveBeaconPosition(position, best.BeaconHeadingDegrees, best.BeaconGeometry);
 
             var sectorId = best.SectorId ?? string.Empty;
             var portalId = best.PortalId ?? string.Empty;
@@ -133,7 +136,7 @@ namespace TopSpeed.Tracks.Guidance
         private bool TryBuildCandidate(
             TrackApproachDefinition approach,
             TrackApproachSide side,
-            Vector2 position,
+            Vector3 position,
             float rangeMeters,
             ref Candidate best,
             ref bool hasBest)
@@ -144,20 +147,23 @@ namespace TopSpeed.Tracks.Guidance
                 return false;
             if (!_portalManager.TryGetPortal(portalId!, out var portal))
                 return false;
+            if (!IsWithinVolume(approach, portal, position.Y))
+                return false;
 
-            var portalPos = new Vector2(portal.X, portal.Z);
-            var portalDistance = Vector2.Distance(position, portalPos);
+            var portalPos = new Vector3(portal.X, portal.Y, portal.Z);
+            var portalDistance = Vector3.Distance(position, portalPos);
             var rangeDistance = portalDistance;
-            var hasShape = TryGetBeaconShape(approach, out var beaconShape);
-            if (hasShape)
-                rangeDistance = DistanceToShape(beaconShape, position, approach.WidthMeters);
+            var hasGeometry = TryGetBeaconGeometry(approach, out var beaconGeometry);
+            if (hasGeometry)
+                rangeDistance = DistanceToGeometry(beaconGeometry, position, approach.WidthMeters);
             if (rangeDistance > rangeMeters)
                 return false;
 
             if (!hasBest || portalDistance < best.DistanceMeters)
             {
+                var beaconHeading = ResolveBeaconHeading(approach, heading.Value);
                 var useHeadingBeacon = ResolveBeaconPlacement(approach);
-                var candidateShape = hasShape ? beaconShape : null;
+                var candidateGeometry = hasGeometry ? beaconGeometry : null;
                 best = new Candidate
                 {
                     SectorId = approach.SectorId,
@@ -165,12 +171,13 @@ namespace TopSpeed.Tracks.Guidance
                     PortalId = portal.Id,
                     PortalPosition = portalPos,
                     TargetHeadingDegrees = heading.Value,
+                    BeaconHeadingDegrees = beaconHeading,
                     DistanceMeters = portalDistance,
                     WidthMeters = approach.WidthMeters,
                     LengthMeters = approach.LengthMeters,
                     ToleranceDegrees = approach.AlignmentToleranceDegrees,
                     UseHeadingBeacon = useHeadingBeacon,
-                    BeaconShape = candidateShape
+                    BeaconGeometry = candidateGeometry
                 };
                 hasBest = true;
             }
@@ -243,49 +250,37 @@ namespace TopSpeed.Tracks.Guidance
             return useHeadingBeacon;
         }
 
-        private static Vector2 ResolveBeaconPosition(Vector2 position, float headingDegrees, ShapeDefinition? shape)
+        private static float ResolveBeaconHeading(TrackApproachDefinition approach, float fallbackHeading)
         {
-            var forward = HeadingToVector(headingDegrees);
-            if (shape == null)
+            if (approach?.Metadata == null || approach.Metadata.Count == 0)
+                return fallbackHeading;
+
+            if (TryGetHeadingValue(approach.Metadata, out var heading, "beacon_heading", "beacon_heading_deg", "beacon_orientation", "beacon_dir", "beacon_direction"))
+                return NormalizeDegrees(heading);
+
+            return fallbackHeading;
+        }
+
+        private static Vector3 ResolveBeaconPosition(Vector3 position, float headingDegrees, GeometryDefinition? geometry)
+        {
+            var forward = HeadingToVector3(headingDegrees);
+            if (geometry == null)
                 return position + forward;
 
-            switch (shape.Type)
+            var points3D = geometry.Points;
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    return ClosestPointOnRectangle(position, shape);
-                case ShapeType.Circle:
-                    return ClosestPointOnCircle(position, shape);
-                case ShapeType.Polyline:
-                    return ClosestPointOnPolyline(position, shape.Points);
-                case ShapeType.Polygon:
-                    return ClosestPointOnPolygon(position, shape.Points);
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
+                    return ClosestPointOnPolyline(position, points3D);
+                case GeometryType.Polygon:
+                    return ClosestPointOnPolygon(position, points3D);
                 default:
                     return position + forward;
             }
         }
 
-        private static Vector2 ClosestPointOnRectangle(Vector2 position, ShapeDefinition shape)
-        {
-            var minX = shape.X;
-            var maxX = shape.X + shape.Width;
-            var minZ = shape.Z;
-            var maxZ = shape.Z + shape.Height;
-            var x = Math.Max(minX, Math.Min(maxX, position.X));
-            var z = Math.Max(minZ, Math.Min(maxZ, position.Y));
-            return new Vector2(x, z);
-        }
-
-        private static Vector2 ClosestPointOnCircle(Vector2 position, ShapeDefinition shape)
-        {
-            var center = new Vector2(shape.X, shape.Z);
-            var toPoint = position - center;
-            var length = toPoint.Length();
-            if (length <= float.Epsilon)
-                return center + new Vector2(shape.Radius, 0f);
-            return center + (toPoint / length) * Math.Max(0f, shape.Radius);
-        }
-
-        private static Vector2 ClosestPointOnPolyline(Vector2 position, IReadOnlyList<Vector2> points)
+        private static Vector3 ClosestPointOnPolyline(Vector3 position, IReadOnlyList<Vector3> points)
         {
             if (points == null || points.Count == 0)
                 return position;
@@ -297,7 +292,7 @@ namespace TopSpeed.Tracks.Guidance
             for (var i = 0; i < points.Count - 1; i++)
             {
                 var candidate = ClosestPointOnSegment(points[i], points[i + 1], position);
-                var dist = Vector2.DistanceSquared(candidate, position);
+                var dist = Vector3.DistanceSquared(candidate, position);
                 if (dist < bestDist)
                 {
                     bestDist = dist;
@@ -307,12 +302,17 @@ namespace TopSpeed.Tracks.Guidance
             return best;
         }
 
-        private static Vector2 ClosestPointOnPolygon(Vector2 position, IReadOnlyList<Vector2> points)
+        private static Vector3 ClosestPointOnPolygon(Vector3 position, IReadOnlyList<Vector3> points)
         {
             if (points == null || points.Count == 0)
                 return position;
-            if (IsPointInPolygon(points, position))
-                return position;
+            if (IsPointInPolygon(ProjectToXZ(points), new Vector2(position.X, position.Z)))
+            {
+                if (TryGetPolygonPlane(points, out var planePoint, out var planeNormal))
+                    return ProjectToPlane(position, planePoint, planeNormal);
+                var avgY = ResolveAverageY(points);
+                return new Vector3(position.X, avgY, position.Z);
+            }
 
             var best = points[0];
             var bestDist = float.MaxValue;
@@ -321,7 +321,7 @@ namespace TopSpeed.Tracks.Guidance
                 var a = points[i];
                 var b = points[(i + 1) % points.Count];
                 var candidate = ClosestPointOnSegment(a, b, position);
-                var dist = Vector2.DistanceSquared(candidate, position);
+                var dist = Vector3.DistanceSquared(candidate, position);
                 if (dist < bestDist)
                 {
                     bestDist = dist;
@@ -331,15 +331,15 @@ namespace TopSpeed.Tracks.Guidance
             return best;
         }
 
-        private static Vector2 ClosestPointOnSegment(Vector2 a, Vector2 b, Vector2 p)
+        private static Vector3 ClosestPointOnSegment(Vector3 a, Vector3 b, Vector3 p)
         {
             var ab = b - a;
             var ap = p - a;
-            var abLenSq = Vector2.Dot(ab, ab);
+            var abLenSq = Vector3.Dot(ab, ab);
             if (abLenSq <= float.Epsilon)
                 return a;
 
-            var t = Vector2.Dot(ap, ab) / abLenSq;
+            var t = Vector3.Dot(ap, ab) / abLenSq;
             if (t < 0f)
                 t = 0f;
             else if (t > 1f)
@@ -348,72 +348,59 @@ namespace TopSpeed.Tracks.Guidance
             return a + (ab * t);
         }
 
-        private bool TryGetBeaconShape(TrackApproachDefinition approach, out ShapeDefinition shape)
+        private bool TryGetBeaconGeometry(TrackApproachDefinition approach, out GeometryDefinition geometry)
         {
-            shape = null!;
+            geometry = null!;
             if (approach?.Metadata == null || approach.Metadata.Count == 0)
                 return false;
 
-            if (!TryGetString(approach.Metadata, out var shapeId, "beacon_shape", "centerline_shape", "beacon_zone", "approach_shape"))
+            if (!TryGetString(approach.Metadata, out var geometryId, "beacon_geometry", "centerline_geometry", "beacon_zone", "approach_geometry"))
                 return false;
 
-            return _shapesById.TryGetValue(shapeId.Trim(), out shape!);
+            return _geometriesById.TryGetValue(geometryId.Trim(), out geometry!);
         }
 
-        private static float DistanceToShape(ShapeDefinition shape, Vector2 position, float? widthOverride)
+        private static float DistanceToGeometry(GeometryDefinition geometry, Vector3 position, float? widthOverride)
         {
-            switch (shape.Type)
+            if (geometry == null)
+                return float.MaxValue;
+
+            var points3D = geometry.Points;
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    return DistanceToRectangle(shape, position);
-                case ShapeType.Circle:
-                    return DistanceToCircle(shape, position);
-                case ShapeType.Polyline:
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
                     var width = widthOverride ?? 0f;
-                    return Math.Max(0f, DistanceToPolyline(shape.Points, position) - (width * 0.5f));
-                case ShapeType.Polygon:
-                    return DistanceToPolygon(shape.Points, position);
+                    return Math.Max(0f, DistanceToPolyline(points3D, position) - (width * 0.5f));
+                case GeometryType.Polygon:
+                    return DistanceToPolygon(points3D, position);
+                case GeometryType.Mesh:
+                case GeometryType.Undefined:
                 default:
-                    var center = new Vector2(shape.X, shape.Z);
-                    return Vector2.Distance(position, center);
+                    return DistanceToPoints(points3D, position);
             }
         }
 
-        private static float DistanceToRectangle(ShapeDefinition shape, Vector2 position)
+        private static float DistanceToPoints(IReadOnlyList<Vector3> points, Vector3 position)
         {
-            var minX = shape.X;
-            var maxX = shape.X + shape.Width;
-            var minZ = shape.Z;
-            var maxZ = shape.Z + shape.Height;
-
-            var dx = 0f;
-            if (position.X < minX)
-                dx = minX - position.X;
-            else if (position.X > maxX)
-                dx = position.X - maxX;
-
-            var dz = 0f;
-            if (position.Y < minZ)
-                dz = minZ - position.Y;
-            else if (position.Y > maxZ)
-                dz = position.Y - maxZ;
-
-            return (float)Math.Sqrt((dx * dx) + (dz * dz));
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var dist = Vector3.Distance(points[i], position);
+                if (dist < best)
+                    best = dist;
+            }
+            return best;
         }
 
-        private static float DistanceToCircle(ShapeDefinition shape, Vector2 position)
-        {
-            var center = new Vector2(shape.X, shape.Z);
-            var distance = Vector2.Distance(center, position);
-            return Math.Max(0f, distance - shape.Radius);
-        }
-
-        private static float DistanceToPolyline(IReadOnlyList<Vector2> points, Vector2 position)
+        private static float DistanceToPolyline(IReadOnlyList<Vector3> points, Vector3 position)
         {
             if (points == null || points.Count == 0)
                 return float.MaxValue;
             if (points.Count == 1)
-                return Vector2.Distance(points[0], position);
+                return Vector3.Distance(points[0], position);
 
             var best = float.MaxValue;
             for (var i = 0; i < points.Count - 1; i++)
@@ -425,13 +412,19 @@ namespace TopSpeed.Tracks.Guidance
             return best;
         }
 
-        private static float DistanceToPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        private static float DistanceToPolygon(IReadOnlyList<Vector3> points, Vector3 position)
         {
             if (points == null || points.Count == 0)
                 return float.MaxValue;
 
-            if (IsPointInPolygon(points, position))
-                return 0f;
+            var points2D = ProjectToXZ(points);
+            var position2D = new Vector2(position.X, position.Z);
+            if (IsPointInPolygon(points2D, position2D))
+            {
+                if (TryGetPolygonPlane(points, out var planePoint, out var planeNormal))
+                    return Math.Abs(Vector3.Dot(position - planePoint, planeNormal));
+                return Math.Abs(position.Y - ResolveAverageY(points));
+            }
 
             var best = float.MaxValue;
             for (var i = 0; i < points.Count; i++)
@@ -443,6 +436,18 @@ namespace TopSpeed.Tracks.Guidance
                     best = distance;
             }
             return best;
+        }
+
+        private static List<Vector2> ProjectToXZ(IReadOnlyList<Vector3> points)
+        {
+            var projected = new List<Vector2>();
+            if (points == null || points.Count == 0)
+                return projected;
+
+            projected.Capacity = points.Count;
+            foreach (var point in points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
         }
 
         private static bool IsPointInPolygon(IReadOnlyList<Vector2> points, Vector2 position)
@@ -462,20 +467,20 @@ namespace TopSpeed.Tracks.Guidance
             return inside;
         }
 
-        private static float DistanceToSegment(Vector2 a, Vector2 b, Vector2 position)
+        private static float DistanceToSegment(Vector3 a, Vector3 b, Vector3 position)
         {
             var ab = b - a;
             var ap = position - a;
-            var abLenSq = Vector2.Dot(ab, ab);
+            var abLenSq = Vector3.Dot(ab, ab);
             if (abLenSq <= float.Epsilon)
-                return Vector2.Distance(a, position);
-            var t = Vector2.Dot(ap, ab) / abLenSq;
+                return Vector3.Distance(a, position);
+            var t = Vector3.Dot(ap, ab) / abLenSq;
             if (t <= 0f)
-                return Vector2.Distance(a, position);
+                return Vector3.Distance(a, position);
             if (t >= 1f)
-                return Vector2.Distance(b, position);
+                return Vector3.Distance(b, position);
             var closest = a + (ab * t);
-            return Vector2.Distance(closest, position);
+            return Vector3.Distance(closest, position);
         }
 
         private static bool TryGetFloat(
@@ -565,6 +570,108 @@ namespace TopSpeed.Tracks.Guidance
             return result;
         }
 
+        private static bool TryGetHeadingValue(
+            IReadOnlyDictionary<string, string> metadata,
+            out float headingDegrees,
+            params string[] keys)
+        {
+            headingDegrees = 0f;
+            if (metadata == null || metadata.Count == 0)
+                return false;
+            foreach (var key in keys)
+            {
+                if (!metadata.TryGetValue(key, out var raw) || string.IsNullOrWhiteSpace(raw))
+                    continue;
+                if (TryParseCompassHeading(raw, out headingDegrees))
+                    return true;
+                if (float.TryParse(raw, System.Globalization.NumberStyles.Float, System.Globalization.CultureInfo.InvariantCulture, out headingDegrees))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool TryParseCompassHeading(string value, out float headingDegrees)
+        {
+            headingDegrees = 0f;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            var trimmed = value.Trim().ToLowerInvariant()
+                .Replace(" ", string.Empty)
+                .Replace("-", string.Empty)
+                .Replace("_", string.Empty);
+
+            switch (trimmed)
+            {
+                case "n":
+                case "north":
+                    headingDegrees = 0f;
+                    return true;
+                case "nne":
+                case "northnortheast":
+                    headingDegrees = 22.5f;
+                    return true;
+                case "ne":
+                case "northeast":
+                    headingDegrees = 45f;
+                    return true;
+                case "ene":
+                case "eastnortheast":
+                    headingDegrees = 67.5f;
+                    return true;
+                case "e":
+                case "east":
+                    headingDegrees = 90f;
+                    return true;
+                case "ese":
+                case "eastsoutheast":
+                    headingDegrees = 112.5f;
+                    return true;
+                case "se":
+                case "southeast":
+                    headingDegrees = 135f;
+                    return true;
+                case "sse":
+                case "southsoutheast":
+                    headingDegrees = 157.5f;
+                    return true;
+                case "s":
+                case "south":
+                    headingDegrees = 180f;
+                    return true;
+                case "ssw":
+                case "southsouthwest":
+                    headingDegrees = 202.5f;
+                    return true;
+                case "sw":
+                case "southwest":
+                    headingDegrees = 225f;
+                    return true;
+                case "wsw":
+                case "westsouthwest":
+                    headingDegrees = 247.5f;
+                    return true;
+                case "w":
+                case "west":
+                    headingDegrees = 270f;
+                    return true;
+                case "wnw":
+                case "westnorthwest":
+                    headingDegrees = 292.5f;
+                    return true;
+                case "nw":
+                case "northwest":
+                    headingDegrees = 315f;
+                    return true;
+                case "nnw":
+                case "northnorthwest":
+                    headingDegrees = 337.5f;
+                    return true;
+            }
+
+            return false;
+        }
+
         private static float DeltaDegrees(float current, float target)
         {
             var diff = Math.Abs(NormalizeDegrees(current - target));
@@ -577,19 +684,138 @@ namespace TopSpeed.Tracks.Guidance
             return new Vector2((float)Math.Sin(radians), (float)Math.Cos(radians));
         }
 
+        private static Vector3 HeadingToVector3(float headingDegrees)
+        {
+            var radians = headingDegrees * (float)Math.PI / 180f;
+            return new Vector3((float)Math.Sin(radians), 0f, (float)Math.Cos(radians));
+        }
+
+        private static float ResolveAverageY(IReadOnlyList<Vector3> points)
+        {
+            if (points == null || points.Count == 0)
+                return 0f;
+            var sum = 0f;
+            for (var i = 0; i < points.Count; i++)
+                sum += points[i].Y;
+            return sum / points.Count;
+        }
+
+        private static bool TryGetPolygonPlane(IReadOnlyList<Vector3> points, out Vector3 planePoint, out Vector3 planeNormal)
+        {
+            planePoint = Vector3.Zero;
+            planeNormal = Vector3.UnitY;
+            if (points == null || points.Count < 3)
+                return false;
+
+            for (var i = 0; i < points.Count - 2; i++)
+            {
+                var a = points[i];
+                var b = points[i + 1];
+                for (var j = i + 2; j < points.Count; j++)
+                {
+                    var c = points[j];
+                    var ab = b - a;
+                    var ac = c - a;
+                    var normal = Vector3.Cross(ab, ac);
+                    if (normal.LengthSquared() <= 0.000001f)
+                        continue;
+                    planePoint = a;
+                    planeNormal = Vector3.Normalize(normal);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static Vector3 ProjectToPlane(Vector3 position, Vector3 planePoint, Vector3 planeNormal)
+        {
+            var toPoint = position - planePoint;
+            var distance = Vector3.Dot(toPoint, planeNormal);
+            return position - (planeNormal * distance);
+        }
+
+        private static bool IsWithinVolume(TrackApproachDefinition approach, PortalDefinition portal, float y)
+        {
+            if (HasVolume(approach))
+            {
+                if (!VolumeBounds.TryResolve(
+                        portal.Y,
+                        approach.VolumeMode,
+                        approach.VolumeOffsetMode,
+                        approach.VolumeOffsetSpace,
+                        approach.VolumeMinMaxSpace,
+                        approach.VolumeThicknessMeters,
+                        approach.VolumeOffsetMeters,
+                        approach.VolumeMinY,
+                        approach.VolumeMaxY,
+                        out var minY,
+                        out var maxY))
+                {
+                    return true;
+                }
+
+                return y >= minY && y <= maxY;
+            }
+
+            if (HasVolume(portal))
+            {
+                if (!VolumeBounds.TryResolve(
+                        portal.Y,
+                        portal.VolumeMode,
+                        portal.VolumeOffsetMode,
+                        portal.VolumeOffsetSpace,
+                        portal.VolumeMinMaxSpace,
+                        portal.VolumeThicknessMeters,
+                        portal.VolumeOffsetMeters,
+                        portal.VolumeMinY,
+                        portal.VolumeMaxY,
+                        out var minY,
+                        out var maxY))
+                {
+                    return true;
+                }
+
+                return y >= minY && y <= maxY;
+            }
+
+            return true;
+        }
+
+        private static bool HasVolume(TrackApproachDefinition approach)
+        {
+            if (approach == null)
+                return false;
+            return approach.VolumeThicknessMeters.HasValue ||
+                   approach.VolumeOffsetMeters.HasValue ||
+                   approach.VolumeMinY.HasValue ||
+                   approach.VolumeMaxY.HasValue;
+        }
+
+        private static bool HasVolume(PortalDefinition portal)
+        {
+            if (portal == null)
+                return false;
+            return portal.VolumeThicknessMeters.HasValue ||
+                   portal.VolumeOffsetMeters.HasValue ||
+                   portal.VolumeMinY.HasValue ||
+                   portal.VolumeMaxY.HasValue;
+        }
+
         private struct Candidate
         {
             public string? SectorId;
             public TrackApproachSide Side;
             public string? PortalId;
-            public Vector2 PortalPosition;
+            public Vector3 PortalPosition;
             public float TargetHeadingDegrees;
+            public float BeaconHeadingDegrees;
             public float DistanceMeters;
             public float? WidthMeters;
             public float? LengthMeters;
             public float? ToleranceDegrees;
             public bool UseHeadingBeacon;
-            public ShapeDefinition? BeaconShape;
+            public GeometryDefinition? BeaconGeometry;
         }
     }
 }

@@ -9,6 +9,7 @@ using TopSpeed.Data;
 using TopSpeed.Input;
 using TopSpeed.Protocol;
 using TopSpeed.Tracks;
+using TopSpeed.Tracks.Collisions;
 using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Map;
 using TopSpeed.Tracks.Walls;
@@ -634,6 +635,20 @@ namespace TopSpeed.Vehicles
                 SoftWallHit();
         }
 
+        private void HandleMeshHit(TrackMeshCollision collision)
+        {
+            if (collision.Mode == TrackWallCollisionMode.Bounce)
+            {
+                SoftWallHit();
+                return;
+            }
+
+            if (IsHardWallMaterial(collision.Material))
+                Crash();
+            else
+                SoftWallHit();
+        }
+
         private void SoftWallHit()
         {
             if (_soundMiniCrash == null)
@@ -956,8 +971,34 @@ namespace TopSpeed.Vehicles
                 var velocity = (forward * _dynamicsState.VelLong) + (right * _dynamicsState.VelLat);
                 var nextPosition = _worldPosition + (velocity * elapsed);
 
-                var canMove = true;
-                if (_track.TryGetWallCollision(_worldPosition, nextPosition, out var wall))
+                var blockedBySurface = false;
+                var hasSurface = false;
+                if (_track.HasSurfaces)
+                {
+                    if (!_track.TryConstrainToSurface(nextPosition, out var constrained, out _))
+                    {
+                        blockedBySurface = true;
+                    }
+                    else
+                    {
+                        nextPosition = constrained;
+                        hasSurface = true;
+                    }
+                }
+
+                var blockedByMesh = false;
+                if (!blockedBySurface && _track.TryGetMeshCollision(_worldPosition, nextPosition, out var meshCollision))
+                {
+                    HandleMeshHit(meshCollision);
+                    blockedByMesh = true;
+                    var hitPosition = meshCollision.Position;
+                    if (meshCollision.Normal.LengthSquared() > 0.0001f)
+                        hitPosition -= Vector3.Normalize(meshCollision.Normal) * 0.02f;
+                    nextPosition = hitPosition;
+                }
+
+                var canMove = !blockedBySurface;
+                if (canMove && !blockedByMesh && _track.TryGetWallCollision(_worldPosition, nextPosition, out var wall))
                 {
                     HandleWallHit(wall);
                     canMove = false;
@@ -972,6 +1013,8 @@ namespace TopSpeed.Vehicles
 
                 if (canMove)
                 {
+                    if (blockedByMesh || hasSurface)
+                        distanceMeters = Vector3.Distance(previousPosition, nextPosition);
                     _worldPosition = nextPosition;
                     _mapState.WorldPosition = _worldPosition;
                     _mapState.HeadingDegrees = headingDegrees;
@@ -984,12 +1027,38 @@ namespace TopSpeed.Vehicles
                     _dynamicsState.VelLong = 0f;
                     _dynamicsState.VelLat = 0f;
                 }
+                if (blockedByMesh)
+                {
+                    _speed = 0f;
+                    _dynamicsState.VelLong = 0f;
+                    _dynamicsState.VelLat = 0f;
+                }
 
                 _positionY = _mapState.DistanceMeters;
                 var worldVelocity = elapsed > 0f ? (_worldPosition - previousPosition) / elapsed : Vector3.Zero;
-                _worldForward = forward.LengthSquared() > 0.0001f ? Vector3.Normalize(forward) : Vector3.UnitZ;
-                _worldUp = Vector3.UnitY;
+                if (_track.TryGetSurfaceOrientation(_worldPosition, headingDegrees, out var surfaceForward, out var surfaceUp))
+                {
+                    _worldForward = surfaceForward;
+                    _worldUp = surfaceUp;
+                }
+                else
+                {
+                    _worldForward = forward.LengthSquared() > 0.0001f ? Vector3.Normalize(forward) : Vector3.UnitZ;
+                    _worldUp = Vector3.UnitY;
+                }
                 _worldVelocity = worldVelocity;
+
+                var forwardAxis = _worldForward.LengthSquared() > 0.0001f ? Vector3.Normalize(_worldForward) : Vector3.UnitZ;
+                var upAxis = _worldUp.LengthSquared() > 0.0001f ? Vector3.Normalize(_worldUp) : Vector3.UnitY;
+                var rightAxis = Vector3.Cross(upAxis, forwardAxis);
+                if (rightAxis.LengthSquared() > 0.0001f)
+                    rightAxis = Vector3.Normalize(rightAxis);
+                else
+                    rightAxis = new Vector3(forwardAxis.Z, 0f, -forwardAxis.X);
+
+                var lateralDelta = Vector3.Dot(_worldPosition - previousPosition, rightAxis);
+                if (IsFinite(lateralDelta))
+                    _positionX += lateralDelta;
                 UpdateTurnTick();
 
                 if (_frame % 4 == 0)

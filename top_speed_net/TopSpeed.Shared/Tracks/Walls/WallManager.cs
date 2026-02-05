@@ -1,27 +1,30 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Geometry;
 
 namespace TopSpeed.Tracks.Walls
 {
     public sealed class TrackWallManager
     {
-        private readonly Dictionary<string, ShapeDefinition> _shapes;
+        private readonly Dictionary<string, GeometryDefinition> _geometries;
+        private readonly Dictionary<string, IReadOnlyList<Vector2>> _geometryPoints2D;
         private readonly List<TrackWallDefinition> _walls;
 
-        public TrackWallManager(IEnumerable<ShapeDefinition> shapes, IEnumerable<TrackWallDefinition> walls)
+        public TrackWallManager(IEnumerable<GeometryDefinition> geometries, IEnumerable<TrackWallDefinition> walls)
         {
-            _shapes = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
+            _geometries = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            _geometryPoints2D = new Dictionary<string, IReadOnlyList<Vector2>>(StringComparer.OrdinalIgnoreCase);
             _walls = new List<TrackWallDefinition>();
 
-            if (shapes != null)
+            if (geometries != null)
             {
-                foreach (var shape in shapes)
+                foreach (var geometry in geometries)
                 {
-                    if (shape == null)
+                    if (geometry == null)
                         continue;
-                    _shapes[shape.Id] = shape;
+                    _geometries[geometry.Id] = geometry;
+                    _geometryPoints2D[geometry.Id] = ProjectToXZ(geometry.Points);
                 }
             }
 
@@ -112,149 +115,31 @@ namespace TopSpeed.Tracks.Walls
         {
             if (wall == null)
                 return false;
-            if (!_shapes.TryGetValue(wall.ShapeId, out var shape))
+            if (!_geometries.TryGetValue(wall.GeometryId, out var geometry))
                 return false;
             var width = wall.WidthMeters;
-            return Contains(shape, position, width);
+            return Contains(geometry, position, width);
         }
 
-        private static bool Contains(ShapeDefinition shape, Vector2 position, float widthMeters)
+        private bool Contains(GeometryDefinition geometry, Vector2 position, float widthMeters)
         {
-            if (shape == null)
+            if (geometry == null)
                 return false;
-            switch (shape.Type)
+            if (!_geometryPoints2D.TryGetValue(geometry.Id, out var points2D))
+                points2D = ProjectToXZ(geometry.Points);
+
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    return widthMeters > 0f
-                        ? ContainsRectanglePath(shape, position, widthMeters)
-                        : ContainsRectangle(shape, position);
-                case ShapeType.Circle:
-                    return widthMeters > 0f
-                        ? ContainsCirclePath(shape, position, widthMeters)
-                        : ContainsCircle(shape, position);
-                case ShapeType.Ring:
-                    return widthMeters > 0f
-                        ? ContainsRingPath(shape, position, widthMeters)
-                        : ContainsRing(shape, position);
-                case ShapeType.Polygon:
-                    return ContainsPolygonPath(shape.Points, position, widthMeters);
-                case ShapeType.Polyline:
-                    return ContainsPolylinePath(shape.Points, position, widthMeters);
+                case GeometryType.Polygon:
+                    return ContainsPolygonPath(points2D, position, widthMeters);
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
+                    return ContainsPolylinePath(points2D, position, widthMeters);
+                case GeometryType.Mesh:
+                case GeometryType.Undefined:
                 default:
                     return false;
             }
-        }
-
-        private static bool ContainsRectangle(ShapeDefinition shape, Vector2 position)
-        {
-            var minX = shape.X;
-            var minZ = shape.Z;
-            var maxX = shape.X + shape.Width;
-            var maxZ = shape.Z + shape.Height;
-            return position.X >= minX && position.X <= maxX &&
-                   position.Y >= minZ && position.Y <= maxZ;
-        }
-
-        private static bool ContainsCircle(ShapeDefinition shape, Vector2 position)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            return (dx * dx + dz * dz) <= (shape.Radius * shape.Radius);
-        }
-
-        private static bool ContainsRectanglePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            if (widthMeters <= 0f)
-                return false;
-
-            var minX = Math.Min(shape.X, shape.X + shape.Width);
-            var maxX = Math.Max(shape.X, shape.X + shape.Width);
-            var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-            var centerX = (minX + maxX) * 0.5f;
-            var centerZ = (minZ + maxZ) * 0.5f;
-            var lengthX = Math.Abs(shape.Width);
-            var lengthZ = Math.Abs(shape.Height);
-            var halfWidth = widthMeters * 0.5f;
-            if (lengthX >= lengthZ)
-            {
-                if (position.X < minX || position.X > maxX)
-                    return false;
-                return Math.Abs(position.Y - centerZ) <= halfWidth;
-            }
-
-            if (position.Y < minZ || position.Y > maxZ)
-                return false;
-            return Math.Abs(position.X - centerX) <= halfWidth;
-        }
-
-        private static bool ContainsCirclePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var radius = Math.Abs(shape.Radius);
-            if (radius <= 0f || widthMeters <= 0f)
-                return false;
-
-            var dist = Vector2.Distance(new Vector2(shape.X, shape.Z), position);
-            var inner = Math.Max(0f, radius - widthMeters);
-            return dist >= inner && dist <= radius;
-        }
-
-        private static bool ContainsRing(ShapeDefinition shape, Vector2 position)
-        {
-            var ringWidth = Math.Abs(shape.RingWidth);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingPath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var ringWidth = Math.Abs(widthMeters);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingCircle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            var distSq = dx * dx + dz * dz;
-            var inner = Math.Abs(shape.Radius);
-            var outer = inner + ringWidth;
-            return distSq >= (inner * inner) && distSq <= (outer * outer);
-        }
-
-        private static bool ContainsRingRectangle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var innerMinX = shape.X;
-            var innerMinZ = shape.Z;
-            var innerMaxX = shape.X + shape.Width;
-            var innerMaxZ = shape.Z + shape.Height;
-            if (innerMaxX <= innerMinX || innerMaxZ <= innerMinZ)
-                return false;
-
-            var outerMinX = innerMinX - ringWidth;
-            var outerMinZ = innerMinZ - ringWidth;
-            var outerMaxX = innerMaxX + ringWidth;
-            var outerMaxZ = innerMaxZ + ringWidth;
-
-            var insideOuter = position.X >= outerMinX && position.X <= outerMaxX &&
-                              position.Y >= outerMinZ && position.Y <= outerMaxZ;
-            if (!insideOuter)
-                return false;
-
-            var insideInner = position.X >= innerMinX && position.X <= innerMaxX &&
-                              position.Y >= innerMinZ && position.Y <= innerMaxZ;
-            return !insideInner;
         }
 
         private static bool ContainsPolygon(IReadOnlyList<Vector2> points, Vector2 position)
@@ -352,6 +237,17 @@ namespace TopSpeed.Tracks.Walls
                 return Vector2.DistanceSquared(p, b);
             var projection = a + ab * t;
             return Vector2.DistanceSquared(p, projection);
+        }
+
+        private static IReadOnlyList<Vector2> ProjectToXZ(IReadOnlyList<Vector3> points)
+        {
+            if (points == null || points.Count == 0)
+                return Array.Empty<Vector2>();
+
+            var projected = new List<Vector2>(points.Count);
+            foreach (var point in points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
         }
     }
 }

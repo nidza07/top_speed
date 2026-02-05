@@ -69,6 +69,7 @@ namespace TopSpeed.Input
         public JoystickAxisOrButton JoystickReportSpeed { get; set; }
         public JoystickAxisOrButton JoystickReportWheelAngle { get; set; }
         public JoystickAxisOrButton JoystickReportHeading { get; set; }
+        public JoystickAxisOrButton JoystickReportSurface { get; set; }
         public JoystickAxisOrButton JoystickTrackName { get; set; }
         public JoystickAxisOrButton JoystickPause { get; set; }
         public JoystickStateSnapshot JoystickCenter { get; set; }
@@ -91,6 +92,7 @@ namespace TopSpeed.Input
         public Key KeyReportSpeed { get; set; }
         public Key KeyReportWheelAngle { get; set; }
         public Key KeyReportHeading { get; set; }
+        public Key KeyReportSurface { get; set; }
         public Key KeyTrackName { get; set; }
         public Key KeyPause { get; set; }
 
@@ -147,6 +149,7 @@ namespace TopSpeed.Input
             JoystickReportSpeed = JoystickAxisOrButton.Button12;
             JoystickReportWheelAngle = JoystickAxisOrButton.Button15;
             JoystickReportHeading = JoystickAxisOrButton.Button16;
+            JoystickReportSurface = JoystickAxisOrButton.AxisNone;
             JoystickTrackName = JoystickAxisOrButton.Button13;
             JoystickPause = JoystickAxisOrButton.Button14;
             JoystickCenter = default;
@@ -169,6 +172,7 @@ namespace TopSpeed.Input
             KeyReportSpeed = Key.S;
             KeyReportWheelAngle = Key.G;
             KeyReportHeading = Key.H;
+            KeyReportSurface = Key.Semicolon;
             KeyTrackName = Key.F9;
             KeyPause = Key.P;
 

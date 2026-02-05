@@ -11,8 +11,11 @@ using TopSpeed.Tracks.Areas;
 using TopSpeed.Tracks.Beacons;
 using TopSpeed.Tracks.Guidance;
 using TopSpeed.Tracks.Markers;
+using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Sectors;
+using TopSpeed.Tracks.Surfaces;
 using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Volumes;
 using TopSpeed.Tracks.Walls;
 
 namespace TopSpeed.Tracks.Map
@@ -77,6 +80,7 @@ namespace TopSpeed.Tracks.Map
     {
         public string Name { get; set; } = "Track";
         public float CellSizeMeters { get; set; } = 1f;
+        public float SurfaceResolutionMeters { get; set; } = 5f;
         public TrackWeather Weather { get; set; } = TrackWeather.Sunny;
         public TrackAmbience Ambience { get; set; } = TrackAmbience.NoAmbience;
         public string DefaultMaterialId { get; set; } = "asphalt";
@@ -86,6 +90,10 @@ namespace TopSpeed.Tracks.Map
         public float? BaseHeightMeters { get; set; }
         public float? DefaultAreaHeightMeters { get; set; }
         public float? DefaultCeilingHeightMeters { get; set; }
+        public float? MinX { get; set; }
+        public float? MinZ { get; set; }
+        public float? MaxX { get; set; }
+        public float? MaxZ { get; set; }
         public float StartX { get; set; }
         public float StartZ { get; set; }
         public float StartHeadingDegrees { get; set; }
@@ -109,7 +117,11 @@ namespace TopSpeed.Tracks.Map
             Metadata = metadata;
             Sectors = Array.Empty<TrackSectorDefinition>();
             Areas = Array.Empty<TrackAreaDefinition>();
-            Shapes = Array.Empty<ShapeDefinition>();
+            Geometries = Array.Empty<GeometryDefinition>();
+            Volumes = Array.Empty<TrackVolumeDefinition>();
+            Surfaces = Array.Empty<TrackSurfaceDefinition>();
+            Profiles = Array.Empty<TrackProfileDefinition>();
+            Banks = Array.Empty<TrackBankDefinition>();
             Portals = Array.Empty<PortalDefinition>();
             Links = Array.Empty<LinkDefinition>();
             Beacons = Array.Empty<TrackBeaconDefinition>();
@@ -125,7 +137,11 @@ namespace TopSpeed.Tracks.Map
             TrackMapMetadata metadata,
             List<TrackSectorDefinition> sectors,
             List<TrackAreaDefinition> areas,
-            List<ShapeDefinition> shapes,
+            List<GeometryDefinition> geometries,
+            List<TrackVolumeDefinition> volumes,
+            List<TrackSurfaceDefinition> surfaces,
+            List<TrackProfileDefinition> profiles,
+            List<TrackBankDefinition> banks,
             List<PortalDefinition> portals,
             List<LinkDefinition> links,
             List<TrackBeaconDefinition> beacons,
@@ -139,7 +155,11 @@ namespace TopSpeed.Tracks.Map
             Metadata = metadata;
             Sectors = sectors ?? new List<TrackSectorDefinition>();
             Areas = areas ?? new List<TrackAreaDefinition>();
-            Shapes = shapes ?? new List<ShapeDefinition>();
+            Geometries = geometries ?? new List<GeometryDefinition>();
+            Volumes = volumes ?? new List<TrackVolumeDefinition>();
+            Surfaces = surfaces ?? new List<TrackSurfaceDefinition>();
+            Profiles = profiles ?? new List<TrackProfileDefinition>();
+            Banks = banks ?? new List<TrackBankDefinition>();
             Portals = portals ?? new List<PortalDefinition>();
             Links = links ?? new List<LinkDefinition>();
             Beacons = beacons ?? new List<TrackBeaconDefinition>();
@@ -154,7 +174,11 @@ namespace TopSpeed.Tracks.Map
         public TrackMapMetadata Metadata { get; }
         public IReadOnlyList<TrackSectorDefinition> Sectors { get; }
         public IReadOnlyList<TrackAreaDefinition> Areas { get; }
-        public IReadOnlyList<ShapeDefinition> Shapes { get; }
+        public IReadOnlyList<GeometryDefinition> Geometries { get; }
+        public IReadOnlyList<TrackVolumeDefinition> Volumes { get; }
+        public IReadOnlyList<TrackSurfaceDefinition> Surfaces { get; }
+        public IReadOnlyList<TrackProfileDefinition> Profiles { get; }
+        public IReadOnlyList<TrackBankDefinition> Banks { get; }
         public IReadOnlyList<PortalDefinition> Portals { get; }
         public IReadOnlyList<LinkDefinition> Links { get; }
         public IReadOnlyList<TrackBeaconDefinition> Beacons { get; }
@@ -169,6 +193,12 @@ namespace TopSpeed.Tracks.Map
     public static class TrackMapFormat
     {
         private const string MapExtension = ".tsm";
+        private enum PolygonPlanarityMode
+        {
+            Strict = 0,
+            Relaxed = 1,
+            Ignore = 2
+        }
         private static readonly HashSet<string> SectorKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id",
@@ -176,7 +206,6 @@ namespace TopSpeed.Tracks.Map
             "name",
             "code",
             "area",
-            "shape",
             "material",
             "noise",
             "flags",
@@ -189,7 +218,12 @@ namespace TopSpeed.Tracks.Map
             "id",
             "type",
             "name",
-            "shape",
+            "geometry",
+            "geometry_id",
+            "volume",
+            "volume_id",
+            "surface",
+            "surface_id",
             "material",
             "noise",
             "width",
@@ -197,6 +231,23 @@ namespace TopSpeed.Tracks.Map
             "height",
             "ceiling",
             "ceiling_height",
+            "thickness",
+            "offset",
+            "min_y",
+            "max_y",
+            "volume_mode",
+            "volume_offset_mode",
+            "offset_mode",
+            "offset_anchor",
+            "volume_offset_anchor",
+            "offset_align",
+            "volume_offset_align",
+            "volume_offset_space",
+            "offset_space",
+            "volume_minmax_space",
+            "minmax_space",
+            "bounds_space",
+            "volume_bounds_space",
             "room",
             "reverb_time",
             "reverb_gain",
@@ -222,6 +273,122 @@ namespace TopSpeed.Tracks.Map
             "caps",
             "capabilities"
         };
+        private static readonly HashSet<string> GeometryKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id",
+            "type",
+            "name",
+            "points3d",
+            "points_3d",
+            "points3",
+            "vertices",
+            "vertex",
+            "vertices3d",
+            "vertices_3d",
+            "vertex3d",
+            "vertex_3d",
+            "triangles",
+            "triangle_indices",
+            "indices",
+            "faces",
+            "tris",
+            "tri",
+            "triangles3d",
+            "triangle3d",
+            "triangle_points",
+            "triangle_points3d",
+            "tri_points",
+            "tri_points3d",
+            "index_base",
+            "indices_base",
+            "indexbase"
+        };
+        private static readonly HashSet<string> VolumeKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id",
+            "type",
+            "name",
+            "geometry",
+            "geometry_id",
+            "mesh",
+            "points3d",
+            "points_3d",
+            "points3",
+            "vertices",
+            "vertex",
+            "x",
+            "y",
+            "z",
+            "elevation",
+            "center",
+            "position",
+            "pos",
+            "origin",
+            "width",
+            "height",
+            "depth",
+            "length",
+            "volume_height",
+            "volume_thickness",
+            "size",
+            "dimensions",
+            "extents",
+            "radius",
+            "r",
+            "min_x",
+            "max_x",
+            "min_y",
+            "max_y",
+            "min_z",
+            "max_z",
+            "offset",
+            "volume_offset",
+            "volume_center",
+            "offset_mode",
+            "offset_anchor",
+            "offset_align",
+            "volume_offset_mode",
+            "volume_offset_anchor",
+            "volume_offset_align",
+            "rotation",
+            "rotation_deg",
+            "rotation_degrees",
+            "rot",
+            "rot_deg",
+            "rot_degrees",
+            "yaw",
+            "pitch",
+            "roll",
+            "rotation_yaw",
+            "rotation_pitch",
+            "rotation_roll"
+        };
+        private static readonly HashSet<string> SurfaceKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id",
+            "type",
+            "name",
+            "geometry",
+            "profile",
+            "bank",
+            "layer",
+            "resolution",
+            "material"
+        };
+        private static readonly HashSet<string> ProfileKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id",
+            "type",
+            "name"
+        };
+        private static readonly HashSet<string> BankKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
+        {
+            "id",
+            "type",
+            "name",
+            "side",
+            "direction"
+        };
         private static readonly HashSet<string> BeaconKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id",
@@ -232,24 +399,70 @@ namespace TopSpeed.Tracks.Map
             "secondary",
             "sector",
             "object",
-            "shape",
+            "geometry",
             "x",
+            "y",
             "z",
             "heading",
             "orientation",
             "radius",
-            "activation_radius"
+            "activation_radius",
+            "height",
+            "thickness",
+            "offset",
+            "min_y",
+            "max_y",
+            "volume_mode",
+            "volume_thickness",
+            "volume_height",
+            "volume_offset",
+            "volume_center",
+            "volume_offset_mode",
+            "offset_mode",
+            "offset_anchor",
+            "volume_offset_anchor",
+            "offset_align",
+            "volume_offset_align",
+            "volume_offset_space",
+            "offset_space",
+            "volume_minmax_space",
+            "minmax_space",
+            "bounds_space",
+            "volume_bounds_space"
         };
         private static readonly HashSet<string> MarkerKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
             "id",
             "type",
             "name",
-            "shape",
+            "geometry",
             "x",
+            "y",
             "z",
             "heading",
-            "orientation"
+            "orientation",
+            "height",
+            "thickness",
+            "offset",
+            "min_y",
+            "max_y",
+            "volume_mode",
+            "volume_thickness",
+            "volume_height",
+            "volume_offset",
+            "volume_center",
+            "volume_offset_mode",
+            "offset_mode",
+            "offset_anchor",
+            "volume_offset_anchor",
+            "offset_align",
+            "volume_offset_align",
+            "volume_offset_space",
+            "offset_space",
+            "volume_minmax_space",
+            "minmax_space",
+            "bounds_space",
+            "volume_bounds_space"
         };
         private static readonly HashSet<string> ApproachKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -281,7 +494,29 @@ namespace TopSpeed.Tracks.Map
             "approach_length",
             "tolerance",
             "alignment_tolerance",
-            "align_tol"
+            "align_tol",
+            "height",
+            "thickness",
+            "offset",
+            "min_y",
+            "max_y",
+            "volume_mode",
+            "volume_thickness",
+            "volume_height",
+            "volume_offset",
+            "volume_center",
+            "volume_offset_mode",
+            "offset_mode",
+            "offset_anchor",
+            "volume_offset_anchor",
+            "offset_align",
+            "volume_offset_align",
+            "volume_offset_space",
+            "offset_space",
+            "volume_minmax_space",
+            "minmax_space",
+            "bounds_space",
+            "volume_bounds_space"
         };
         private static readonly HashSet<string> WallKnownKeys = new HashSet<string>(StringComparer.OrdinalIgnoreCase)
         {
@@ -378,7 +613,11 @@ namespace TopSpeed.Tracks.Map
             var metadata = new TrackMapMetadata();
             var sectors = new List<TrackSectorDefinition>();
             var areas = new List<TrackAreaDefinition>();
-            var shapes = new List<ShapeDefinition>();
+            var geometries = new List<GeometryDefinition>();
+            var volumes = new List<TrackVolumeDefinition>();
+            var surfaces = new List<TrackSurfaceDefinition>();
+            var profiles = new List<TrackProfileDefinition>();
+            var banks = new List<TrackBankDefinition>();
             var portals = new List<PortalDefinition>();
             var links = new List<LinkDefinition>();
             var beacons = new List<TrackBeaconDefinition>();
@@ -402,7 +641,7 @@ namespace TopSpeed.Tracks.Map
                     case "cell":
                     case "line":
                     case "rect":
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Grid cell sections are no longer supported. Use shapes and areas instead.", block.StartLine));
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Grid cell sections are no longer supported. Use geometry and areas instead.", block.StartLine));
                         break;
                     case "sector":
                         ApplySector(sectors, block, issues);
@@ -413,26 +652,38 @@ namespace TopSpeed.Tracks.Map
                     case "area":
                         ApplyArea(metadata, areas, block, issues);
                         break;
-                    case "shape":
-                        ApplyShape(shapes, block, issues);
+                    case "geometry":
+                        ApplyGeometry(geometries, block, issues);
+                        break;
+                    case "volume":
+                        ApplyVolume(volumes, block, issues);
+                        break;
+                    case "surface":
+                        ApplySurface(surfaces, block, issues);
+                        break;
+                    case "profile":
+                        ApplyProfile(profiles, block, issues);
+                        break;
+                    case "bank":
+                        ApplyBank(banks, block, issues);
                         break;
                     case "portal":
-                        ApplyPortal(portals, block, issues);
+                        ApplyPortal(portals, block, issues, metadata.BaseHeightMeters);
                         break;
                     case "link":
                         ApplyLink(links, block, issues);
                         break;
                     case "path":
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Path sections are not supported. Use areas with shapes instead.", block.StartLine));
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Path sections are not supported. Use [geometry] with type=polyline or type=spline instead.", block.StartLine));
                         break;
                     case "lane":
                         issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Lane sections are not supported. Use area metadata for optional lane guidance.", block.StartLine));
                         break;
                     case "beacon":
-                        ApplyBeacon(beacons, block, issues);
+                        ApplyBeacon(beacons, block, issues, metadata.BaseHeightMeters);
                         break;
                     case "marker":
-                        ApplyMarker(markers, block, issues);
+                        ApplyMarker(markers, block, issues, metadata.BaseHeightMeters);
                         break;
                     case "approach":
                         ApplyApproach(approaches, block, issues);
@@ -457,7 +708,7 @@ namespace TopSpeed.Tracks.Map
                         ApplyRoom(rooms, block, issues);
                         break;
                     case "turn":
-                        ApplyTurn(metadata, sectors, areas, shapes, portals, approaches, block, issues);
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn sections are not supported. Use [geometry], [area], [portal], and [approach] instead.", block.StartLine));
                         break;
                     case "curve":
                         issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Curve sections are not supported. Use areas, portals, and approach metadata instead.", block.StartLine));
@@ -466,11 +717,13 @@ namespace TopSpeed.Tracks.Map
             }
 
             if (guideBlocks.Count > 0)
-                ApplyGuides(guideBlocks, sectors, areas, shapes, portals, approaches, issues);
+                ApplyGuides(guideBlocks, sectors, areas, geometries, portals, approaches, issues);
             if (branchBlocks.Count > 0)
                 ApplyBranches(branchBlocks, sectors, areas, portals, branches, issues);
 
-            map = new TrackMapDefinition(metadata, sectors, areas, shapes, portals, links, beacons, markers, approaches, branches, walls, materials, rooms);
+            ValidateVolumeReferences(volumes, areas, geometries, issues);
+
+            map = new TrackMapDefinition(metadata, sectors, areas, geometries, volumes, surfaces, profiles, banks, portals, links, beacons, markers, approaches, branches, walls, materials, rooms);
             return issues.All(issue => issue.Severity != TrackMapIssueSeverity.Error);
         }
 
@@ -632,6 +885,14 @@ namespace TopSpeed.Tracks.Map
                     metadata.CellSizeMeters = Math.Max(0.1f, cellSize);
             }
 
+            if (TryGetValue(block, "surface_resolution", out var surfaceResRaw) ||
+                TryGetValue(block, "surface_cell_size", out surfaceResRaw) ||
+                TryGetValue(block, "surface_grid", out surfaceResRaw))
+            {
+                if (TryFloat(surfaceResRaw, out var surfaceRes))
+                    metadata.SurfaceResolutionMeters = Math.Max(0.1f, surfaceRes);
+            }
+
             if (TryGetValue(block, "default_material", out var defaultMaterial) &&
                 !string.IsNullOrWhiteSpace(defaultMaterial))
             {
@@ -661,6 +922,18 @@ namespace TopSpeed.Tracks.Map
             if (TryGetValue(block, "default_ceiling_height", out var defaultCeilingRaw) &&
                 TryFloat(defaultCeilingRaw, out var defaultCeilingHeight))
                 metadata.DefaultCeilingHeightMeters = defaultCeilingHeight;
+
+            if (TryGetValue(block, "min_x", out var minXRaw) && TryFloat(minXRaw, out var minX))
+                metadata.MinX = minX;
+
+            if (TryGetValue(block, "min_z", out var minZRaw) && TryFloat(minZRaw, out var minZ))
+                metadata.MinZ = minZ;
+
+            if (TryGetValue(block, "max_x", out var maxXRaw) && TryFloat(maxXRaw, out var maxX))
+                metadata.MaxX = maxX;
+
+            if (TryGetValue(block, "max_z", out var maxZRaw) && TryFloat(maxZRaw, out var maxZ))
+                metadata.MaxZ = maxZ;
 
             if (TryGetValue(block, "weather", out var weatherRaw) &&
                 Enum.TryParse(weatherRaw, true, out TrackWeather weather))
@@ -744,122 +1017,461 @@ namespace TopSpeed.Tracks.Map
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "default_ceiling_height must be above base_height.", block.StartLine));
         }
 
-        private static void ApplyShape(
-            List<ShapeDefinition> shapes,
+        private static void ApplyGeometry(
+            List<GeometryDefinition> geometries,
             SectionBlock block,
             List<TrackMapIssue> issues)
         {
             if (!TryReadId(block, out var id))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Shape requires an id.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Geometry requires an id.", block.StartLine));
                 return;
             }
 
-            if (shapes.Any(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase)))
+            if (geometries.Any(g => string.Equals(g.Id, id, StringComparison.OrdinalIgnoreCase)))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate shape id '{id}'.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate geometry id '{id}'.", block.StartLine));
                 return;
             }
 
             if (!TryGetValue(block, "type", out var rawType) ||
                 string.IsNullOrWhiteSpace(rawType) ||
-                !TryShapeType(rawType, out var shapeType))
+                !TryGeometryType(rawType, out var geometryType))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Shape requires a valid type.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Geometry requires a valid type.", block.StartLine));
                 return;
             }
 
-            switch (shapeType)
+            var points = new List<Vector3>();
+            var triangleIndices = new List<int>();
+            var hasPoints = TryParsePoints3D(block, out points);
+
+            if (geometryType == GeometryType.Mesh)
             {
-                case ShapeType.Rectangle:
-                    if (!TryFloat(block, "x", out var rectX) ||
-                        !TryFloat(block, "z", out var rectZ) ||
-                        !TryFloat(block, "width", out var rectWidth) ||
-                        !TryFloat(block, "height", out var rectHeight) ||
-                        rectWidth <= 0f || rectHeight <= 0f)
+                var hasTrianglePoints = TryParseTrianglePoints3D(block, out var trianglePoints);
+                var hasIndices = TryParseTriangleIndices(block, out triangleIndices);
+                var indexBase = TryIntAny(block, out var indexBaseValue, "index_base", "indices_base", "indexbase") ? indexBaseValue : 0;
+
+                if (hasTrianglePoints)
+                {
+                    if (trianglePoints.Count < 3 || (trianglePoints.Count % 3) != 0)
                     {
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Rectangle requires x, z, width, height.", block.StartLine));
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Mesh triangles3d must be a multiple of 3 points.", block.StartLine));
                         return;
                     }
-                    shapes.Add(new ShapeDefinition(id, shapeType, rectX, rectZ, rectWidth, rectHeight));
-                    break;
-                case ShapeType.Circle:
-                    if (!TryFloat(block, "x", out var circleX) ||
-                        !TryFloat(block, "z", out var circleZ) ||
-                        !TryFloat(block, "radius", out var circleRadius) ||
-                        circleRadius <= 0f)
+
+                    points = trianglePoints;
+                    triangleIndices = new List<int>(points.Count);
+                    for (var i = 0; i < points.Count; i++)
+                        triangleIndices.Add(i);
+                }
+                else
+                {
+                    if (!hasPoints)
                     {
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Circle requires x, z, radius.", block.StartLine));
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Mesh requires vertices (points3d/vertices3d) or triangles3d.", block.StartLine));
                         return;
                     }
-                    shapes.Add(new ShapeDefinition(id, shapeType, circleX, circleZ, radius: circleRadius));
-                    break;
-                case ShapeType.Ring:
-                    if (TryFloat(block, "radius", out var ringRadius))
+
+                    if (!hasIndices)
                     {
-                        if (!TryFloat(block, "x", out var ringX) ||
-                            !TryFloat(block, "z", out var ringZ) ||
-                            !TryFloat(block, "ring_width", out var ringWidth) ||
-                            ringRadius <= 0f || ringWidth <= 0f)
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Mesh requires triangle indices (triangles/indices/faces).", block.StartLine));
+                        return;
+                    }
+
+                    if (triangleIndices.Count < 3 || (triangleIndices.Count % 3) != 0)
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Mesh triangle indices must be a multiple of 3.", block.StartLine));
+                        return;
+                    }
+
+                    if (indexBase != 0)
+                    {
+                        for (var i = 0; i < triangleIndices.Count; i++)
+                            triangleIndices[i] -= indexBase;
+                    }
+
+                    for (var i = 0; i < triangleIndices.Count; i++)
+                    {
+                        var index = triangleIndices[i];
+                        if (index < 0 || index >= points.Count)
                         {
-                            issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Ring circle requires x, z, radius, ring_width.", block.StartLine));
+                            issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Mesh index {index} is out of range for {points.Count} vertices.", block.StartLine));
                             return;
                         }
-                        shapes.Add(new ShapeDefinition(id, shapeType, ringX, ringZ, radius: ringRadius, ringWidth: ringWidth));
                     }
-                    else
-                    {
-                        if (!TryFloat(block, "x", out var ringRectX) ||
-                            !TryFloat(block, "z", out var ringRectZ) ||
-                            !TryFloat(block, "width", out var ringRectWidth) ||
-                            !TryFloat(block, "height", out var ringRectHeight) ||
-                            !TryFloat(block, "ring_width", out var ringRectRing) ||
-                            ringRectWidth <= 0f || ringRectHeight <= 0f || ringRectRing <= 0f)
-                        {
-                            issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Ring rectangle requires x, z, width, height, ring_width.", block.StartLine));
-                            return;
-                        }
-                        shapes.Add(new ShapeDefinition(id, shapeType, ringRectX, ringRectZ, ringRectWidth, ringRectHeight, ringWidth: ringRectRing));
-                    }
-                    break;
-                case ShapeType.Polygon:
-                case ShapeType.Polyline:
-                    if (!TryParsePoints(block, out var points))
-                    {
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Shape requires points.", block.StartLine));
-                        return;
-                    }
-                    if (shapeType == ShapeType.Polygon && points.Count < 3)
-                    {
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon requires at least 3 points.", block.StartLine));
-                        return;
-                    }
-                    if (shapeType == ShapeType.Polyline && points.Count < 2)
-                    {
-                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polyline requires at least 2 points.", block.StartLine));
-                        return;
-                    }
-                    if (shapeType == ShapeType.Polygon)
-                    {
-                        var normalized = NormalizePolygonPoints(points);
-                        if (normalized.Count < 3)
-                        {
-                            issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon requires at least 3 distinct points.", block.StartLine));
-                            return;
-                        }
-                        if (!ValidatePolygon(normalized, id, issues, block.StartLine))
-                            return;
-                        shapes.Add(new ShapeDefinition(id, shapeType, points: normalized));
-                    }
-                    else
-                    {
-                        shapes.Add(new ShapeDefinition(id, shapeType, points: points));
-                    }
-                    break;
-                default:
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Shape '{id}' has unsupported type '{rawType}'.", block.StartLine));
-                    break;
+                }
             }
+            else
+            {
+                if (!hasPoints)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Geometry requires points3d.", block.StartLine));
+                    return;
+                }
+
+                if ((geometryType == GeometryType.Polyline || geometryType == GeometryType.Spline) && points.Count < 2)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polyline requires at least 2 points.", block.StartLine));
+                    return;
+                }
+
+                if (geometryType == GeometryType.Polygon)
+                {
+                    var normalized = NormalizePolygonPoints3D(points);
+                    if (normalized.Count < 3)
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon requires at least 3 distinct points.", block.StartLine));
+                        return;
+                    }
+
+                    if (!TryGetPlane(normalized, out var planeOrigin, out var planeNormal))
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon points are collinear.", block.StartLine));
+                        return;
+                    }
+
+                    var planarityMode = TryParsePolygonPlanarityMode(block, out var parsedPlanarity)
+                        ? parsedPlanarity
+                        : PolygonPlanarityMode.Strict;
+
+                    if (planarityMode == PolygonPlanarityMode.Strict && !IsPlanar(normalized, planeOrigin, planeNormal))
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon points must be planar.", block.StartLine));
+                        return;
+                    }
+
+                    var projected = ProjectToPlane(normalized, planeOrigin, planeNormal);
+                    var normalized2D = NormalizePolygonPoints(projected);
+                    if (normalized2D.Count < 3)
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Polygon requires at least 3 distinct points.", block.StartLine));
+                        return;
+                    }
+
+                    if (!ValidatePolygon(normalized2D, id, issues, block.StartLine))
+                        return;
+
+                    points = normalized;
+                }
+            }
+
+            var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
+            var metadata = CollectGeometryMetadata(block);
+            geometries.Add(new GeometryDefinition(id, geometryType, points, triangleIndices, name, metadata));
+        }
+
+        private static void ApplyVolume(
+            List<TrackVolumeDefinition> volumes,
+            SectionBlock block,
+            List<TrackMapIssue> issues)
+        {
+            if (!TryReadId(block, out var id))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Volume requires an id.", block.StartLine));
+                return;
+            }
+
+            if (volumes.Any(v => string.Equals(v.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate volume id '{id}'.", block.StartLine));
+                return;
+            }
+
+            if (!TryGetValue(block, "type", out var rawType) ||
+                string.IsNullOrWhiteSpace(rawType) ||
+                !TryVolumeType(rawType, out var volumeType))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Volume requires a valid type.", block.StartLine));
+                return;
+            }
+
+            var geometryId = TryGetValue(block, "geometry", out var geometryValue) ? geometryValue :
+                (TryGetValue(block, "geometry_id", out geometryValue) ? geometryValue : null);
+            if (string.IsNullOrWhiteSpace(geometryId) && TryGetValue(block, "mesh", out var meshValue))
+                geometryId = meshValue;
+
+            var hasCenter = TryParseVector3Any(block, out var center, "center", "position", "pos", "origin");
+            if (!hasCenter)
+            {
+                var hasX = TryFloat(block, "x", out var xValue);
+                var hasZ = TryFloat(block, "z", out var zValue);
+                var yValue = TryFloatAny(block, out var yParsed, "y", "elevation") ? yParsed : 0f;
+                if (hasX && hasZ)
+                {
+                    center = new Vector3(xValue, yValue, zValue);
+                    hasCenter = true;
+                }
+            }
+
+            var rotation = Vector3.Zero;
+            TryParseRotation(block, out rotation);
+
+            var size = Vector3.Zero;
+            var radius = 0f;
+            var height = 0f;
+            float? minY = null;
+            float? maxY = null;
+
+            if (volumeType == TrackVolumeType.Box)
+            {
+                if (TryParseVector3Any(block, out var sizeValue, "size", "dimensions", "extents"))
+                    size = sizeValue;
+                else
+                {
+                    var hasWidth = TryFloat(block, "width", out var widthValue);
+                    var hasHeight = TryFloatAny(block, out var heightValue, "height", "volume_height");
+                    var hasDepth = TryFloatAny(block, out var depthValue, "depth", "length");
+                    if (hasWidth && hasHeight && hasDepth)
+                        size = new Vector3(widthValue, heightValue, depthValue);
+                }
+
+                var hasMinX = TryFloatAny(block, out var minXValue, "min_x", "minx");
+                var hasMaxX = TryFloatAny(block, out var maxXValue, "max_x", "maxx");
+                var hasMinY = TryFloatAny(block, out var minYValue, "min_y", "miny");
+                var hasMaxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy");
+                var hasMinZ = TryFloatAny(block, out var minZValue, "min_z", "minz");
+                var hasMaxZ = TryFloatAny(block, out var maxZValue, "max_z", "maxz");
+
+                if (hasMinX || hasMaxX || hasMinY || hasMaxY || hasMinZ || hasMaxZ)
+                {
+                    if (!hasMinX || !hasMaxX || !hasMinY || !hasMaxY || !hasMinZ || !hasMaxZ)
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' box min/max requires all axes.", block.StartLine));
+                        return;
+                    }
+
+                    size = new Vector3(maxXValue - minXValue, maxYValue - minYValue, maxZValue - minZValue);
+                    center = new Vector3((minXValue + maxXValue) * 0.5f, (minYValue + maxYValue) * 0.5f, (minZValue + maxZValue) * 0.5f);
+                    hasCenter = true;
+                }
+
+                if (size.X <= 0f || size.Y <= 0f || size.Z <= 0f)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' box requires positive size.", block.StartLine));
+                    return;
+                }
+
+                if (!hasCenter)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' box requires center (x,y,z) or min/max bounds.", block.StartLine));
+                    return;
+                }
+            }
+            else if (volumeType == TrackVolumeType.Sphere)
+            {
+                if (!TryFloatAny(block, out var radiusValue, "radius", "r") || radiusValue <= 0f)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' sphere requires radius.", block.StartLine));
+                    return;
+                }
+                radius = radiusValue;
+                if (!hasCenter)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' sphere requires center (x,y,z).", block.StartLine));
+                    return;
+                }
+            }
+            else if (volumeType == TrackVolumeType.Cylinder || volumeType == TrackVolumeType.Capsule)
+            {
+                if (!TryFloatAny(block, out var radiusValue, "radius", "r") || radiusValue <= 0f)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' requires radius.", block.StartLine));
+                    return;
+                }
+                if (!TryFloatAny(block, out var heightValue, "height", "length", "volume_height", "volume_thickness", "thickness") || heightValue <= 0f)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' requires height.", block.StartLine));
+                    return;
+                }
+                radius = radiusValue;
+                height = heightValue;
+                if (!hasCenter)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' requires center (x,y,z).", block.StartLine));
+                    return;
+                }
+            }
+            else if (volumeType == TrackVolumeType.Prism)
+            {
+                if (string.IsNullOrWhiteSpace(geometryId))
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' prism requires geometry.", block.StartLine));
+                    return;
+                }
+
+                if (TryFloatAny(block, out var minYValue, "min_y", "miny"))
+                    minY = minYValue;
+                if (TryFloatAny(block, out var maxYValue, "max_y", "maxy"))
+                    maxY = maxYValue;
+
+                if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' prism max_y must be above min_y.", block.StartLine));
+                    return;
+                }
+
+                if (!minY.HasValue || !maxY.HasValue)
+                {
+                    if (!TryFloatAny(block, out var heightValue, "height", "thickness", "volume_height", "volume_thickness") || heightValue <= 0f)
+                    {
+                        issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' prism requires height or min/max y.", block.StartLine));
+                        return;
+                    }
+
+                    var offset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center") ? offsetValue : 0f;
+                    var offsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                        ? offsetModeValue
+                        : TrackAreaVolumeOffsetMode.Bottom;
+
+                    var minLocal = offset;
+                    switch (offsetMode)
+                    {
+                        case TrackAreaVolumeOffsetMode.Center:
+                            minLocal = offset - (heightValue * 0.5f);
+                            break;
+                        case TrackAreaVolumeOffsetMode.Top:
+                            minLocal = offset - heightValue;
+                            break;
+                    }
+                    minY = minLocal;
+                    maxY = minLocal + heightValue;
+                }
+            }
+            else if (volumeType == TrackVolumeType.Mesh)
+            {
+                if (string.IsNullOrWhiteSpace(geometryId))
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Volume '{id}' mesh requires geometry.", block.StartLine));
+                    return;
+                }
+            }
+
+            var metadata = CollectVolumeMetadata(block);
+            volumes.Add(new TrackVolumeDefinition(
+                id,
+                volumeType,
+                center,
+                hasCenter,
+                size,
+                radius,
+                height,
+                geometryId,
+                minY,
+                maxY,
+                rotation,
+                metadata));
+        }
+
+        private static void ApplySurface(
+            List<TrackSurfaceDefinition> surfaces,
+            SectionBlock block,
+            List<TrackMapIssue> issues)
+        {
+            if (!TryReadId(block, out var id))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Surface requires an id.", block.StartLine));
+                return;
+            }
+
+            if (!TryGetValue(block, "type", out var rawType) ||
+                string.IsNullOrWhiteSpace(rawType) ||
+                !TrySurfaceType(rawType, out var surfaceType))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Surface requires a valid type.", block.StartLine));
+                return;
+            }
+
+            if (surfaces.Any(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate surface id '{id}'.", block.StartLine));
+                return;
+            }
+
+            var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
+            var shapeId = TryGetValue(block, "geometry", out var shapeValue) ? shapeValue : null;
+            var profileId = TryGetValue(block, "profile", out var profileValue) ? profileValue : null;
+            var bankId = TryGetValue(block, "bank", out var bankValue) ? bankValue : null;
+            var materialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
+            var layer = TryInt(block, "layer", out var layerValue) ? layerValue : 0;
+            var resolution = TryFloat(block, "resolution", out var resolutionValue) ? Math.Max(0.1f, resolutionValue) : (float?)null;
+            var metadata = CollectSurfaceMetadata(block);
+
+            surfaces.Add(new TrackSurfaceDefinition(id, surfaceType, shapeId, profileId, bankId, layer, resolution, materialId, name, metadata));
+        }
+
+        private static void ApplyProfile(
+            List<TrackProfileDefinition> profiles,
+            SectionBlock block,
+            List<TrackMapIssue> issues)
+        {
+            if (!TryReadId(block, out var id))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Profile requires an id.", block.StartLine));
+                return;
+            }
+
+            if (!TryGetValue(block, "type", out var rawType) ||
+                string.IsNullOrWhiteSpace(rawType) ||
+                !TryProfileType(rawType, out var profileType))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Profile requires a valid type.", block.StartLine));
+                return;
+            }
+
+            if (profiles.Any(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate profile id '{id}'.", block.StartLine));
+                return;
+            }
+
+            var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
+            var parameters = CollectProfileMetadata(block);
+            profiles.Add(new TrackProfileDefinition(id, profileType, name, parameters));
+        }
+
+        private static void ApplyBank(
+            List<TrackBankDefinition> banks,
+            SectionBlock block,
+            List<TrackMapIssue> issues)
+        {
+            if (!TryReadId(block, out var id))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Bank requires an id.", block.StartLine));
+                return;
+            }
+
+            if (!TryGetValue(block, "type", out var rawType) ||
+                string.IsNullOrWhiteSpace(rawType) ||
+                !TryBankType(rawType, out var bankType))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Bank requires a valid type.", block.StartLine));
+                return;
+            }
+
+            if (banks.Any(b => string.Equals(b.Id, id, StringComparison.OrdinalIgnoreCase)))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate bank id '{id}'.", block.StartLine));
+                return;
+            }
+
+            var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
+            var side = TrackBankSide.Right;
+            var hasSide = TryGetValue(block, "side", out var sideRaw) || TryGetValue(block, "direction", out sideRaw);
+            if (hasSide && !TryBankSide(sideRaw, out side))
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Bank side must be left or right.", block.StartLine));
+                return;
+            }
+
+            if (bankType != TrackBankType.Flat && !hasSide)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Bank requires side=left or side=right.", block.StartLine));
+                return;
+            }
+
+            var parameters = CollectBankMetadata(block);
+            banks.Add(new TrackBankDefinition(id, bankType, side, name, parameters));
         }
 
         private static void ApplySector(
@@ -895,8 +1507,7 @@ namespace TopSpeed.Tracks.Map
 
             var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
             var code = TryGetValue(block, "code", out var codeValue) ? codeValue : null;
-            var areaId = TryGetValue(block, "area", out var areaValue) ? areaValue :
-                (TryGetValue(block, "shape", out areaValue) ? areaValue : null);
+            var areaId = TryGetValue(block, "area", out var areaValue) ? areaValue : null;
             var materialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
             var noise = TryNoise(block, "noise", out var noiseValue) ? noiseValue : (TrackNoise?)null;
             var flags = TrySectorFlags(block, out var sectorFlags) ? sectorFlags : TrackSectorFlags.None;
@@ -925,6 +1536,88 @@ namespace TopSpeed.Tracks.Map
 
             if (result.Count > 2 && NearlyEqual(result[0], result[result.Count - 1]))
                 result.RemoveAt(result.Count - 1);
+
+            return result;
+        }
+
+        private static List<Vector3> NormalizePolygonPoints3D(IReadOnlyList<Vector3> points)
+        {
+            var result = new List<Vector3>();
+            if (points == null || points.Count == 0)
+                return result;
+
+            for (var i = 0; i < points.Count; i++)
+            {
+                var current = points[i];
+                if (result.Count == 0 || !NearlyEqual(result[result.Count - 1], current))
+                    result.Add(current);
+            }
+
+            if (result.Count > 2 && NearlyEqual(result[0], result[result.Count - 1]))
+                result.RemoveAt(result.Count - 1);
+
+            return result;
+        }
+
+        private static bool TryGetPlane(IReadOnlyList<Vector3> points, out Vector3 origin, out Vector3 normal)
+        {
+            origin = Vector3.Zero;
+            normal = Vector3.UnitY;
+            if (points == null || points.Count < 3)
+                return false;
+
+            for (var i = 0; i < points.Count - 2; i++)
+            {
+                var a = points[i];
+                for (var j = i + 1; j < points.Count - 1; j++)
+                {
+                    var b = points[j];
+                    for (var k = j + 1; k < points.Count; k++)
+                    {
+                        var c = points[k];
+                        var ab = b - a;
+                        var ac = c - a;
+                        var cross = Vector3.Cross(ab, ac);
+                        if (cross.LengthSquared() > 0.000001f)
+                        {
+                            origin = a;
+                            normal = Vector3.Normalize(cross);
+                            return true;
+                        }
+                    }
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsPlanar(IReadOnlyList<Vector3> points, Vector3 origin, Vector3 normal)
+        {
+            if (points == null || points.Count == 0)
+                return false;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var distance = Vector3.Dot(normal, points[i] - origin);
+                if (Math.Abs(distance) > 0.001f)
+                    return false;
+            }
+            return true;
+        }
+
+        private static List<Vector2> ProjectToPlane(IReadOnlyList<Vector3> points, Vector3 origin, Vector3 normal)
+        {
+            var up = Math.Abs(normal.Y) < 0.99f ? Vector3.UnitY : Vector3.UnitX;
+            var axisX = Vector3.Normalize(Vector3.Cross(up, normal));
+            var axisY = Vector3.Normalize(Vector3.Cross(normal, axisX));
+
+            var result = new List<Vector2>(points.Count);
+            for (var i = 0; i < points.Count; i++)
+            {
+                var rel = points[i] - origin;
+                result.Add(new Vector2(
+                    Vector3.Dot(rel, axisX),
+                    Vector3.Dot(rel, axisY)));
+            }
 
             return result;
         }
@@ -1032,6 +1725,11 @@ namespace TopSpeed.Tracks.Map
             return Vector2.DistanceSquared(a, b) <= 0.0001f * 0.0001f;
         }
 
+        private static bool NearlyEqual(Vector3 a, Vector3 b)
+        {
+            return Vector3.DistanceSquared(a, b) <= 0.0001f * 0.0001f;
+        }
+
         private static void ApplyJunction(
             List<TrackSectorDefinition> sectors,
             SectionBlock block,
@@ -1048,15 +1746,14 @@ namespace TopSpeed.Tracks.Map
             SectionBlock block,
             List<TrackMapIssue> issues)
         {
-            if (block.Values.ContainsKey("surface") ||
-                block.Values.ContainsKey("acoustic_material") ||
+            if (block.Values.ContainsKey("acoustic_material") ||
                 block.Values.ContainsKey("audio_material") ||
                 block.Values.ContainsKey("sound_material") ||
                 block.Values.ContainsKey("wall_acoustic_material") ||
                 block.Values.ContainsKey("wall_audio_material") ||
                 block.Values.ContainsKey("wall_sound_material"))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area surface/acoustic_material is not supported. Use material instead.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area acoustic_material is not supported. Use material instead.", block.StartLine));
                 return;
             }
 
@@ -1080,17 +1777,29 @@ namespace TopSpeed.Tracks.Map
                 return;
             }
 
-            if (!TryGetValue(block, "shape", out var shapeId) || string.IsNullOrWhiteSpace(shapeId))
+            var geometryId = TryGetValue(block, "geometry", out var geometryValue) ? geometryValue :
+                (TryGetValue(block, "geometry_id", out geometryValue) ? geometryValue : null);
+            if (string.IsNullOrWhiteSpace(geometryId))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area requires a shape id.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area requires a geometry id.", block.StartLine));
                 return;
             }
+
+            var volumeId = TryGetValue(block, "volume", out var volumeValue) ? volumeValue :
+                (TryGetValue(block, "volume_id", out volumeValue) ? volumeValue : null);
+            if (string.IsNullOrWhiteSpace(volumeId))
+                volumeId = null;
+
+            var surfaceId = TryGetValue(block, "surface", out var surfaceValue) ? surfaceValue :
+                (TryGetValue(block, "surface_id", out surfaceValue) ? surfaceValue : null);
+            if (string.IsNullOrWhiteSpace(surfaceId))
+                surfaceId = null;
 
             if (TryGetValue(block, "invert", out _) ||
                 TryGetValue(block, "outside", out _) ||
                 TryGetValue(block, "outside_of", out _))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area invert/outside is not supported. Use a ring shape with ring_width.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Area invert/outside is not supported. Use a dedicated polygon volume instead.", block.StartLine));
                 return;
             }
 
@@ -1133,6 +1842,31 @@ namespace TopSpeed.Tracks.Map
                 return;
             }
 
+            var volumeThickness = TryFloatAny(block, out var thicknessValue, "thickness", "volume_thickness", "volume_height")
+                ? Math.Max(0.01f, thicknessValue)
+                : (float?)null;
+            var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                ? offsetValue
+                : (float?)null;
+            var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+            var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+            var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+            var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                ? offsetModeValue
+                : TrackAreaVolumeOffsetMode.Bottom;
+            var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                ? offsetSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+            var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                ? minMaxSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+
+            if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' max_y must be above min_y.", block.StartLine));
+                return;
+            }
+
             var ceilingMeters = (float?)null;
             if (TryFloatAny(block, out var ceilingValue, "ceiling_height", "ceiling"))
                 ceilingMeters = ceilingValue;
@@ -1170,7 +1904,31 @@ namespace TopSpeed.Tracks.Map
             if (HasBranchKeys(block))
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{id}' contains branch keys. Use a [branch] section instead.", block.StartLine));
 
-            areas.Add(new TrackAreaDefinition(id, areaType, shapeId, elevationMeters, heightMeters, ceilingMeters, roomId, roomOverrides, name, materialId, noise, width, flags, areaMetadata));
+            areas.Add(new TrackAreaDefinition(
+                id,
+                areaType,
+                geometryId,
+                elevationMeters,
+                heightMeters,
+                ceilingMeters,
+                roomId,
+                roomOverrides,
+                name,
+                materialId,
+                noise,
+                width,
+                flags,
+                areaMetadata,
+                volumeId,
+                surfaceId,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
         }
 
         private static bool HasGuideKeys(SectionBlock block)
@@ -1219,10 +1977,10 @@ namespace TopSpeed.Tracks.Map
                 case "range":
                 case "beacon_range":
                 case "beacon_mode":
-                case "beacon_shape":
+                case "beacon_geometry":
                 case "turn_range":
-                case "turn_shape":
-                case "centerline_shape":
+                case "turn_geometry":
+                case "centerline_geometry":
                 case "entry_enabled":
                 case "exit_enabled":
                 case "beacon_enabled":
@@ -1264,7 +2022,7 @@ namespace TopSpeed.Tracks.Map
             List<SectionBlock> blocks,
             List<TrackSectorDefinition> sectors,
             List<TrackAreaDefinition> areas,
-            List<ShapeDefinition> shapes,
+            List<GeometryDefinition> geometries,
             List<PortalDefinition> portals,
             List<TrackApproachDefinition> approaches,
             List<TrackMapIssue> issues)
@@ -1278,6 +2036,14 @@ namespace TopSpeed.Tracks.Map
                 if (sector == null)
                     continue;
                 sectorsById[sector.Id] = sector;
+            }
+
+            var areasById = new Dictionary<string, TrackAreaDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var area in areas)
+            {
+                if (area == null || string.IsNullOrWhiteSpace(area.Id))
+                    continue;
+                areasById[area.Id] = area;
             }
 
             var portalIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1301,12 +2067,12 @@ namespace TopSpeed.Tracks.Map
                 list.Add(sector);
             }
 
-            var shapeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
-            foreach (var shape in shapes)
+            var geometryIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            foreach (var geometry in geometries)
             {
-                if (shape == null || string.IsNullOrWhiteSpace(shape.Id))
+                if (geometry == null || string.IsNullOrWhiteSpace(geometry.Id))
                     continue;
-                shapeIds.Add(shape.Id);
+                geometryIds.Add(geometry.Id);
             }
 
             var guideIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
@@ -1373,6 +2139,31 @@ namespace TopSpeed.Tracks.Map
                 var length = TryFloat(block, "length", out var lengthValue) ? Math.Max(0.1f, lengthValue) : (float?)null;
                 var tolerance = TryFloat(block, "tolerance", out var toleranceValue) ? Math.Max(0f, toleranceValue) : (float?)null;
 
+                var volumeThickness = TryFloatAny(block, out var thicknessValue, "height", "thickness", "volume_thickness", "volume_height")
+                    ? Math.Max(0.01f, thicknessValue)
+                    : (float?)null;
+                var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                    ? offsetValue
+                    : (float?)null;
+                var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+                var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+                var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+                var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                    ? offsetModeValue
+                    : TrackAreaVolumeOffsetMode.Bottom;
+                var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                    ? offsetSpaceValue
+                    : TrackAreaVolumeSpace.Inherit;
+                var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                    ? minMaxSpaceValue
+                    : TrackAreaVolumeSpace.Inherit;
+
+                if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+                {
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Guide '{id}' max_y must be above min_y.", block.StartLine));
+                    continue;
+                }
+
                 var metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
                 if (TryGetValue(block, "side", out var side))
                     metadata["approach_side"] = side.Trim();
@@ -1384,14 +2175,14 @@ namespace TopSpeed.Tracks.Map
                     metadata["beacon_range"] = beaconRange.Trim();
                 if (TryGetValue(block, "beacon_mode", out var beaconMode))
                     metadata["beacon_mode"] = beaconMode.Trim();
-                if (TryGetValue(block, "beacon_shape", out var beaconShape))
-                    metadata["beacon_shape"] = beaconShape.Trim();
+                if (TryGetValue(block, "beacon_geometry", out var beaconGeometry))
+                    metadata["beacon_geometry"] = beaconGeometry.Trim();
                 if (TryGetValue(block, "turn_range", out var turnRange))
                     metadata["turn_range"] = turnRange.Trim();
-                if (TryGetValue(block, "turn_shape", out var turnShape))
-                    metadata["turn_shape"] = turnShape.Trim();
-                if (TryGetValue(block, "centerline_shape", out var centerlineShape))
-                    metadata["centerline_shape"] = centerlineShape.Trim();
+                if (TryGetValue(block, "turn_geometry", out var turnGeometry))
+                    metadata["turn_geometry"] = turnGeometry.Trim();
+                if (TryGetValue(block, "centerline_geometry", out var centerlineGeometry))
+                    metadata["centerline_geometry"] = centerlineGeometry.Trim();
                 if (TryGetValue(block, "enabled", out var enabled))
                     metadata["enabled"] = enabled.Trim();
                 if (TryGetValue(block, "entry_enabled", out var entryEnabled))
@@ -1403,9 +2194,16 @@ namespace TopSpeed.Tracks.Map
                 if (TryGetValue(block, "turn_enabled", out var turnEnabled))
                     metadata["turn_enabled"] = turnEnabled.Trim();
 
-                ValidateGuideShape(metadata, shapeIds, "beacon_shape", id, issues, block.StartLine);
-                ValidateGuideShape(metadata, shapeIds, "turn_shape", id, issues, block.StartLine);
-                ValidateGuideShape(metadata, shapeIds, "centerline_shape", id, issues, block.StartLine);
+                if (!metadata.ContainsKey("beacon_geometry"))
+                {
+                    var areaGeometryId = ResolveGuideAreaGeometry(areaId, targets, areasById);
+                    if (!string.IsNullOrWhiteSpace(areaGeometryId))
+                        metadata["beacon_geometry"] = areaGeometryId!;
+                }
+
+                ValidateGuideGeometry(metadata, geometryIds, "beacon_geometry", id, issues, block.StartLine);
+                ValidateGuideGeometry(metadata, geometryIds, "turn_geometry", id, issues, block.StartLine);
+                ValidateGuideGeometry(metadata, geometryIds, "centerline_geometry", id, issues, block.StartLine);
 
                 var entries = ParsePortalRefs(block, "entries", "entry_portals", "entry_list");
                 var exits = ParsePortalRefs(block, "exits", "exit_portals", "exit_list");
@@ -1445,6 +2243,14 @@ namespace TopSpeed.Tracks.Map
                         width,
                         length,
                         tolerance,
+                        volumeThickness,
+                        volumeOffset,
+                        minY,
+                        maxY,
+                        volumeMode,
+                        volumeOffsetMode,
+                        volumeOffsetSpace,
+                        volumeMinMaxSpace,
                         metadata,
                         id,
                         issues,
@@ -1453,9 +2259,9 @@ namespace TopSpeed.Tracks.Map
             }
         }
 
-        private static void ValidateGuideShape(
+        private static void ValidateGuideGeometry(
             IReadOnlyDictionary<string, string> metadata,
-            HashSet<string> shapeIds,
+            HashSet<string> geometryIds,
             string key,
             string guideId,
             List<TrackMapIssue> issues,
@@ -1465,8 +2271,8 @@ namespace TopSpeed.Tracks.Map
                 return;
             if (string.IsNullOrWhiteSpace(value))
                 return;
-            if (!shapeIds.Contains(value.Trim()))
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Guide '{guideId}' references missing shape '{value}' for {key}.", line));
+            if (!geometryIds.Contains(value.Trim()))
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Guide '{guideId}' references missing geometry '{value}' for {key}.", line));
         }
 
         private readonly struct PortalRef
@@ -1519,10 +2325,10 @@ namespace TopSpeed.Tracks.Map
             {
                 portalId = trimmed.Substring(0, separator).Trim();
                 var headingRaw = trimmed.Substring(separator + 1).Trim();
-                if (TryDirection(headingRaw, out var direction))
-                    heading = DirectionToDegrees(direction);
-                else if (TryFloat(headingRaw, out var headingValue))
+                if (TryParseCompassHeading(headingRaw, out var headingValue))
                     heading = headingValue;
+                else if (TryFloat(headingRaw, out var headingNumeric))
+                    heading = headingNumeric;
             }
             else
             {
@@ -1542,8 +2348,8 @@ namespace TopSpeed.Tracks.Map
             var headings = new List<float>();
             foreach (var token in SplitTokens(raw))
             {
-                if (TryDirection(token, out var direction))
-                    headings.Add(DirectionToDegrees(direction));
+                if (TryParseCompassHeading(token, out var headingValue))
+                    headings.Add(headingValue);
                 else if (TryFloat(token, out var value))
                     headings.Add(value);
             }
@@ -1570,6 +2376,14 @@ namespace TopSpeed.Tracks.Map
             float? width,
             float? length,
             float? tolerance,
+            float? volumeThickness,
+            float? volumeOffset,
+            float? minY,
+            float? maxY,
+            TrackAreaVolumeMode volumeMode,
+            TrackAreaVolumeOffsetMode volumeOffsetMode,
+            TrackAreaVolumeSpace volumeOffsetSpace,
+            TrackAreaVolumeSpace volumeMinMaxSpace,
             IReadOnlyDictionary<string, string> metadata,
             string guideId,
             List<TrackMapIssue> issues,
@@ -1596,7 +2410,9 @@ namespace TopSpeed.Tracks.Map
 
                     for (var i = 0; i < entries.Count; i++)
                     {
-                        AddGuideApproach(approaches, sectorId, name, entries[i], exits[i], width, length, tolerance, metadata);
+                        AddGuideApproach(approaches, sectorId, name, entries[i], exits[i], width, length, tolerance,
+                            volumeThickness, volumeOffset, minY, maxY, volumeMode, volumeOffsetMode, volumeOffsetSpace, volumeMinMaxSpace,
+                            metadata);
                     }
                     return;
                 }
@@ -1604,7 +2420,9 @@ namespace TopSpeed.Tracks.Map
                 foreach (var entry in entries)
                 {
                     foreach (var exit in exits)
-                        AddGuideApproach(approaches, sectorId, name, entry, exit, width, length, tolerance, metadata);
+                        AddGuideApproach(approaches, sectorId, name, entry, exit, width, length, tolerance,
+                            volumeThickness, volumeOffset, minY, maxY, volumeMode, volumeOffsetMode, volumeOffsetSpace, volumeMinMaxSpace,
+                            metadata);
                 }
 
                 return;
@@ -1613,12 +2431,16 @@ namespace TopSpeed.Tracks.Map
             if (entries.Count > 0)
             {
                 foreach (var entry in entries)
-                    AddGuideApproach(approaches, sectorId, name, entry, null, width, length, tolerance, metadata);
+                    AddGuideApproach(approaches, sectorId, name, entry, null, width, length, tolerance,
+                        volumeThickness, volumeOffset, minY, maxY, volumeMode, volumeOffsetMode, volumeOffsetSpace, volumeMinMaxSpace,
+                        metadata);
                 return;
             }
 
             foreach (var exit in exits)
-                AddGuideApproach(approaches, sectorId, name, null, exit, width, length, tolerance, metadata);
+                AddGuideApproach(approaches, sectorId, name, null, exit, width, length, tolerance,
+                    volumeThickness, volumeOffset, minY, maxY, volumeMode, volumeOffsetMode, volumeOffsetSpace, volumeMinMaxSpace,
+                    metadata);
         }
 
         private static void AddGuideApproach(
@@ -1630,6 +2452,14 @@ namespace TopSpeed.Tracks.Map
             float? width,
             float? length,
             float? tolerance,
+            float? volumeThickness,
+            float? volumeOffset,
+            float? minY,
+            float? maxY,
+            TrackAreaVolumeMode volumeMode,
+            TrackAreaVolumeOffsetMode volumeOffsetMode,
+            TrackAreaVolumeSpace volumeOffsetSpace,
+            TrackAreaVolumeSpace volumeMinMaxSpace,
             IReadOnlyDictionary<string, string> metadata)
         {
             string? entryPortalId = entry?.PortalId;
@@ -1647,7 +2477,36 @@ namespace TopSpeed.Tracks.Map
                 width,
                 length,
                 tolerance,
-                metadata));
+                metadata,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
+        }
+
+        private static string? ResolveGuideAreaGeometry(
+            string? areaId,
+            List<TrackSectorDefinition> targets,
+            Dictionary<string, TrackAreaDefinition> areasById)
+        {
+            if (!string.IsNullOrWhiteSpace(areaId) && areasById.TryGetValue(areaId.Trim(), out var area))
+                return area.GeometryId;
+
+            if (targets != null && targets.Count == 1)
+            {
+                var sectorAreaId = targets[0].AreaId;
+                if (!string.IsNullOrWhiteSpace(sectorAreaId) &&
+                    areasById.TryGetValue(sectorAreaId.Trim(), out var sectorArea))
+                {
+                    return sectorArea.GeometryId;
+                }
+            }
+
+            return null;
         }
 
         private static void ApplyBranches(
@@ -2048,7 +2907,8 @@ namespace TopSpeed.Tracks.Map
         private static void ApplyPortal(
             List<PortalDefinition> portals,
             SectionBlock block,
-            List<TrackMapIssue> issues)
+            List<TrackMapIssue> issues,
+            float? baseHeightMeters)
         {
             if (!TryReadId(block, out var id))
             {
@@ -2068,6 +2928,9 @@ namespace TopSpeed.Tracks.Map
                 return;
             }
 
+            var hasY = TryFloatAny(block, out var yValue, "y", "elevation");
+            var y = hasY ? yValue : baseHeightMeters.GetValueOrDefault(0f);
+
             if (portals.Any(p => string.Equals(p.Id, id, StringComparison.OrdinalIgnoreCase)))
             {
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate portal id '{id}'.", block.StartLine));
@@ -2077,6 +2940,31 @@ namespace TopSpeed.Tracks.Map
             var width = TryFloat(block, "width", out var widthMeters) ? Math.Max(0.1f, widthMeters) : 0f;
             var entryHeading = TryReadHeading(block, "entry", out var entryHeadingValue) ? entryHeadingValue : (float?)null;
             var exitHeading = TryReadHeading(block, "exit", out var exitHeadingValue) ? exitHeadingValue : (float?)null;
+
+            var volumeThickness = TryFloatAny(block, out var thicknessValue, "height", "thickness", "volume_thickness", "volume_height")
+                ? Math.Max(0.01f, thicknessValue)
+                : (float?)null;
+            var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                ? offsetValue
+                : (float?)null;
+            var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+            var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+            var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+            var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                ? offsetModeValue
+                : TrackAreaVolumeOffsetMode.Bottom;
+            var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                ? offsetSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+            var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                ? minMaxSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+
+            if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Portal '{id}' max_y must be above min_y.", block.StartLine));
+                return;
+            }
 
             if (!entryHeading.HasValue && !exitHeading.HasValue && TryReadHeadingFallback(block, out var bothHeading))
             {
@@ -2093,245 +2981,24 @@ namespace TopSpeed.Tracks.Map
                     role = PortalRole.Exit;
             }
 
-            portals.Add(new PortalDefinition(id, sectorId.Trim(), x, z, width, entryHeading, exitHeading, role));
-        }
-
-        private static void ApplyTurn(
-            TrackMapMetadata metadata,
-            List<TrackSectorDefinition> sectors,
-            List<TrackAreaDefinition> areas,
-            List<ShapeDefinition> shapes,
-            List<PortalDefinition> portals,
-            List<TrackApproachDefinition> approaches,
-            SectionBlock block,
-            List<TrackMapIssue> issues)
-        {
-            if (!TryReadId(block, out var id))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires an id.", block.StartLine));
-                return;
-            }
-
-            if (sectors.Any(s => string.Equals(s.Id, id, StringComparison.OrdinalIgnoreCase)) ||
-                areas.Any(a => string.Equals(a.Id, $"{id}_area", StringComparison.OrdinalIgnoreCase)) ||
-                shapes.Any(s => string.Equals(s.Id, $"{id}_shape", StringComparison.OrdinalIgnoreCase)) ||
-                portals.Any(p => string.Equals(p.Id, $"{id}_entry", StringComparison.OrdinalIgnoreCase)) ||
-                portals.Any(p => string.Equals(p.Id, $"{id}_exit", StringComparison.OrdinalIgnoreCase)) ||
-                approaches.Any(a => string.Equals(a.SectorId, id, StringComparison.OrdinalIgnoreCase)))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Turn id '{id}' conflicts with existing ids.", block.StartLine));
-                return;
-            }
-
-            var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
-            var turnMaterialId = TryMaterialId(block, "material", out var materialValue) ? materialValue : null;
-            var turnWallMaterialId = TryMaterialId(block, "wall_material_id", out var wallMaterialValue) ? wallMaterialValue : null;
-            var hasTurnWallHeight = TryFloatAny(block, out var turnWallHeight, "wall_height", "wall_height_m");
-            var turnNoise = TryNoise(block, "noise", out var noiseValue) ? noiseValue : (TrackNoise?)null;
-            var turnWidth = TryFloatAny(block, out var turnWidthValue, "area_width", "corridor_width", "area_width_m") ? Math.Max(0.1f, turnWidthValue) : (float?)null;
-            var turnFlags = TryAreaFlags(block, out var parsedTurnFlags) ? parsedTurnFlags : TrackAreaFlags.None;
-            var hasTurnElevation = TryFloatAny(block, out var turnElevationValue, "elevation");
-            var hasTurnHeight = TryFloatAny(block, out var turnHeightValue, "height");
-            var hasTurnCeiling = TryFloatAny(block, out var turnCeilingValue, "ceiling_height", "ceiling");
-            var turnRoomId = TryGetValue(block, "room", out var roomValue) ? roomValue?.Trim() : null;
-            if (string.IsNullOrWhiteSpace(turnRoomId))
-                turnRoomId = null;
-            var turnRoomOverrides = ReadRoomOverrides(block, out var hasTurnRoomOverrides);
-
-            if (!TryReadHeading(block, "from", out var fromHeading) &&
-                !TryReadHeading(block, "entry", out fromHeading) &&
-                !TryReadHeading(block, "start", out fromHeading))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires a from_heading.", block.StartLine));
-                return;
-            }
-
-            if (!TryReadHeading(block, "to", out var toHeading) &&
-                !TryReadHeading(block, "exit", out toHeading) &&
-                !TryReadHeading(block, "end", out toHeading))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires a to_heading.", block.StartLine));
-                return;
-            }
-
-            if (!TryDirectionFromDegrees(fromHeading, out var fromDir) ||
-                !TryDirectionFromDegrees(toHeading, out var toDir))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn headings must be cardinal directions.", block.StartLine));
-                return;
-            }
-
-            var fromVec = DirectionVector(fromDir);
-            var toVec = DirectionVector(toDir);
-            var leftVec = new Vector2(-fromVec.Y, fromVec.X);
-            var rightVec = new Vector2(fromVec.Y, -fromVec.X);
-            if (!VectorsEqual(toVec, leftVec) && !VectorsEqual(toVec, rightVec))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires a left or right to_heading relative to from_heading.", block.StartLine));
-                return;
-            }
-
-            var alongAxisX = Math.Abs(fromVec.X) > 0.5f;
-            float start;
-            float end;
-            if (alongAxisX)
-            {
-                if (!TryFloatAny(block, out start, "start_x", "from_x", "x_start", "x1") ||
-                    !TryFloatAny(block, out end, "end_x", "to_x", "x_end", "x2"))
-                {
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires start_x and end_x for east/west turns.", block.StartLine));
-                    return;
-                }
-            }
-            else
-            {
-                if (!TryFloatAny(block, out start, "start_z", "from_z", "z_start", "z1") ||
-                    !TryFloatAny(block, out end, "end_z", "to_z", "z_end", "z2"))
-                {
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires start_z and end_z for north/south turns.", block.StartLine));
-                    return;
-                }
-            }
-
-            var baseCoord = 0f;
-            if (alongAxisX)
-                TryFloatAny(block, out baseCoord, "base_z", "origin_z", "center_z", "line_z");
-            else
-                TryFloatAny(block, out baseCoord, "base_x", "origin_x", "center_x", "line_x");
-
-            if (!TryFloatAny(block, out var sideSpace, "side_space", "turn_space", "space", "side_length", "turn_length") &&
-                !TryDirectionalSpace(block, toDir, out sideSpace) &&
-                !TryFloatAny(block, out sideSpace, "turn_width", "width"))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires side_space (or north/south/east/west_space).", block.StartLine));
-                return;
-            }
-
-            if (sideSpace <= 0f)
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn side_space must be greater than 0.", block.StartLine));
-                return;
-            }
-
-            float minX;
-            float minZ;
-            float width;
-            float height;
-            if (alongAxisX)
-            {
-                minX = Math.Min(start, end);
-                width = Math.Abs(end - start);
-                height = sideSpace;
-                minZ = toVec.Y >= 0f ? baseCoord : baseCoord - sideSpace;
-            }
-            else
-            {
-                minZ = Math.Min(start, end);
-                height = Math.Abs(end - start);
-                width = sideSpace;
-                minX = toVec.X >= 0f ? baseCoord : baseCoord - sideSpace;
-            }
-
-            if (width <= 0f || height <= 0f)
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn dimensions must be greater than 0.", block.StartLine));
-                return;
-            }
-
-            var shapeId = $"{id}_shape";
-            var areaId = $"{id}_area";
-            var entryPortalId = $"{id}_entry";
-            var exitPortalId = $"{id}_exit";
-
-            shapes.Add(new ShapeDefinition(shapeId, ShapeType.Rectangle, minX, minZ, width, height));
-            if (!metadata.BaseHeightMeters.HasValue || !metadata.DefaultAreaHeightMeters.HasValue)
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires meta base_height and default_area_height for auto-generated areas.", block.StartLine));
-                return;
-            }
-            if (string.IsNullOrWhiteSpace(turnMaterialId) &&
-                (!metadata.DefaultMaterialDefined || string.IsNullOrWhiteSpace(metadata.DefaultMaterialId)))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn requires meta default_material for auto-generated areas.", block.StartLine));
-                return;
-            }
-
-            var turnElevation = hasTurnElevation ? turnElevationValue : metadata.BaseHeightMeters.Value;
-            var turnHeight = hasTurnHeight ? turnHeightValue : metadata.DefaultAreaHeightMeters.Value;
-            if (turnHeight <= 0f)
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn height must be greater than 0.", block.StartLine));
-                return;
-            }
-
-            var turnCeiling = hasTurnCeiling
-                ? (float?)turnCeilingValue
-                : metadata.DefaultCeilingHeightMeters;
-            if (turnCeiling.HasValue && turnCeiling.Value <= turnElevation)
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn ceiling_height must be above elevation.", block.StartLine));
-                return;
-            }
-            if (turnCeiling.HasValue && hasTurnWallHeight)
-            {
-                var expectedWallHeight = turnCeiling.Value - turnElevation;
-                if (Math.Abs(turnWallHeight - expectedWallHeight) > 0.01f)
-                {
-                    issues.Add(new TrackMapIssue(
-                        TrackMapIssueSeverity.Error,
-                        $"Turn wall_height must match {expectedWallHeight.ToString(CultureInfo.InvariantCulture)} when a ceiling is defined.",
-                        block.StartLine));
-                    return;
-                }
-            }
-            if (hasTurnRoomOverrides && string.IsNullOrWhiteSpace(turnRoomId))
-            {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Turn has room overrides but no room id.", block.StartLine));
-                return;
-            }
-
-            areas.Add(new TrackAreaDefinition(
-                areaId,
-                TrackAreaType.Curve,
-                shapeId,
-                turnElevation,
-                turnHeight,
-                turnCeiling,
-                turnRoomId,
-                turnRoomOverrides,
-                name,
-                string.IsNullOrWhiteSpace(turnMaterialId) ? metadata.DefaultMaterialId : turnMaterialId,
-                turnNoise,
-                turnWidth,
-                turnFlags,
-                BuildTurnAreaMetadata(block, turnWallMaterialId, hasTurnWallHeight, turnWallHeight)));
-
-            var metadataMap = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
-            {
-                ["approach_side"] = "exit",
-                ["beacon_shape"] = shapeId,
-                ["turn_shape"] = shapeId
-            };
-
-            if (TryFloatAny(block, out var turnRange, "turn_range", "guidance_range", "turn_guidance_range"))
-                metadataMap["turn_range"] = turnRange.ToString(CultureInfo.InvariantCulture);
-            if (TryFloatAny(block, out var beaconRange, "beacon_range", "approach_range", "range"))
-                metadataMap["beacon_range"] = beaconRange.ToString(CultureInfo.InvariantCulture);
-            if (TryFloatAny(block, out var radius, "radius", "turn_radius"))
-                metadataMap["radius"] = radius.ToString(CultureInfo.InvariantCulture);
-
-            sectors.Add(new TrackSectorDefinition(id, TrackSectorType.Curve, name, areaId, null, null, null, TrackSectorFlags.None, metadataMap));
-
-            var pathWidth = metadata.DefaultWidthMeters;
-            TryFloatAny(block, out pathWidth, "lane_width", "portal_width");
-            pathWidth = Math.Max(0.5f, pathWidth);
-
-            var entryPos = alongAxisX ? new Vector2(start, baseCoord) : new Vector2(baseCoord, start);
-            var exitPos = alongAxisX ? new Vector2(end, baseCoord) : new Vector2(baseCoord, end);
-
-            portals.Add(new PortalDefinition(entryPortalId, id, entryPos.X, entryPos.Y, pathWidth, fromHeading, null, PortalRole.Entry));
-            portals.Add(new PortalDefinition(exitPortalId, id, exitPos.X, exitPos.Y, pathWidth, null, toHeading, PortalRole.Exit));
-            approaches.Add(new TrackApproachDefinition(id, name, entryPortalId, exitPortalId, fromHeading, toHeading, pathWidth, alongAxisX ? width : height, null, metadataMap));
+            portals.Add(new PortalDefinition(
+                id,
+                sectorId.Trim(),
+                x,
+                y,
+                z,
+                width,
+                entryHeading,
+                exitHeading,
+                role,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
         }
 
         private static void ApplyLink(
@@ -2361,7 +3028,8 @@ namespace TopSpeed.Tracks.Map
         private static void ApplyBeacon(
             List<TrackBeaconDefinition> beacons,
             SectionBlock block,
-            List<TrackMapIssue> issues)
+            List<TrackMapIssue> issues,
+            float? baseHeightMeters)
         {
             if (!TryReadId(block, out var id))
             {
@@ -2374,6 +3042,9 @@ namespace TopSpeed.Tracks.Map
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Beacon requires x and z.", block.StartLine));
                 return;
             }
+
+            var hasY = TryFloatAny(block, out var yValue, "y", "elevation");
+            var y = hasY ? yValue : baseHeightMeters.GetValueOrDefault(0f);
 
             if (beacons.Any(b => string.Equals(b.Id, id, StringComparison.OrdinalIgnoreCase)))
             {
@@ -2388,7 +3059,7 @@ namespace TopSpeed.Tracks.Map
                 (TryGetValue(block, "secondary", out name2Value) ? name2Value : null);
             var sectorId = TryGetValue(block, "sector", out var sectorValue) ? sectorValue :
                 (TryGetValue(block, "object", out sectorValue) ? sectorValue : null);
-            var shapeId = TryGetValue(block, "shape", out var shapeValue) ? shapeValue : null;
+            var shapeId = TryGetValue(block, "geometry", out var shapeValue) ? shapeValue : null;
             var heading = TryReadHeadingValue(block, out var headingValue) ? headingValue : (float?)null;
             float? radius = null;
             if (TryFloat(block, "radius", out var radiusValue) && radiusValue > 0f)
@@ -2397,13 +3068,60 @@ namespace TopSpeed.Tracks.Map
                 radius = radiusValue;
             var metadata = CollectBeaconMetadata(block);
 
-            beacons.Add(new TrackBeaconDefinition(id, type, x, z, name, name2, sectorId, shapeId, heading, radius, role, metadata));
+            var volumeThickness = TryFloatAny(block, out var thicknessValue, "height", "thickness", "volume_thickness", "volume_height")
+                ? Math.Max(0.01f, thicknessValue)
+                : (float?)null;
+            var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                ? offsetValue
+                : (float?)null;
+            var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+            var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+            var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+            var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                ? offsetModeValue
+                : TrackAreaVolumeOffsetMode.Bottom;
+            var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                ? offsetSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+            var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                ? minMaxSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+
+            if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Beacon '{id}' max_y must be above min_y.", block.StartLine));
+                return;
+            }
+
+            beacons.Add(new TrackBeaconDefinition(
+                id,
+                type,
+                x,
+                y,
+                z,
+                name,
+                name2,
+                sectorId,
+                shapeId,
+                heading,
+                radius,
+                role,
+                metadata,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
         }
 
         private static void ApplyMarker(
             List<TrackMarkerDefinition> markers,
             SectionBlock block,
-            List<TrackMapIssue> issues)
+            List<TrackMapIssue> issues,
+            float? baseHeightMeters)
         {
             if (!TryReadId(block, out var id))
             {
@@ -2417,6 +3135,9 @@ namespace TopSpeed.Tracks.Map
                 return;
             }
 
+            var hasY = TryFloatAny(block, out var yValue, "y", "elevation");
+            var y = hasY ? yValue : baseHeightMeters.GetValueOrDefault(0f);
+
             if (markers.Any(m => string.Equals(m.Id, id, StringComparison.OrdinalIgnoreCase)))
             {
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Duplicate marker id '{id}'.", block.StartLine));
@@ -2425,11 +3146,133 @@ namespace TopSpeed.Tracks.Map
 
             var type = TryMarkerType(block, out var parsedType) ? parsedType : TrackMarkerType.Undefined;
             var name = TryGetValue(block, "name", out var nameValue) ? nameValue : null;
-            var shapeId = TryGetValue(block, "shape", out var shapeValue) ? shapeValue : null;
+            var shapeId = TryGetValue(block, "geometry", out var shapeValue) ? shapeValue : null;
             var heading = TryReadHeadingValue(block, out var headingValue) ? headingValue : (float?)null;
             var metadata = CollectMarkerMetadata(block);
 
-            markers.Add(new TrackMarkerDefinition(id, type, x, z, name, shapeId, heading, metadata));
+            var volumeThickness = TryFloatAny(block, out var thicknessValue, "height", "thickness", "volume_thickness", "volume_height")
+                ? Math.Max(0.01f, thicknessValue)
+                : (float?)null;
+            var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                ? offsetValue
+                : (float?)null;
+            var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+            var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+            var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+            var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                ? offsetModeValue
+                : TrackAreaVolumeOffsetMode.Bottom;
+            var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                ? offsetSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+            var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                ? minMaxSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+
+            if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Marker '{id}' max_y must be above min_y.", block.StartLine));
+                return;
+            }
+
+            markers.Add(new TrackMarkerDefinition(
+                id,
+                type,
+                x,
+                y,
+                z,
+                name,
+                shapeId,
+                heading,
+                metadata,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
+        }
+
+        private static void ValidateVolumeReferences(
+            List<TrackVolumeDefinition> volumes,
+            List<TrackAreaDefinition> areas,
+            List<GeometryDefinition> geometries,
+            List<TrackMapIssue> issues)
+        {
+            if (issues == null)
+                return;
+
+            var volumeIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (volumes != null)
+            {
+                foreach (var volume in volumes)
+                {
+                    if (volume == null || string.IsNullOrWhiteSpace(volume.Id))
+                        continue;
+                    volumeIds.Add(volume.Id);
+                }
+            }
+
+            var geometryLookup = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            if (geometries != null)
+            {
+                foreach (var geometry in geometries)
+                {
+                    if (geometry == null || string.IsNullOrWhiteSpace(geometry.Id))
+                        continue;
+                    geometryLookup[geometry.Id] = geometry;
+                }
+            }
+
+            if (volumes != null)
+            {
+                foreach (var volume in volumes)
+                {
+                    if (volume == null)
+                        continue;
+                    if ((volume.Type == TrackVolumeType.Prism || volume.Type == TrackVolumeType.Mesh) &&
+                        !string.IsNullOrWhiteSpace(volume.GeometryId))
+                    {
+                        if (!geometryLookup.TryGetValue(volume.GeometryId!, out var geometry))
+                        {
+                            issues.Add(new TrackMapIssue(
+                                TrackMapIssueSeverity.Error,
+                                $"Volume '{volume.Id}' references unknown geometry '{volume.GeometryId}'."));
+                            continue;
+                        }
+
+                        if (volume.Type == TrackVolumeType.Prism && geometry.Type != GeometryType.Polygon)
+                        {
+                            issues.Add(new TrackMapIssue(
+                                TrackMapIssueSeverity.Error,
+                                $"Volume '{volume.Id}' prism requires polygon geometry '{volume.GeometryId}'."));
+                        }
+                        else if (volume.Type == TrackVolumeType.Mesh && geometry.Type != GeometryType.Mesh)
+                        {
+                            issues.Add(new TrackMapIssue(
+                                TrackMapIssueSeverity.Error,
+                                $"Volume '{volume.Id}' mesh requires mesh geometry '{volume.GeometryId}'."));
+                        }
+                    }
+                }
+            }
+
+            if (areas == null || areas.Count == 0)
+                return;
+
+            foreach (var area in areas)
+            {
+                if (area == null || string.IsNullOrWhiteSpace(area.VolumeId))
+                    continue;
+                if (!volumeIds.Contains(area.VolumeId!))
+                {
+                    issues.Add(new TrackMapIssue(
+                        TrackMapIssueSeverity.Error,
+                        $"Area '{area.Id}' references unknown volume '{area.VolumeId}'."));
+                }
+            }
         }
 
         private static void ApplyWall(
@@ -2467,9 +3310,9 @@ namespace TopSpeed.Tracks.Map
                 return;
             }
 
-            if (!TryGetValue(block, "shape", out var shapeId) || string.IsNullOrWhiteSpace(shapeId))
+            if (!TryGetValue(block, "geometry", out var shapeId) || string.IsNullOrWhiteSpace(shapeId))
             {
-                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Wall requires a shape id.", block.StartLine));
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Wall requires a geometry id.", block.StartLine));
                 return;
             }
 
@@ -2734,6 +3577,31 @@ namespace TopSpeed.Tracks.Map
                 (TryFloat(block, "alignment_tolerance", out toleranceDegrees) ? Math.Max(0f, toleranceDegrees) :
                  (TryFloat(block, "align_tol", out toleranceDegrees) ? Math.Max(0f, toleranceDegrees) : (float?)null));
 
+            var volumeThickness = TryFloatAny(block, out var thicknessValue, "height", "thickness", "volume_thickness", "volume_height")
+                ? Math.Max(0.01f, thicknessValue)
+                : (float?)null;
+            var volumeOffset = TryFloatAny(block, out var offsetValue, "offset", "volume_offset", "volume_center")
+                ? offsetValue
+                : (float?)null;
+            var minY = TryFloatAny(block, out var minYValue, "min_y", "miny") ? minYValue : (float?)null;
+            var maxY = TryFloatAny(block, out var maxYValue, "max_y", "maxy") ? maxYValue : (float?)null;
+            var volumeMode = TryParseAreaVolumeMode(block, out var modeValue) ? modeValue : TrackAreaVolumeMode.LocalBand;
+            var volumeOffsetMode = TryParseAreaVolumeOffsetMode(block, out var offsetModeValue)
+                ? offsetModeValue
+                : TrackAreaVolumeOffsetMode.Bottom;
+            var volumeOffsetSpace = TryParseAreaVolumeSpace(block, out var offsetSpaceValue, "volume_offset_space", "offset_space")
+                ? offsetSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+            var volumeMinMaxSpace = TryParseAreaVolumeSpace(block, out var minMaxSpaceValue, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space")
+                ? minMaxSpaceValue
+                : TrackAreaVolumeSpace.Inherit;
+
+            if (minY.HasValue && maxY.HasValue && maxY.Value <= minY.Value)
+            {
+                issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Approach '{sectorId}' max_y must be above min_y.", block.StartLine));
+                return;
+            }
+
             var metadata = CollectApproachMetadata(block);
 
             approaches.Add(new TrackApproachDefinition(
@@ -2746,7 +3614,15 @@ namespace TopSpeed.Tracks.Map
                 width,
                 length,
                 tolerance,
-                metadata));
+                metadata,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace));
         }
 
         private static bool TryGetValue(SectionBlock block, string key, out string value)
@@ -2852,6 +3728,33 @@ namespace TopSpeed.Tracks.Map
                     continue;
                 if (float.TryParse(raw, NumberStyles.Float, CultureInfo.InvariantCulture, out value))
                     return true;
+            }
+            return false;
+        }
+
+        private static bool TryIntAny(SectionBlock block, out int value, params string[] keys)
+        {
+            value = 0;
+            foreach (var key in keys)
+            {
+                if (!TryGetValue(block, key, out var raw))
+                    continue;
+                if (int.TryParse(raw, NumberStyles.Integer, CultureInfo.InvariantCulture, out value))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool TryGetValueAny(SectionBlock block, out string value, params string[] keys)
+        {
+            value = string.Empty;
+            foreach (var key in keys)
+            {
+                if (TryGetValue(block, key, out var raw) && !string.IsNullOrWhiteSpace(raw))
+                {
+                    value = raw;
+                    return true;
+                }
             }
             return false;
         }
@@ -3177,6 +4080,81 @@ namespace TopSpeed.Tracks.Map
             return metadata;
         }
 
+        private static IReadOnlyDictionary<string, string>? CollectGeometryMetadata(SectionBlock block)
+        {
+            Dictionary<string, string>? metadata = null;
+            foreach (var pair in block.Values)
+            {
+                if (GeometryKnownKeys.Contains(pair.Key))
+                    continue;
+                if (pair.Value.Count == 0)
+                    continue;
+                metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                metadata[pair.Key] = pair.Value[pair.Value.Count - 1];
+            }
+            return metadata;
+        }
+
+        private static IReadOnlyDictionary<string, string>? CollectVolumeMetadata(SectionBlock block)
+        {
+            Dictionary<string, string>? metadata = null;
+            foreach (var pair in block.Values)
+            {
+                if (VolumeKnownKeys.Contains(pair.Key))
+                    continue;
+                if (pair.Value.Count == 0)
+                    continue;
+                metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                metadata[pair.Key] = pair.Value[pair.Value.Count - 1];
+            }
+            return metadata;
+        }
+
+        private static IReadOnlyDictionary<string, string>? CollectSurfaceMetadata(SectionBlock block)
+        {
+            Dictionary<string, string>? metadata = null;
+            foreach (var pair in block.Values)
+            {
+                if (SurfaceKnownKeys.Contains(pair.Key))
+                    continue;
+                if (pair.Value.Count == 0)
+                    continue;
+                metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                metadata[pair.Key] = pair.Value[pair.Value.Count - 1];
+            }
+            return metadata;
+        }
+
+        private static IReadOnlyDictionary<string, string>? CollectProfileMetadata(SectionBlock block)
+        {
+            Dictionary<string, string>? metadata = null;
+            foreach (var pair in block.Values)
+            {
+                if (ProfileKnownKeys.Contains(pair.Key))
+                    continue;
+                if (pair.Value.Count == 0)
+                    continue;
+                metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                metadata[pair.Key] = pair.Value[pair.Value.Count - 1];
+            }
+            return metadata;
+        }
+
+        private static IReadOnlyDictionary<string, string>? CollectBankMetadata(SectionBlock block)
+        {
+            Dictionary<string, string>? metadata = null;
+            foreach (var pair in block.Values)
+            {
+                if (BankKnownKeys.Contains(pair.Key))
+                    continue;
+                if (pair.Value.Count == 0)
+                    continue;
+                metadata ??= new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+                metadata[pair.Key] = pair.Value[pair.Value.Count - 1];
+            }
+            return metadata;
+        }
+
         private static IReadOnlyDictionary<string, string>? CollectWallMetadata(SectionBlock block)
         {
             Dictionary<string, string>? metadata = null;
@@ -3297,11 +4275,8 @@ namespace TopSpeed.Tracks.Map
             headingDegrees = 0f;
             foreach (var raw in GetValues(block, $"{key}_heading", $"{key}_heading_deg", $"{key}_dir", $"{key}_direction", key))
             {
-                if (TryDirection(raw, out var direction))
-                {
-                    headingDegrees = DirectionToDegrees(direction);
+                if (TryParseCompassHeading(raw, out headingDegrees))
                     return true;
-                }
                 if (TryFloat(raw, out headingDegrees))
                     return true;
             }
@@ -3314,11 +4289,8 @@ namespace TopSpeed.Tracks.Map
             headingDegrees = 0f;
             foreach (var raw in GetValues(block, "heading", "dir", "direction"))
             {
-                if (TryDirection(raw, out var direction))
-                {
-                    headingDegrees = DirectionToDegrees(direction);
+                if (TryParseCompassHeading(raw, out headingDegrees))
                     return true;
-                }
                 if (TryFloat(raw, out headingDegrees))
                     return true;
             }
@@ -3330,11 +4302,8 @@ namespace TopSpeed.Tracks.Map
             headingDegrees = 0f;
             foreach (var raw in GetValues(block, "heading", "orientation", "dir", "direction"))
             {
-                if (TryDirection(raw, out var direction))
-                {
-                    headingDegrees = DirectionToDegrees(direction);
+                if (TryParseCompassHeading(raw, out headingDegrees))
                     return true;
-                }
                 if (TryFloat(raw, out headingDegrees))
                     return true;
             }
@@ -3369,6 +4338,55 @@ namespace TopSpeed.Tracks.Map
 
             return points.Count > 0;
         }
+
+        private static bool TryParsePoints3D(SectionBlock block, out List<Vector3> points)
+        {
+            points = new List<Vector3>();
+
+            foreach (var raw in GetValues(block, "points3d", "points_3d", "points3", "vertices3d", "vertices_3d", "vertex3d", "vertex_3d", "vertices", "vertex"))
+            {
+                if (!TryParsePoints3D(raw, out var parsed))
+                    return false;
+                points.AddRange(parsed);
+            }
+
+            foreach (var raw in GetValues(block, "point3d", "point_3d", "point3"))
+            {
+                if (!TryParsePoints3D(raw, out var parsed))
+                    return false;
+                points.AddRange(parsed);
+            }
+
+            return points.Count > 0;
+        }
+
+        private static bool TryParseTrianglePoints3D(SectionBlock block, out List<Vector3> points)
+        {
+            points = new List<Vector3>();
+
+            foreach (var raw in GetValues(block, "triangles3d", "triangle3d", "triangle_points", "triangle_points3d", "tri_points", "tri_points3d"))
+            {
+                if (!TryParsePoints3D(raw, out var parsed))
+                    return false;
+                points.AddRange(parsed);
+            }
+
+            return points.Count > 0;
+        }
+
+        private static bool TryParseTriangleIndices(SectionBlock block, out List<int> indices)
+        {
+            indices = new List<int>();
+
+            foreach (var raw in GetValues(block, "triangles", "triangle_indices", "indices", "faces", "tris", "tri"))
+            {
+                if (!TryParseIndices(raw, out var parsed))
+                    return false;
+                indices.AddRange(parsed);
+            }
+
+            return indices.Count > 0;
+        }
         private static bool TryDirection(string value, out MapDirection direction)
         {
             direction = MapDirection.North;
@@ -3397,36 +4415,396 @@ namespace TopSpeed.Tracks.Map
             return false;
         }
 
-        private static bool TryShapeType(string value, out ShapeType type)
+        private static bool TryParseCompassHeading(string value, out float headingDegrees)
         {
-            type = ShapeType.Undefined;
+            headingDegrees = 0f;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+
+            var trimmed = value.Trim().ToLowerInvariant()
+                .Replace(" ", string.Empty)
+                .Replace("-", string.Empty)
+                .Replace("_", string.Empty);
+
+            switch (trimmed)
+            {
+                case "n":
+                case "north":
+                    headingDegrees = 0f;
+                    return true;
+                case "nne":
+                case "northnortheast":
+                    headingDegrees = 22.5f;
+                    return true;
+                case "ne":
+                case "northeast":
+                    headingDegrees = 45f;
+                    return true;
+                case "ene":
+                case "eastnortheast":
+                    headingDegrees = 67.5f;
+                    return true;
+                case "e":
+                case "east":
+                    headingDegrees = 90f;
+                    return true;
+                case "ese":
+                case "eastsoutheast":
+                    headingDegrees = 112.5f;
+                    return true;
+                case "se":
+                case "southeast":
+                    headingDegrees = 135f;
+                    return true;
+                case "sse":
+                case "southsoutheast":
+                    headingDegrees = 157.5f;
+                    return true;
+                case "s":
+                case "south":
+                    headingDegrees = 180f;
+                    return true;
+                case "ssw":
+                case "southsouthwest":
+                    headingDegrees = 202.5f;
+                    return true;
+                case "sw":
+                case "southwest":
+                    headingDegrees = 225f;
+                    return true;
+                case "wsw":
+                case "westsouthwest":
+                    headingDegrees = 247.5f;
+                    return true;
+                case "w":
+                case "west":
+                    headingDegrees = 270f;
+                    return true;
+                case "wnw":
+                case "westnorthwest":
+                    headingDegrees = 292.5f;
+                    return true;
+                case "nw":
+                case "northwest":
+                    headingDegrees = 315f;
+                    return true;
+                case "nnw":
+                case "northnorthwest":
+                    headingDegrees = 337.5f;
+                    return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGeometryType(string value, out GeometryType type)
+        {
+            type = GeometryType.Undefined;
             if (string.IsNullOrWhiteSpace(value))
                 return false;
             var trimmed = value.Trim().ToLowerInvariant();
             switch (trimmed)
             {
-                case "rect":
-                case "rectangle":
-                    type = ShapeType.Rectangle;
-                    return true;
-                case "circle":
-                    type = ShapeType.Circle;
-                    return true;
-                case "ring":
-                case "band":
-                    type = ShapeType.Ring;
-                    return true;
                 case "polygon":
                 case "poly":
-                    type = ShapeType.Polygon;
+                    type = GeometryType.Polygon;
                     return true;
                 case "polyline":
                 case "line":
                 case "path":
-                    type = ShapeType.Polyline;
+                    type = GeometryType.Polyline;
+                    return true;
+                case "spline":
+                case "curve":
+                    type = GeometryType.Spline;
+                    return true;
+                case "mesh":
+                    type = GeometryType.Mesh;
                     return true;
             }
             return Enum.TryParse(value, true, out type);
+        }
+
+        private static bool TryVolumeType(string value, out TrackVolumeType type)
+        {
+            type = TrackVolumeType.Undefined;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            var trimmed = value.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "box":
+                case "rect":
+                case "rectangle":
+                case "cube":
+                    type = TrackVolumeType.Box;
+                    return true;
+                case "sphere":
+                case "ball":
+                    type = TrackVolumeType.Sphere;
+                    return true;
+                case "cylinder":
+                case "cyl":
+                    type = TrackVolumeType.Cylinder;
+                    return true;
+                case "capsule":
+                case "cap":
+                    type = TrackVolumeType.Capsule;
+                    return true;
+                case "prism":
+                case "extrude":
+                case "extrusion":
+                    type = TrackVolumeType.Prism;
+                    return true;
+                case "mesh":
+                    type = TrackVolumeType.Mesh;
+                    return true;
+            }
+            return Enum.TryParse(value, true, out type);
+        }
+
+        private static bool TrySurfaceType(string value, out TrackSurfaceType type)
+        {
+            type = TrackSurfaceType.Undefined;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            var trimmed = value.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "loft":
+                case "ribbon":
+                case "path":
+                    type = TrackSurfaceType.Loft;
+                    return true;
+                case "polygon":
+                case "area":
+                    type = TrackSurfaceType.Polygon;
+                    return true;
+                case "mesh":
+                    type = TrackSurfaceType.Mesh;
+                    return true;
+            }
+            return Enum.TryParse(value, true, out type);
+        }
+
+        private static bool TryProfileType(string value, out TrackProfileType type)
+        {
+            type = TrackProfileType.Undefined;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            var trimmed = value.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "flat":
+                    type = TrackProfileType.Flat;
+                    return true;
+                case "plane":
+                    type = TrackProfileType.Plane;
+                    return true;
+                case "linear":
+                case "linear_along_path":
+                case "linear_along_centerline":
+                    type = TrackProfileType.LinearAlongPath;
+                    return true;
+                case "spline":
+                case "spline_along_path":
+                case "spline_along_centerline":
+                    type = TrackProfileType.SplineAlongPath;
+                    return true;
+                case "bezier":
+                case "bezier_along_path":
+                case "bezier_along_centerline":
+                    type = TrackProfileType.BezierAlongPath;
+                    return true;
+                case "grid":
+                case "height_grid":
+                    type = TrackProfileType.Grid;
+                    return true;
+            }
+            return Enum.TryParse(value, true, out type);
+        }
+
+        private static bool TryBankType(string value, out TrackBankType type)
+        {
+            type = TrackBankType.Undefined;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            var trimmed = value.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "flat":
+                    type = TrackBankType.Flat;
+                    return true;
+                case "linear":
+                case "linear_along_path":
+                case "linear_along_centerline":
+                    type = TrackBankType.LinearAlongPath;
+                    return true;
+                case "spline":
+                case "spline_along_path":
+                case "spline_along_centerline":
+                    type = TrackBankType.SplineAlongPath;
+                    return true;
+                case "bezier":
+                case "bezier_along_path":
+                case "bezier_along_centerline":
+                    type = TrackBankType.BezierAlongPath;
+                    return true;
+            }
+            return Enum.TryParse(value, true, out type);
+        }
+
+        private static bool TryParseAreaVolumeMode(SectionBlock block, out TrackAreaVolumeMode mode)
+        {
+            mode = TrackAreaVolumeMode.LocalBand;
+            if (!TryGetValue(block, "volume_mode", out var raw) || string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "local":
+                case "local_band":
+                case "band":
+                    mode = TrackAreaVolumeMode.LocalBand;
+                    return true;
+                case "world":
+                case "world_band":
+                case "world_y":
+                case "worldy":
+                    mode = TrackAreaVolumeMode.WorldBand;
+                    return true;
+                case "closed":
+                case "closed_mesh":
+                    mode = TrackAreaVolumeMode.ClosedMesh;
+                    return true;
+            }
+
+            return Enum.TryParse(raw, true, out mode);
+        }
+
+        private static bool TryParseAreaVolumeOffsetMode(SectionBlock block, out TrackAreaVolumeOffsetMode mode)
+        {
+            mode = TrackAreaVolumeOffsetMode.Bottom;
+            if (!TryGetValueAny(
+                    block,
+                    out var raw,
+                    "volume_offset_mode",
+                    "offset_mode",
+                    "offset_anchor",
+                    "volume_offset_anchor",
+                    "offset_align",
+                    "volume_offset_align") ||
+                string.IsNullOrWhiteSpace(raw))
+            {
+                return false;
+            }
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "bottom":
+                case "min":
+                case "lower":
+                case "start":
+                    mode = TrackAreaVolumeOffsetMode.Bottom;
+                    return true;
+                case "center":
+                case "centre":
+                case "middle":
+                case "mid":
+                    mode = TrackAreaVolumeOffsetMode.Center;
+                    return true;
+                case "top":
+                case "max":
+                case "upper":
+                case "end":
+                    mode = TrackAreaVolumeOffsetMode.Top;
+                    return true;
+            }
+
+            return Enum.TryParse(raw, true, out mode);
+        }
+
+        private static bool TryParseAreaVolumeSpace(SectionBlock block, out TrackAreaVolumeSpace space, params string[] keys)
+        {
+            space = TrackAreaVolumeSpace.Inherit;
+            if (!TryGetValueAny(block, out var raw, keys) || string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "inherit":
+                case "default":
+                case "auto":
+                    space = TrackAreaVolumeSpace.Inherit;
+                    return true;
+                case "local":
+                case "relative":
+                case "elevation":
+                case "area":
+                    space = TrackAreaVolumeSpace.Local;
+                    return true;
+                case "world":
+                case "absolute":
+                case "global":
+                    space = TrackAreaVolumeSpace.World;
+                    return true;
+            }
+
+            return Enum.TryParse(raw, true, out space);
+        }
+
+        private static bool TryParsePolygonPlanarityMode(SectionBlock block, out PolygonPlanarityMode mode)
+        {
+            mode = PolygonPlanarityMode.Strict;
+            if (!TryGetValueAny(block, out var raw, "planarity", "polygon_planarity", "planar", "planar_mode", "plane_mode"))
+                return false;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "strict":
+                case "required":
+                case "enforce":
+                    mode = PolygonPlanarityMode.Strict;
+                    return true;
+                case "relaxed":
+                case "allow":
+                case "best_fit":
+                case "bestfit":
+                case "fit":
+                    mode = PolygonPlanarityMode.Relaxed;
+                    return true;
+                case "ignore":
+                case "none":
+                case "off":
+                    mode = PolygonPlanarityMode.Ignore;
+                    return true;
+            }
+
+            return Enum.TryParse(raw, true, out mode);
+        }
+
+        private static bool TryBankSide(string value, out TrackBankSide side)
+        {
+            side = TrackBankSide.Right;
+            if (string.IsNullOrWhiteSpace(value))
+                return false;
+            var trimmed = value.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "left":
+                case "l":
+                    side = TrackBankSide.Left;
+                    return true;
+                case "right":
+                case "r":
+                    side = TrackBankSide.Right;
+                    return true;
+            }
+            return Enum.TryParse(value, true, out side);
         }
 
         private static bool TryPortalRole(string value, out PortalRole role)
@@ -3666,6 +5044,108 @@ namespace TopSpeed.Tracks.Map
             return points.Count > 0;
         }
 
+        private static bool TryParsePoints3D(string raw, out List<Vector3> points)
+        {
+            points = new List<Vector3>();
+            if (string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            var tokens = raw.Split(new[] { ',', ';', '|', ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length < 3 || (tokens.Length % 3) != 0)
+                return false;
+
+            for (var i = 0; i < tokens.Length; i += 3)
+            {
+                if (!float.TryParse(tokens[i], NumberStyles.Float, CultureInfo.InvariantCulture, out var x))
+                    return false;
+                if (!float.TryParse(tokens[i + 1], NumberStyles.Float, CultureInfo.InvariantCulture, out var y))
+                    return false;
+                if (!float.TryParse(tokens[i + 2], NumberStyles.Float, CultureInfo.InvariantCulture, out var z))
+                    return false;
+                points.Add(new Vector3(x, y, z));
+            }
+
+            return points.Count > 0;
+        }
+
+        private static bool TryParseVector3(string raw, out Vector3 value)
+        {
+            value = Vector3.Zero;
+            if (!TryParsePoints3D(raw, out var points) || points.Count != 1)
+                return false;
+            value = points[0];
+            return true;
+        }
+
+        private static bool TryParseVector3Any(SectionBlock block, out Vector3 value, params string[] keys)
+        {
+            value = Vector3.Zero;
+            foreach (var raw in GetValues(block, keys))
+            {
+                if (TryParseVector3(raw, out value))
+                    return true;
+            }
+            return false;
+        }
+
+        private static bool TryParseRotation(SectionBlock block, out Vector3 rotationDegrees)
+        {
+            rotationDegrees = Vector3.Zero;
+
+            if (TryParseVector3Any(block, out var vector, "rotation", "rotation_deg", "rotation_degrees", "rot", "rot_deg", "rot_degrees"))
+            {
+                rotationDegrees = vector;
+                return true;
+            }
+
+            var hasAny = false;
+            var pitch = 0f;
+            var yaw = 0f;
+            var roll = 0f;
+
+            if (TryFloatAny(block, out var yawValue, "yaw", "rotation_yaw"))
+            {
+                yaw = yawValue;
+                hasAny = true;
+            }
+            if (TryFloatAny(block, out var pitchValue, "pitch", "rotation_pitch"))
+            {
+                pitch = pitchValue;
+                hasAny = true;
+            }
+            if (TryFloatAny(block, out var rollValue, "roll", "rotation_roll"))
+            {
+                roll = rollValue;
+                hasAny = true;
+            }
+
+            if (!hasAny)
+                return false;
+
+            rotationDegrees = new Vector3(pitch, yaw, roll);
+            return true;
+        }
+
+        private static bool TryParseIndices(string raw, out List<int> indices)
+        {
+            indices = new List<int>();
+            if (string.IsNullOrWhiteSpace(raw))
+                return false;
+
+            var tokens = raw.Split(new[] { ',', ';', '|', ' ', '\t', '\n', '\r' }, StringSplitOptions.RemoveEmptyEntries);
+            if (tokens.Length == 0)
+                return false;
+
+            for (var i = 0; i < tokens.Length; i++)
+            {
+                if (!int.TryParse(tokens[i], NumberStyles.Integer, CultureInfo.InvariantCulture, out var index))
+                    return false;
+                indices.Add(index);
+            }
+
+            return indices.Count > 0;
+        }
+
         private static bool TryParseSectorFlags(string raw, out TrackSectorFlags flags)
         {
             flags = TrackSectorFlags.None;
@@ -3881,7 +5361,7 @@ namespace TopSpeed.Tracks.Map
 
         private static void Validate(TrackMapDefinition map, TrackMapValidationOptions options, List<TrackMapIssue> issues)
         {
-            var hasTopology = map.Areas.Count > 0 || map.Shapes.Count > 0 || map.Sectors.Count > 0 || map.Portals.Count > 0;
+            var hasTopology = map.Areas.Count > 0 || map.Geometries.Count > 0 || map.Sectors.Count > 0 || map.Portals.Count > 0;
             if (!hasTopology)
             {
                 issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, "Map contains no topology."));
@@ -3918,13 +5398,13 @@ namespace TopSpeed.Tracks.Map
 
         private static void ValidateTopology(TrackMapDefinition map, List<TrackMapIssue> issues)
         {
-            if (map.Shapes.Count == 0 && map.Portals.Count == 0 &&
+            if (map.Geometries.Count == 0 && map.Portals.Count == 0 &&
                 map.Links.Count == 0 && map.Areas.Count == 0 && map.Beacons.Count == 0 && map.Markers.Count == 0 &&
                 map.Approaches.Count == 0)
                 return;
 
             var sectorIds = new HashSet<string>(map.Sectors.Select(s => s.Id), StringComparer.OrdinalIgnoreCase);
-            var shapeIds = new HashSet<string>(map.Shapes.Select(s => s.Id), StringComparer.OrdinalIgnoreCase);
+            var geometryIds = new HashSet<string>(map.Geometries.Select(g => g.Id), StringComparer.OrdinalIgnoreCase);
             var portalIds = new HashSet<string>(map.Portals.Select(p => p.Id), StringComparer.OrdinalIgnoreCase);
             var materialIds = new HashSet<string>(map.Materials.Select(m => m.Id), StringComparer.OrdinalIgnoreCase);
             var roomIds = new HashSet<string>(map.Rooms.Select(r => r.Id), StringComparer.OrdinalIgnoreCase);
@@ -3957,8 +5437,8 @@ namespace TopSpeed.Tracks.Map
             {
                 if (area.WidthMeters.HasValue && area.WidthMeters.Value < 0f)
                     issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{area.Id}' width must be positive."));
-                if (!shapeIds.Contains(area.ShapeId))
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{area.Id}' references missing shape '{area.ShapeId}'."));
+                if (!geometryIds.Contains(area.GeometryId))
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Area '{area.Id}' references missing geometry '{area.GeometryId}'."));
                 if (!string.IsNullOrWhiteSpace(area.MaterialId))
                 {
                     var materialId = area.MaterialId!;
@@ -3989,18 +5469,18 @@ namespace TopSpeed.Tracks.Map
 
             foreach (var beacon in map.Beacons)
             {
-                if (!string.IsNullOrWhiteSpace(beacon.ShapeId) && !shapeIds.Contains(beacon.ShapeId!))
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Beacon '{beacon.Id}' references missing shape '{beacon.ShapeId}'."));
+                if (!string.IsNullOrWhiteSpace(beacon.GeometryId) && !geometryIds.Contains(beacon.GeometryId!))
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Beacon '{beacon.Id}' references missing geometry '{beacon.GeometryId}'."));
                 if (sectorIds.Count > 0 && !string.IsNullOrWhiteSpace(beacon.SectorId) && !sectorIds.Contains(beacon.SectorId!))
                     issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Warning, $"Beacon '{beacon.Id}' references missing sector '{beacon.SectorId}'."));
-                if (string.IsNullOrWhiteSpace(beacon.ShapeId) && !beacon.ActivationRadiusMeters.HasValue)
+                if (string.IsNullOrWhiteSpace(beacon.GeometryId) && !beacon.ActivationRadiusMeters.HasValue)
                     issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Warning, $"Beacon '{beacon.Id}' has no activation area."));
             }
 
             foreach (var marker in map.Markers)
             {
-                if (!string.IsNullOrWhiteSpace(marker.ShapeId) && !shapeIds.Contains(marker.ShapeId!))
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Marker '{marker.Id}' references missing shape '{marker.ShapeId}'."));
+                if (!string.IsNullOrWhiteSpace(marker.GeometryId) && !geometryIds.Contains(marker.GeometryId!))
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Marker '{marker.Id}' references missing geometry '{marker.GeometryId}'."));
             }
 
             if (map.Branches.Count > 0)
@@ -4029,8 +5509,8 @@ namespace TopSpeed.Tracks.Map
 
             foreach (var wall in map.Walls)
             {
-                if (!shapeIds.Contains(wall.ShapeId))
-                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Wall '{wall.Id}' references missing shape '{wall.ShapeId}'."));
+                if (!geometryIds.Contains(wall.GeometryId))
+                    issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Wall '{wall.Id}' references missing geometry '{wall.GeometryId}'."));
                 if (wall.WidthMeters < 0f)
                     issues.Add(new TrackMapIssue(TrackMapIssueSeverity.Error, $"Wall '{wall.Id}' width must be non-negative."));
                 if (!string.IsNullOrWhiteSpace(wall.MaterialId))
@@ -4060,19 +5540,21 @@ namespace TopSpeed.Tracks.Map
 
         private sealed class RegionSample
         {
-            public RegionSample(string id, ShapeDefinition shape, float widthMeters, bool closedCentered)
+            public RegionSample(string id, GeometryDefinition geometry, float widthMeters, bool closedCentered)
             {
                 Id = id;
-                Shape = shape;
+                Geometry = geometry;
                 WidthMeters = widthMeters;
                 ClosedCentered = closedCentered;
-                Bounds = GetBounds(shape, widthMeters, closedCentered);
+                Points2D = ProjectToXZ(geometry);
+                Bounds = GetBounds(geometry, Points2D, widthMeters, closedCentered);
             }
 
             public string Id { get; }
-            public ShapeDefinition Shape { get; }
+            public GeometryDefinition Geometry { get; }
             public float WidthMeters { get; }
             public bool ClosedCentered { get; }
+            public IReadOnlyList<Vector2> Points2D { get; }
             public Bounds Bounds { get; }
         }
 
@@ -4094,10 +5576,16 @@ namespace TopSpeed.Tracks.Map
 
         private static void ValidateRegionOverlaps(TrackMapDefinition map, List<TrackMapIssue> issues)
         {
-            if (map.Shapes.Count == 0 || map.Areas.Count == 0)
+            if (map.Geometries.Count == 0 || map.Areas.Count == 0)
                 return;
 
-            var areaManager = new TrackAreaManager(map.Shapes, map.Areas);
+            var geometryById = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var geometry in map.Geometries)
+            {
+                if (geometry == null || string.IsNullOrWhiteSpace(geometry.Id))
+                    continue;
+                geometryById[geometry.Id] = geometry;
+            }
 
             var hasDrivableAreas = HasDrivableAreas(map.Areas);
             var drivableRegions = new List<RegionSample>();
@@ -4111,12 +5599,12 @@ namespace TopSpeed.Tracks.Map
                         continue;
                     if (IsOverlayArea(area) || IsNonDrivableArea(area))
                         continue;
-                    if (!areaManager.TryGetShape(area.ShapeId, out var shape))
+                    if (!geometryById.TryGetValue(area.GeometryId, out var geometry))
                         continue;
 
                     var closedCentered = IsCenteredClosedWidth(area.Metadata);
                     var width = area.WidthMeters.GetValueOrDefault();
-                    drivableRegions.Add(new RegionSample($"area:{area.Id}", shape, width, closedCentered));
+                    drivableRegions.Add(new RegionSample($"area:{area.Id}", geometry, width, closedCentered));
                 }
             }
             foreach (var area in map.Areas)
@@ -4125,12 +5613,12 @@ namespace TopSpeed.Tracks.Map
                     continue;
                 if (!IsNonDrivableArea(area))
                     continue;
-                if (!areaManager.TryGetShape(area.ShapeId, out var shape))
+                if (!geometryById.TryGetValue(area.GeometryId, out var geometry))
                     continue;
 
                 var closedCentered = IsCenteredClosedWidth(area.Metadata);
                 var width = area.WidthMeters.GetValueOrDefault();
-                nonDrivableAreas.Add(new RegionSample($"area:{area.Id}", shape, width, closedCentered));
+                nonDrivableAreas.Add(new RegionSample($"area:{area.Id}", geometry, width, closedCentered));
             }
 
             if (drivableRegions.Count == 0)
@@ -4154,7 +5642,7 @@ namespace TopSpeed.Tracks.Map
                     for (var z = minZ; z <= maxZ; z += step)
                     {
                         var sample = new Vector2(x + step * 0.5f, z + step * 0.5f);
-                        if (!Contains(region.Shape, sample, region.WidthMeters, region.ClosedCentered))
+                        if (!Contains(region.Geometry, region.Points2D, sample, region.WidthMeters, region.ClosedCentered))
                             continue;
 
                         var key = MakeKey(sample.X, sample.Y, step);
@@ -4174,7 +5662,7 @@ namespace TopSpeed.Tracks.Map
 
                         foreach (var blocked in nonDrivableAreas)
                         {
-                            if (!Contains(blocked.Shape, sample, blocked.WidthMeters, blocked.ClosedCentered))
+                            if (!Contains(blocked.Geometry, blocked.Points2D, sample, blocked.WidthMeters, blocked.ClosedCentered))
                                 continue;
                             if (blockedRegions.Add($"{region.Id}|{blocked.Id}"))
                             {
@@ -4260,209 +5748,66 @@ namespace TopSpeed.Tracks.Map
                 : $"{b}|{a}";
         }
 
-        private static Bounds GetBounds(ShapeDefinition shape, float widthMeters, bool closedCentered)
+        private static IReadOnlyList<Vector2> ProjectToXZ(GeometryDefinition geometry)
         {
-            if (shape == null)
+            if (geometry == null || geometry.Points == null || geometry.Points.Count == 0)
+                return Array.Empty<Vector2>();
+
+            var projected = new List<Vector2>(geometry.Points.Count);
+            foreach (var point in geometry.Points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
+        }
+
+        private static Bounds GetBounds(
+            GeometryDefinition geometry,
+            IReadOnlyList<Vector2> points2D,
+            float widthMeters,
+            bool closedCentered)
+        {
+            if (geometry == null || points2D == null || points2D.Count == 0)
                 return new Bounds(0f, 0f, 0f, 0f);
 
-            var expand = Math.Abs(widthMeters);
-            switch (shape.Type)
+            var minX = float.MaxValue;
+            var minZ = float.MaxValue;
+            var maxX = float.MinValue;
+            var maxZ = float.MinValue;
+            foreach (var point in points2D)
             {
-                case ShapeType.Rectangle:
-                {
-                    var minX = Math.Min(shape.X, shape.X + shape.Width);
-                    var maxX = Math.Max(shape.X, shape.X + shape.Width);
-                    var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-                    var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-                    return new Bounds(minX - expand, minZ - expand, maxX + expand, maxZ + expand);
-                }
-                case ShapeType.Circle:
-                {
-                    var radius = Math.Abs(shape.Radius);
-                    var outer = Math.Max(radius, radius + expand);
-                    return new Bounds(shape.X - outer, shape.Z - outer, shape.X + outer, shape.Z + outer);
-                }
-                case ShapeType.Ring:
-                {
-                    var ringWidth = shape.RingWidth > 0f ? shape.RingWidth : expand;
-                    if (shape.Radius > 0f)
-                    {
-                        var outer = Math.Abs(shape.Radius) + Math.Abs(ringWidth);
-                        return new Bounds(shape.X - outer, shape.Z - outer, shape.X + outer, shape.Z + outer);
-                    }
-
-                    var minX = Math.Min(shape.X, shape.X + shape.Width);
-                    var maxX = Math.Max(shape.X, shape.X + shape.Width);
-                    var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-                    var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-                    var ring = Math.Abs(ringWidth);
-                    return new Bounds(minX - ring, minZ - ring, maxX + ring, maxZ + ring);
-                }
-                case ShapeType.Polygon:
-                case ShapeType.Polyline:
-                {
-                    if (shape.Points == null || shape.Points.Count == 0)
-                        return new Bounds(0f, 0f, 0f, 0f);
-                    var minX = float.MaxValue;
-                    var minZ = float.MaxValue;
-                    var maxX = float.MinValue;
-                    var maxZ = float.MinValue;
-                    foreach (var point in shape.Points)
-                    {
-                        if (point.X < minX) minX = point.X;
-                        if (point.Y < minZ) minZ = point.Y;
-                        if (point.X > maxX) maxX = point.X;
-                        if (point.Y > maxZ) maxZ = point.Y;
-                    }
-
-                    var expandBy = expand;
-                    if (closedCentered && expandBy > 0f)
-                        expandBy *= 0.5f;
-
-                    return new Bounds(minX - expandBy, minZ - expandBy, maxX + expandBy, maxZ + expandBy);
-                }
-                default:
-                    return new Bounds(0f, 0f, 0f, 0f);
+                if (point.X < minX) minX = point.X;
+                if (point.Y < minZ) minZ = point.Y;
+                if (point.X > maxX) maxX = point.X;
+                if (point.Y > maxZ) maxZ = point.Y;
             }
+
+            var expandBy = Math.Abs(widthMeters);
+            if (closedCentered && expandBy > 0f)
+                expandBy *= 0.5f;
+
+            return new Bounds(minX - expandBy, minZ - expandBy, maxX + expandBy, maxZ + expandBy);
         }
 
-        private static bool Contains(ShapeDefinition shape, Vector2 position, float widthMeters, bool closedCentered)
+        private static bool Contains(
+            GeometryDefinition geometry,
+            IReadOnlyList<Vector2> points2D,
+            Vector2 position,
+            float widthMeters,
+            bool closedCentered)
         {
-            if (shape == null)
+            if (geometry == null)
                 return false;
-            switch (shape.Type)
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    return widthMeters > 0f
-                        ? ContainsRectanglePath(shape, position, widthMeters)
-                        : ContainsRectangle(shape, position);
-                case ShapeType.Circle:
-                    return widthMeters > 0f
-                        ? ContainsCirclePath(shape, position, widthMeters)
-                        : ContainsCircle(shape, position);
-                case ShapeType.Ring:
-                    return widthMeters > 0f
-                        ? ContainsRingPath(shape, position, widthMeters)
-                        : ContainsRing(shape, position);
-                case ShapeType.Polygon:
-                    return ContainsPolygonPath(shape.Points, position, widthMeters, closedCentered);
-                case ShapeType.Polyline:
-                    return ContainsPolylinePath(shape.Points, position, widthMeters, closedCentered);
+                case GeometryType.Polygon:
+                    return ContainsPolygonPath(points2D, position, widthMeters, closedCentered);
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
+                    return ContainsPolylinePath(points2D, position, widthMeters, closedCentered);
+                case GeometryType.Mesh:
+                case GeometryType.Undefined:
                 default:
                     return false;
             }
-        }
-
-        private static bool ContainsRectangle(ShapeDefinition shape, Vector2 position)
-        {
-            var minX = shape.X;
-            var minZ = shape.Z;
-            var maxX = shape.X + shape.Width;
-            var maxZ = shape.Z + shape.Height;
-            return position.X >= minX && position.X <= maxX &&
-                   position.Y >= minZ && position.Y <= maxZ;
-        }
-
-        private static bool ContainsCircle(ShapeDefinition shape, Vector2 position)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            return (dx * dx + dz * dz) <= (shape.Radius * shape.Radius);
-        }
-
-        private static bool ContainsRectanglePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            if (widthMeters <= 0f)
-                return false;
-
-            var minX = Math.Min(shape.X, shape.X + shape.Width);
-            var maxX = Math.Max(shape.X, shape.X + shape.Width);
-            var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-            var centerX = (minX + maxX) * 0.5f;
-            var centerZ = (minZ + maxZ) * 0.5f;
-            var lengthX = Math.Abs(shape.Width);
-            var lengthZ = Math.Abs(shape.Height);
-            var halfWidth = widthMeters * 0.5f;
-            if (lengthX >= lengthZ)
-            {
-                if (position.X < minX || position.X > maxX)
-                    return false;
-                return Math.Abs(position.Y - centerZ) <= halfWidth;
-            }
-
-            if (position.Y < minZ || position.Y > maxZ)
-                return false;
-            return Math.Abs(position.X - centerX) <= halfWidth;
-        }
-
-        private static bool ContainsCirclePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var radius = Math.Abs(shape.Radius);
-            if (radius <= 0f || widthMeters <= 0f)
-                return false;
-
-            var dist = Vector2.Distance(new Vector2(shape.X, shape.Z), position);
-            var inner = Math.Max(0f, radius - widthMeters);
-            return dist >= inner && dist <= radius;
-        }
-
-        private static bool ContainsRing(ShapeDefinition shape, Vector2 position)
-        {
-            var ringWidth = Math.Abs(shape.RingWidth);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingPath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var ringWidth = Math.Abs(widthMeters);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingCircle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            var distSq = dx * dx + dz * dz;
-            var inner = Math.Abs(shape.Radius);
-            var outer = inner + ringWidth;
-            return distSq >= (inner * inner) && distSq <= (outer * outer);
-        }
-
-        private static bool ContainsRingRectangle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var innerMinX = shape.X;
-            var innerMinZ = shape.Z;
-            var innerMaxX = shape.X + shape.Width;
-            var innerMaxZ = shape.Z + shape.Height;
-            if (innerMaxX <= innerMinX || innerMaxZ <= innerMinZ)
-                return false;
-
-            var outerMinX = innerMinX - ringWidth;
-            var outerMinZ = innerMinZ - ringWidth;
-            var outerMaxX = innerMaxX + ringWidth;
-            var outerMaxZ = innerMaxZ + ringWidth;
-
-            var insideOuter = position.X >= outerMinX && position.X <= outerMaxX &&
-                              position.Y >= outerMinZ && position.Y <= outerMaxZ;
-            if (!insideOuter)
-                return false;
-
-            var insideInner = position.X >= innerMinX && position.X <= innerMaxX &&
-                              position.Y >= innerMinZ && position.Y <= innerMaxZ;
-            return !insideInner;
         }
 
         private static bool ContainsPolygon(IReadOnlyList<Vector2> points, Vector2 position)

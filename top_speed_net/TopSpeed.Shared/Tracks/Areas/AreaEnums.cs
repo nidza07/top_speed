@@ -35,4 +35,25 @@ namespace TopSpeed.Tracks.Areas
         Restricted = 1 << 4,
         PitSpeed = 1 << 5
     }
+
+    public enum TrackAreaVolumeMode
+    {
+        LocalBand = 0,
+        WorldBand = 1,
+        ClosedMesh = 2
+    }
+
+    public enum TrackAreaVolumeSpace
+    {
+        Inherit = 0,
+        Local = 1,
+        World = 2
+    }
+
+    public enum TrackAreaVolumeOffsetMode
+    {
+        Bottom = 0,
+        Center = 1,
+        Top = 2
+    }
 }

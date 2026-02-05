@@ -8,10 +8,13 @@ using TopSpeed.Data;
 using TopSpeed.Tracks.Areas;
 using TopSpeed.Tracks.Acoustics;
 using TopSpeed.Tracks.Guidance;
+using TopSpeed.Tracks.Collisions;
 using TopSpeed.Tracks.Geometry;
+using TopSpeed.Tracks.Surfaces;
 using TopSpeed.Tracks.Rooms;
 using TopSpeed.Tracks.Sectors;
 using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Volumes;
 using TopSpeed.Tracks.Walls;
 using TS.Audio;
 
@@ -60,6 +63,9 @@ namespace TopSpeed.Tracks.Map
         private readonly TrackApproachBeacon _approachBeacon;
         private readonly TrackBranchManager _branchManager;
         private readonly TrackWallManager _wallManager;
+        private readonly TrackMeshCollisionManager _meshCollisionManager;
+        private readonly TrackSurfaceSystem _surfaceSystem;
+        private readonly bool _hasSurfaces;
         private readonly string _trackName;
         private readonly bool _userDefined;
         private TrackNoise _currentNoise;
@@ -101,7 +107,10 @@ namespace TopSpeed.Tracks.Map
             _approachManager = new TrackApproachManager(map.Sectors, map.Approaches, _portalManager);
             _approachBeacon = new TrackApproachBeacon(map);
             _branchManager = map.BuildBranchManager();
-            _wallManager = new TrackWallManager(map.Shapes, map.Walls);
+            _wallManager = new TrackWallManager(map.Geometries, map.Walls);
+            _meshCollisionManager = new TrackMeshCollisionManager(map.Geometries, map.Materials);
+            _surfaceSystem = map.BuildSurfaceSystem();
+            _hasSurfaces = _surfaceSystem.Surfaces.Count > 0;
             _trackLength = ResolveTrackLength();
             InitializeSounds();
             InitializeSteamAudioScene();
@@ -129,6 +138,7 @@ namespace TopSpeed.Tracks.Map
         public TrackSectorRuleManager SectorRules => _sectorRuleManager;
         public TrackBranchManager Branches => _branchManager;
         public bool HasFinishArea => !string.IsNullOrWhiteSpace(_map.FinishAreaId);
+        public bool HasSurfaces => _hasSurfaces;
 
         public int Lap(float distanceMeters)
         {
@@ -145,7 +155,10 @@ namespace TopSpeed.Tracks.Map
 
         public MapMovementState CreateStartState()
         {
-            return MapMovement.CreateStart(_map);
+            var state = MapMovement.CreateStart(_map);
+            if (TryConstrainToSurface(state.WorldPosition, out var constrained, out _))
+                state.WorldPosition = constrained;
+            return state;
         }
 
         public MapMovementState CreateStateFromWorld(Vector3 worldPosition, float headingDegrees)
@@ -161,8 +174,20 @@ namespace TopSpeed.Tracks.Map
         public TrackPose GetPose(MapMovementState state)
         {
             var forward = MapMovement.HeadingVector(state.HeadingDegrees);
-            var right = new Vector3(forward.Z, 0f, -forward.X);
             var up = Vector3.UnitY;
+
+            if (TryGetSurfaceOrientation(state.WorldPosition, state.HeadingDegrees, out var surfaceForward, out var surfaceUp))
+            {
+                forward = surfaceForward;
+                up = surfaceUp;
+            }
+
+            var right = Vector3.Cross(forward, up);
+            if (right.LengthSquared() > 0.000001f)
+                right = Vector3.Normalize(right);
+            else
+                right = new Vector3(forward.Z, 0f, -forward.X);
+
             var heading = state.HeadingDegrees * (float)Math.PI / 180f;
             return new TrackPose(state.WorldPosition, forward, right, up, heading, 0f);
         }
@@ -178,8 +203,35 @@ namespace TopSpeed.Tracks.Map
 
             ApplyAreaOverrides(state.WorldPosition, state.HeadingDegrees, ref width, ref length, ref materialId, ref noise, ref safeZone);
 
+            var forwardAxis = MapMovement.HeadingVector(state.HeadingDegrees);
+            var upAxis = Vector3.UnitY;
+            if (TryGetSurfaceOrientation(state.WorldPosition, state.HeadingDegrees, out var surfaceForward, out var surfaceUp))
+            {
+                forwardAxis = surfaceForward;
+                upAxis = surfaceUp;
+            }
+
+            if (forwardAxis.LengthSquared() > 0.000001f)
+                forwardAxis = Vector3.Normalize(forwardAxis);
+            else
+                forwardAxis = Vector3.UnitZ;
+
+            if (upAxis.LengthSquared() > 0.000001f)
+                upAxis = Vector3.Normalize(upAxis);
+            else
+                upAxis = Vector3.UnitY;
+
+            var rightAxis = Vector3.Cross(upAxis, forwardAxis);
+            if (rightAxis.LengthSquared() > 0.000001f)
+                rightAxis = Vector3.Normalize(rightAxis);
+            else
+                rightAxis = new Vector3(forwardAxis.Z, 0f, -forwardAxis.X);
+
             road.Left = -width * 0.5f;
             road.Right = width * 0.5f;
+            road.ForwardAxis = forwardAxis;
+            road.RightAxis = rightAxis;
+            road.UpAxis = upAxis;
             road.Length = length;
             road.MaterialId = materialId;
             road.Type = TrackType.Straight;
@@ -213,8 +265,7 @@ namespace TopSpeed.Tracks.Map
                 return false;
             if (!_areaManager.TryGetArea(_map.FinishAreaId!, out var area))
                 return false;
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            return _areaManager.Contains(area, position);
+            return _areaManager.Contains(area, worldPosition);
         }
 
         public bool TryGetCeilingHeight(Vector3 worldPosition, out float ceilingHeight)
@@ -223,8 +274,7 @@ namespace TopSpeed.Tracks.Map
             if (_areaManager == null)
                 return false;
 
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return false;
 
@@ -261,8 +311,7 @@ namespace TopSpeed.Tracks.Map
             if (_sectorManager == null || _sectorRuleManager == null)
                 return false;
 
-            var position2D = new Vector2(worldPosition.X, worldPosition.Z);
-            if (!_sectorManager.TryLocate(position2D, headingDegrees, out var foundSector, out var foundPortal, out var delta))
+            if (!_sectorManager.TryLocate(worldPosition, headingDegrees, out var foundSector, out var foundPortal, out var delta))
                 return false;
 
             if (!_sectorRuleManager.TryGetRules(foundSector.Id, out var foundRules))
@@ -290,6 +339,17 @@ namespace TopSpeed.Tracks.Map
             var direction = MapMovement.HeadingVector(heading);
             var nextPosition = previousPosition + (direction * distanceMeters);
 
+            if (_hasSurfaces)
+            {
+                if (!TryConstrainToSurface(nextPosition, out var constrained, out _))
+                {
+                    boundaryHit = true;
+                    road = RoadAt(state);
+                    return false;
+                }
+                nextPosition = constrained;
+            }
+
             if (TryGetWallCollision(previousPosition, nextPosition, out _))
             {
                 boundaryHit = true;
@@ -313,7 +373,10 @@ namespace TopSpeed.Tracks.Map
 
             state.WorldPosition = nextPosition;
             state.HeadingDegrees = heading;
-            state.DistanceMeters += distanceMeters;
+            var traveled = distanceMeters;
+            if (_hasSurfaces)
+                traveled = Vector3.Distance(previousPosition, nextPosition);
+            state.DistanceMeters += traveled;
             road = RoadAt(state);
             return true;
         }
@@ -324,7 +387,8 @@ namespace TopSpeed.Tracks.Map
             if (_approachManager == null)
                 return false;
 
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
+            var position = worldPosition;
+            var position2D = new Vector2(worldPosition.X, worldPosition.Z);
             var best = default(TurnCandidate);
             var hasBest = false;
 
@@ -353,7 +417,7 @@ namespace TopSpeed.Tracks.Map
             if (best.PortalHeadingDegrees.HasValue)
             {
                 var forward = HeadingToVector(best.PortalHeadingDegrees.Value);
-                var toPlayer = position - best.PortalPosition;
+                var toPlayer = position2D - new Vector2(best.PortalPosition.X, best.PortalPosition.Z);
                 passed = Vector2.Dot(forward, toPlayer) > 0f;
             }
 
@@ -372,10 +436,9 @@ namespace TopSpeed.Tracks.Map
         public bool TryGetAvailableHeadings(Vector3 worldPosition, float headingDegrees, out IReadOnlyList<float> headings)
         {
             var list = new List<float>();
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
 
             if (_sectorManager != null &&
-                _sectorManager.TryLocate(position, headingDegrees, out var sector, out _, out _))
+                _sectorManager.TryLocate(worldPosition, headingDegrees, out var sector, out _, out _))
             {
                 var branches = _branchManager.GetBranchesForSector(sector.Id);
                 foreach (var branch in branches)
@@ -499,6 +562,9 @@ namespace TopSpeed.Tracks.Map
             {
                 Left = -width * 0.5f,
                 Right = width * 0.5f,
+                ForwardAxis = Vector3.UnitZ,
+                RightAxis = Vector3.UnitX,
+                UpAxis = Vector3.UnitY,
                 MaterialId = _map.DefaultMaterialId,
                 Type = TrackType.Straight,
                 Length = _map.CellSizeMeters
@@ -514,14 +580,13 @@ namespace TopSpeed.Tracks.Map
             ref TrackNoise noise,
             ref bool safeZone)
         {
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
             var heading = MapMovement.ToCardinal(headingDegrees);
-            ApplySectorOverrides(position, heading, ref width, ref length, ref materialId, ref noise, ref safeZone);
+            ApplySectorOverrides(worldPosition, heading, ref width, ref length, ref materialId, ref noise, ref safeZone);
 
             if (_areaManager == null)
                 return;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return;
 
@@ -553,8 +618,7 @@ namespace TopSpeed.Tracks.Map
                 if (widthArea.WidthMeters.HasValue)
                     width = Math.Max(0.5f, widthArea.WidthMeters.Value);
 
-                if (!TryApplyMetadataDimensions(widthArea.Metadata, ref width, ref length))
-                    TryApplyShapeDimensions(widthArea, heading, ref width, ref length);
+                TryApplyMetadataDimensions(widthArea.Metadata, ref width, ref length);
             }
         }
 
@@ -571,11 +635,10 @@ namespace TopSpeed.Tracks.Map
 
         private RoomAcoustics ResolveRoomAcoustics(Vector3 worldPosition)
         {
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
             if (_areaManager == null)
                 return RoomAcoustics.Default;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return RoomAcoustics.Default;
 
@@ -714,7 +777,7 @@ namespace TopSpeed.Tracks.Map
         }
 
         private void ApplySectorOverrides(
-            Vector2 position,
+            Vector3 worldPosition,
             MapDirection heading,
             ref float width,
             ref float length,
@@ -725,7 +788,7 @@ namespace TopSpeed.Tracks.Map
             if (_sectorManager == null)
                 return;
 
-            var sectors = _sectorManager.FindSectorsContaining(position);
+            var sectors = _sectorManager.FindSectorsContaining(worldPosition);
             if (sectors.Count == 0)
                 return;
 
@@ -760,53 +823,6 @@ namespace TopSpeed.Tracks.Map
                 hadAny = true;
             }
             return hadAny;
-        }
-
-        private void TryApplyShapeDimensions(
-            TrackAreaDefinition area,
-            MapDirection heading,
-            ref float width,
-            ref float length)
-        {
-            if (!_areaManager.TryGetShape(area.ShapeId, out var shape))
-                return;
-
-            switch (shape.Type)
-            {
-                case ShapeType.Rectangle:
-                    ApplyRectangleDimensions(shape, heading, ref width, ref length);
-                    break;
-                case ShapeType.Circle:
-                    width = Math.Max(width, shape.Radius * 2f);
-                    length = Math.Max(length, shape.Radius * 2f);
-                    break;
-            }
-        }
-
-        private static void ApplyRectangleDimensions(
-            ShapeDefinition shape,
-            MapDirection heading,
-            ref float width,
-            ref float length)
-        {
-            var rectWidth = Math.Abs(shape.Width);
-            var rectHeight = Math.Abs(shape.Height);
-            if (rectWidth <= 0f || rectHeight <= 0f)
-                return;
-
-            switch (heading)
-            {
-                case MapDirection.North:
-                case MapDirection.South:
-                    width = Math.Max(width, rectWidth);
-                    length = Math.Max(length, rectHeight);
-                    break;
-                case MapDirection.East:
-                case MapDirection.West:
-                    width = Math.Max(width, rectHeight);
-                    length = Math.Max(length, rectWidth);
-                    break;
-            }
         }
 
         private static bool TryGetMetadataFloat(
@@ -864,7 +880,7 @@ namespace TopSpeed.Tracks.Map
         private void TryBuildTurnCandidate(
             TrackApproachDefinition approach,
             TrackApproachSide side,
-            Vector2 position,
+            Vector3 position,
             float guidanceRangeMeters,
             ref TurnCandidate best,
             ref bool hasBest)
@@ -875,11 +891,13 @@ namespace TopSpeed.Tracks.Map
                 return;
             if (!_portalManager.TryGetPortal(portalId!, out var portal))
                 return;
+            if (!IsWithinVolume(approach, portal, position.Y))
+                return;
 
-            var portalPos = new Vector2(portal.X, portal.Z);
-            var distance = Vector2.Distance(position, portalPos);
-            if (TryGetTurnShape(approach, out var turnShape))
-                distance = DistanceToShape(turnShape, position, approach.WidthMeters);
+            var portalPos = new Vector3(portal.X, portal.Y, portal.Z);
+            var distance = Vector3.Distance(position, portalPos);
+            if (TryGetTurnGeometry(approach, out var turnGeometry))
+                distance = DistanceToGeometry(turnGeometry, position, approach.WidthMeters);
 
             if (!hasBest || distance < best.DistanceMeters)
             {
@@ -967,19 +985,19 @@ namespace TopSpeed.Tracks.Map
             public string? ExitPortalId;
             public float TurnHeadingDegrees;
             public float DistanceMeters;
-            public Vector2 PortalPosition;
+            public Vector3 PortalPosition;
             public float? PortalHeadingDegrees;
             public float GuidanceRangeMeters;
         }
 
-        private bool TryGetTurnShape(TrackApproachDefinition approach, out ShapeDefinition shape)
+        private bool TryGetTurnGeometry(TrackApproachDefinition approach, out GeometryDefinition geometry)
         {
-            shape = null!;
+            geometry = null!;
             if (approach?.Metadata == null || approach.Metadata.Count == 0)
                 return false;
-            if (!TryGetMetadataString(approach.Metadata, out var shapeId, "turn_shape", "centerline_shape", "beacon_shape", "approach_shape"))
+            if (!TryGetMetadataString(approach.Metadata, out var geometryId, "turn_geometry", "centerline_geometry", "beacon_geometry", "approach_geometry"))
                 return false;
-            return _areaManager.TryGetShape(shapeId, out shape);
+            return _areaManager.TryGetGeometry(geometryId, out geometry);
         }
 
         private static bool TryGetMetadataString(
@@ -999,60 +1017,47 @@ namespace TopSpeed.Tracks.Map
             return false;
         }
 
-        private static float DistanceToShape(ShapeDefinition shape, Vector2 position, float? widthOverride)
+        private static float DistanceToGeometry(GeometryDefinition geometry, Vector3 position, float? widthOverride)
         {
-            switch (shape.Type)
+            if (geometry == null)
+                return float.MaxValue;
+
+            var points3D = geometry.Points;
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    return DistanceToRectangle(shape, position);
-                case ShapeType.Circle:
-                    return DistanceToCircle(shape, position);
-                case ShapeType.Polyline:
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
                     var width = widthOverride ?? 0f;
-                    return Math.Max(0f, DistanceToPolyline(shape.Points, position) - (width * 0.5f));
-                case ShapeType.Polygon:
-                    return DistanceToPolygon(shape.Points, position);
+                    return Math.Max(0f, DistanceToPolyline(points3D, position) - (width * 0.5f));
+                case GeometryType.Polygon:
+                    return DistanceToPolygon(points3D, position);
+                case GeometryType.Mesh:
+                case GeometryType.Undefined:
                 default:
-                    var center = new Vector2(shape.X, shape.Z);
-                    return Vector2.Distance(position, center);
+                    return DistanceToPoints(points3D, position);
             }
         }
 
-        private static float DistanceToRectangle(ShapeDefinition shape, Vector2 position)
+        private static float DistanceToPoints(IReadOnlyList<Vector3> points, Vector3 position)
         {
-            var minX = shape.X;
-            var maxX = shape.X + shape.Width;
-            var minZ = shape.Z;
-            var maxZ = shape.Z + shape.Height;
-
-            var dx = 0f;
-            if (position.X < minX)
-                dx = minX - position.X;
-            else if (position.X > maxX)
-                dx = position.X - maxX;
-
-            var dz = 0f;
-            if (position.Y < minZ)
-                dz = minZ - position.Y;
-            else if (position.Y > maxZ)
-                dz = position.Y - maxZ;
-
-            return (float)Math.Sqrt((dx * dx) + (dz * dz));
+            if (points == null || points.Count == 0)
+                return float.MaxValue;
+            var best = float.MaxValue;
+            for (var i = 0; i < points.Count; i++)
+            {
+                var dist = Vector3.Distance(points[i], position);
+                if (dist < best)
+                    best = dist;
+            }
+            return best;
         }
 
-        private static float DistanceToCircle(ShapeDefinition shape, Vector2 position)
-        {
-            var center = new Vector2(shape.X, shape.Z);
-            var distance = Vector2.Distance(center, position);
-            return Math.Max(0f, distance - shape.Radius);
-        }
-
-        private static float DistanceToPolyline(IReadOnlyList<Vector2> points, Vector2 position)
+        private static float DistanceToPolyline(IReadOnlyList<Vector3> points, Vector3 position)
         {
             if (points == null || points.Count == 0)
                 return float.MaxValue;
             if (points.Count == 1)
-                return Vector2.Distance(points[0], position);
+                return Vector3.Distance(points[0], position);
 
             var best = float.MaxValue;
             for (var i = 0; i < points.Count - 1; i++)
@@ -1064,13 +1069,19 @@ namespace TopSpeed.Tracks.Map
             return best;
         }
 
-        private static float DistanceToPolygon(IReadOnlyList<Vector2> points, Vector2 position)
+        private static float DistanceToPolygon(IReadOnlyList<Vector3> points, Vector3 position)
         {
             if (points == null || points.Count == 0)
                 return float.MaxValue;
 
-            if (IsPointInPolygon(points, position))
-                return 0f;
+            var points2D = ProjectToXZ(points);
+            var position2D = new Vector2(position.X, position.Z);
+            if (IsPointInPolygon(points2D, position2D))
+            {
+                if (TryGetPolygonPlane(points, out var planePoint, out var planeNormal))
+                    return Math.Abs(Vector3.Dot(position - planePoint, planeNormal));
+                return Math.Abs(position.Y - ResolveAverageY(points));
+            }
 
             var best = float.MaxValue;
             for (var i = 0; i < points.Count; i++)
@@ -1082,6 +1093,18 @@ namespace TopSpeed.Tracks.Map
                     best = distance;
             }
             return best;
+        }
+
+        private static List<Vector2> ProjectToXZ(IReadOnlyList<Vector3> points)
+        {
+            var projected = new List<Vector2>();
+            if (points == null || points.Count == 0)
+                return projected;
+
+            projected.Capacity = points.Count;
+            foreach (var point in points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
         }
 
         private static bool IsPointInPolygon(IReadOnlyList<Vector2> points, Vector2 position)
@@ -1101,20 +1124,111 @@ namespace TopSpeed.Tracks.Map
             return inside;
         }
 
-        private static float DistanceToSegment(Vector2 a, Vector2 b, Vector2 position)
+        private static float DistanceToSegment(Vector3 a, Vector3 b, Vector3 position)
         {
             var ab = b - a;
             var ap = position - a;
-            var abLenSq = Vector2.Dot(ab, ab);
+            var abLenSq = Vector3.Dot(ab, ab);
             if (abLenSq <= float.Epsilon)
-                return Vector2.Distance(a, position);
-            var t = Vector2.Dot(ap, ab) / abLenSq;
+                return Vector3.Distance(a, position);
+            var t = Vector3.Dot(ap, ab) / abLenSq;
             if (t <= 0f)
-                return Vector2.Distance(a, position);
+                return Vector3.Distance(a, position);
             if (t >= 1f)
-                return Vector2.Distance(b, position);
+                return Vector3.Distance(b, position);
             var closest = a + (ab * t);
-            return Vector2.Distance(closest, position);
+            return Vector3.Distance(closest, position);
+        }
+
+        private static float ResolveAverageY(IReadOnlyList<Vector3> points)
+        {
+            if (points == null || points.Count == 0)
+                return 0f;
+            var sum = 0f;
+            for (var i = 0; i < points.Count; i++)
+                sum += points[i].Y;
+            return sum / points.Count;
+        }
+
+        private static bool TryGetPolygonPlane(IReadOnlyList<Vector3> points, out Vector3 planePoint, out Vector3 planeNormal)
+        {
+            planePoint = Vector3.Zero;
+            planeNormal = Vector3.UnitY;
+            if (points == null || points.Count < 3)
+                return false;
+
+            for (var i = 0; i < points.Count - 2; i++)
+            {
+                var a = points[i];
+                var b = points[i + 1];
+                for (var j = i + 2; j < points.Count; j++)
+                {
+                    var c = points[j];
+                    var ab = b - a;
+                    var ac = c - a;
+                    var normal = Vector3.Cross(ab, ac);
+                    if (normal.LengthSquared() <= 0.000001f)
+                        continue;
+                    planePoint = a;
+                    planeNormal = Vector3.Normalize(normal);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        private static bool IsWithinVolume(TrackApproachDefinition approach, PortalDefinition portal, float y)
+        {
+            if (approach != null && (approach.VolumeThicknessMeters.HasValue ||
+                                     approach.VolumeOffsetMeters.HasValue ||
+                                     approach.VolumeMinY.HasValue ||
+                                     approach.VolumeMaxY.HasValue))
+            {
+                if (!VolumeBounds.TryResolve(
+                        portal.Y,
+                        approach.VolumeMode,
+                        approach.VolumeOffsetMode,
+                        approach.VolumeOffsetSpace,
+                        approach.VolumeMinMaxSpace,
+                        approach.VolumeThicknessMeters,
+                        approach.VolumeOffsetMeters,
+                        approach.VolumeMinY,
+                        approach.VolumeMaxY,
+                        out var minY,
+                        out var maxY))
+                {
+                    return true;
+                }
+
+                return y >= minY && y <= maxY;
+            }
+
+            if (portal != null && (portal.VolumeThicknessMeters.HasValue ||
+                                   portal.VolumeOffsetMeters.HasValue ||
+                                   portal.VolumeMinY.HasValue ||
+                                   portal.VolumeMaxY.HasValue))
+            {
+                if (!VolumeBounds.TryResolve(
+                        portal.Y,
+                        portal.VolumeMode,
+                        portal.VolumeOffsetMode,
+                        portal.VolumeOffsetSpace,
+                        portal.VolumeMinMaxSpace,
+                        portal.VolumeThicknessMeters,
+                        portal.VolumeOffsetMeters,
+                        portal.VolumeMinY,
+                        portal.VolumeMaxY,
+                        out var minY,
+                        out var maxY))
+                {
+                    return true;
+                }
+
+                return y >= minY && y <= maxY;
+            }
+
+            return true;
         }
 
 
@@ -1273,7 +1387,7 @@ namespace TopSpeed.Tracks.Map
             var headingDegrees = state.HeadingDegrees;
             if (_approachBeacon.TryGetCue(state.WorldPosition, headingDegrees, out var cue) && !cue.Passed)
             {
-                var position = AudioWorld.ToMeters(new Vector3(cue.BeaconPosition.X, 0f, cue.BeaconPosition.Y));
+                var position = AudioWorld.ToMeters(cue.BeaconPosition);
                 _soundBeacon.SetPosition(position);
                 _soundBeacon.SetVelocity(Vector3.Zero);
                 ApplyBeaconBakedIdentifier(cue.PortalId);
@@ -1306,19 +1420,29 @@ namespace TopSpeed.Tracks.Map
 
         public bool IsWithinTrack(Vector3 worldPosition)
         {
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            var safeZone = IsSafeZone(position);
+            var safeZone = IsSafeZone(worldPosition);
             return IsWithinTrackInternal(worldPosition, safeZone);
         }
 
         private bool IsWithinTrackInternal(Vector3 worldPosition, bool isSafeZone)
         {
+            if (_map.MinX.HasValue && worldPosition.X <= _map.MinX.Value)
+                return false;
+            if (_map.MinZ.HasValue && worldPosition.Z <= _map.MinZ.Value)
+                return false;
+            if (_map.MaxX.HasValue && worldPosition.X >= _map.MaxX.Value)
+                return false;
+            if (_map.MaxZ.HasValue && worldPosition.Z >= _map.MaxZ.Value)
+                return false;
+
             var position = new Vector2(worldPosition.X, worldPosition.Z);
-            if (IsBlockedBySectorRules(position))
+            if (IsBlockedBySectorRules(worldPosition))
                 return false;
             if (IsBlockedByWall(position))
                 return false;
-            if (_areaManager != null && _areaManager.ContainsTrackArea(position))
+            if (_areaManager != null && _areaManager.ContainsTrackArea(worldPosition))
+                return true;
+            if (_hasSurfaces && _surfaceSystem.TrySample(worldPosition, out _))
                 return true;
             return isSafeZone;
         }
@@ -1347,6 +1471,60 @@ namespace TopSpeed.Tracks.Map
             }
 
             return false;
+        }
+
+        public bool TryGetMeshCollision(Vector3 fromWorld, Vector3 toWorld, out TrackMeshCollision collision)
+        {
+            collision = default;
+            if (_meshCollisionManager == null || !_meshCollisionManager.HasColliders)
+                return false;
+            return _meshCollisionManager.TryGetCollision(fromWorld, toWorld, out collision);
+        }
+
+        public bool TryConstrainToSurface(Vector3 position, out Vector3 constrainedPosition, out TrackSurfaceSample sample)
+        {
+            constrainedPosition = position;
+            sample = default;
+            if (!_hasSurfaces)
+                return false;
+
+            if (!_surfaceSystem.TrySample(position, out var hit))
+                return false;
+
+            var normal = hit.Normal;
+            if (normal.LengthSquared() > 0.000001f)
+                normal = Vector3.Normalize(normal);
+            if (normal.Y <= 0.0001f)
+                return false;
+
+            constrainedPosition = new Vector3(position.X, hit.Position.Y, position.Z);
+            sample = hit;
+            return true;
+        }
+
+        public bool TryGetSurfaceOrientation(Vector3 position, float headingDegrees, out Vector3 forward, out Vector3 up)
+        {
+            forward = MapMovement.HeadingVector(headingDegrees);
+            up = Vector3.UnitY;
+            if (!_hasSurfaces)
+                return false;
+
+            if (!_surfaceSystem.TrySample(position, out var sample))
+                return false;
+
+            var normal = sample.Normal;
+            if (normal.LengthSquared() > 0.000001f)
+                normal = Vector3.Normalize(normal);
+            if (normal.Y <= 0.0001f)
+                return false;
+
+            var heading = forward;
+            var projected = heading - (normal * Vector3.Dot(heading, normal));
+            if (projected.LengthSquared() > 0.000001f)
+                forward = Vector3.Normalize(projected);
+
+            up = normal;
+            return true;
         }
 
         private bool IsBlockedByWall(Vector2 position)
@@ -1386,12 +1564,12 @@ namespace TopSpeed.Tracks.Map
             return true;
         }
 
-        private bool IsSafeZone(Vector2 position)
+        private bool IsSafeZone(Vector3 worldPosition)
         {
             if (_areaManager == null)
                 return false;
 
-            var areas = _areaManager.FindAreasContaining(position);
+            var areas = _areaManager.FindAreasContaining(worldPosition);
             if (areas.Count == 0)
                 return false;
 
@@ -1446,11 +1624,8 @@ namespace TopSpeed.Tracks.Map
             if (_sectorRuleManager == null || _sectorManager == null)
                 return true;
 
-            var fromPos = new Vector2(fromPosition.X, fromPosition.Z);
-            var toPos = new Vector2(toPosition.X, toPosition.Z);
-
-            var hasFrom = _sectorManager.TryLocate(fromPos, headingDegrees, out var fromSector, out var fromPortal, out _);
-            var hasTo = _sectorManager.TryLocate(toPos, headingDegrees, out var toSector, out var toPortal, out _);
+            var hasFrom = _sectorManager.TryLocate(fromPosition, headingDegrees, out var fromSector, out var fromPortal, out _);
+            var hasTo = _sectorManager.TryLocate(toPosition, headingDegrees, out var toSector, out var toPortal, out _);
 
             if (!hasTo)
                 return true;
@@ -1480,8 +1655,7 @@ namespace TopSpeed.Tracks.Map
             if (_sectorRuleManager == null || _sectorManager == null)
                 return;
 
-            var position = new Vector2(worldPosition.X, worldPosition.Z);
-            if (!_sectorManager.TryLocate(position, headingDegrees, out var sector, out _, out _))
+            if (!_sectorManager.TryLocate(worldPosition, headingDegrees, out var sector, out _, out _))
                 return;
             if (!_sectorRuleManager.TryGetRules(sector.Id, out var rules))
                 return;
@@ -1494,12 +1668,12 @@ namespace TopSpeed.Tracks.Map
             road.MaxSpeedKph = rules.MaxSpeedKph;
         }
 
-        private bool IsBlockedBySectorRules(Vector2 position)
+        private bool IsBlockedBySectorRules(Vector3 worldPosition)
         {
             if (_sectorRuleManager == null || _sectorManager == null)
                 return false;
 
-            var sectors = _sectorManager.FindSectorsContaining(position);
+            var sectors = _sectorManager.FindSectorsContaining(worldPosition);
             if (sectors.Count == 0)
                 return false;
 

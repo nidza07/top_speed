@@ -8,7 +8,7 @@ using TriangleNet.Meshing;
 using TopSpeed.Tracks.Areas;
 using TopSpeed.Tracks.Map;
 using TopSpeed.Tracks.Materials;
-using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Walls;
 using TS.Audio;
 
@@ -16,9 +16,6 @@ namespace TopSpeed.Tracks.Acoustics
 {
     internal static class SteamAudioSceneBuilder
     {
-        private const int MinCircleSegments = 12;
-        private const int MaxCircleSegments = 64;
-
         public static TrackSteamAudioScene? Build(TrackMap map, SteamAudioContext context)
         {
             if (map == null)
@@ -28,12 +25,12 @@ namespace TopSpeed.Tracks.Acoustics
             if (context.Context.Handle == IntPtr.Zero)
                 return null;
 
-            var shapesById = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
-            foreach (var shape in map.Shapes)
+            var geometriesById = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            foreach (var geometry in map.Geometries)
             {
-                if (shape == null)
+                if (geometry == null)
                     continue;
-                shapesById[shape.Id] = shape;
+                geometriesById[geometry.Id] = geometry;
             }
 
             var materialLookup = new MaterialLookup(map);
@@ -45,20 +42,20 @@ namespace TopSpeed.Tracks.Acoustics
             {
                 if (area == null || IsOverlayArea(area))
                     continue;
-                if (!shapesById.TryGetValue(area.ShapeId, out var shape))
+                if (!geometriesById.TryGetValue(area.GeometryId, out var geometry))
                     continue;
                 var materialIndex = materialLookup.GetIndex(area.MaterialId);
-                AddAreaGeometry(shape, area, materialIndex, vertices, triangles, materialIndices);
+                AddAreaGeometry(geometry, area, materialIndex, vertices, triangles, materialIndices);
             }
 
             foreach (var wall in map.Walls)
             {
                 if (wall == null)
                     continue;
-                if (!shapesById.TryGetValue(wall.ShapeId, out var shape))
+                if (!geometriesById.TryGetValue(wall.GeometryId, out var geometry))
                     continue;
                 var materialIndex = materialLookup.GetIndex(wall.MaterialId);
-                AddWallGeometry(shape, wall, materialIndex, vertices, triangles, materialIndices);
+                AddWallGeometry(geometry, wall, materialIndex, vertices, triangles, materialIndices);
             }
 
             if (vertices.Count == 0 || triangles.Count == 0)
@@ -269,8 +266,6 @@ namespace TopSpeed.Tracks.Acoustics
 
             var span = Math.Max(bounds.Max.X - bounds.Min.X, bounds.Max.Z - bounds.Min.Z);
             var influenceRadius = Math.Max(50f, Math.Min(120f, span * 0.5f));
-            var baseHeight = map.BaseHeightMeters;
-
             foreach (var portal in map.Portals)
             {
                 if (portal == null || string.IsNullOrWhiteSpace(portal.Id))
@@ -289,7 +284,7 @@ namespace TopSpeed.Tracks.Acoustics
                         Center = new IPL.Vector3
                         {
                             X = portal.X,
-                            Y = baseHeight,
+                            Y = portal.Y,
                             Z = portal.Z
                         },
                         Radius = influenceRadius
@@ -344,204 +339,137 @@ namespace TopSpeed.Tracks.Acoustics
         }
 
         private static void AddAreaGeometry(
-            ShapeDefinition shape,
+            GeometryDefinition geometry,
             TrackAreaDefinition area,
             int materialIndex,
             List<IPL.Vector3> vertices,
             List<IPL.Triangle> triangles,
             List<int> materialIndices)
         {
+            if (geometry == null)
+                return;
+
+            if (geometry.Type == GeometryType.Mesh)
+            {
+                AddMeshGeometry(geometry, materialIndex, vertices, triangles, materialIndices);
+                return;
+            }
+
+            if (geometry.Type != GeometryType.Polygon)
+                return;
+
+            var points = NormalizePolygonPoints(ProjectToXZ(geometry.Points));
+            if (points.Length < 3)
+                return;
+
             var elevation = area.ElevationMeters;
             var ceiling = area.CeilingHeightMeters;
 
-            switch (shape.Type)
-            {
-                case ShapeType.Rectangle:
-                    AddRectangleSurface(shape, elevation, materialIndex, vertices, triangles, materialIndices, flipWinding: false);
-                    if (ceiling.HasValue)
-                        AddRectangleSurface(shape, ceiling.Value, materialIndex, vertices, triangles, materialIndices, flipWinding: true);
-                    break;
-                case ShapeType.Circle:
-                    AddCircleSurface(shape, elevation, materialIndex, vertices, triangles, materialIndices, flipWinding: false);
-                    if (ceiling.HasValue)
-                        AddCircleSurface(shape, ceiling.Value, materialIndex, vertices, triangles, materialIndices, flipWinding: true);
-                    break;
-                case ShapeType.Ring:
-                    AddRingSurface(shape, elevation, materialIndex, vertices, triangles, materialIndices, flipWinding: false);
-                    if (ceiling.HasValue)
-                        AddRingSurface(shape, ceiling.Value, materialIndex, vertices, triangles, materialIndices, flipWinding: true);
-                    break;
-                case ShapeType.Polygon:
-                    AddPolygonSurface(shape, elevation, materialIndex, vertices, triangles, materialIndices, flipWinding: false);
-                    if (ceiling.HasValue)
-                        AddPolygonSurface(shape, ceiling.Value, materialIndex, vertices, triangles, materialIndices, flipWinding: true);
-                    break;
-                case ShapeType.Polyline:
-                default:
-                    break;
-            }
+            AddPolygonSurface(points, elevation, materialIndex, vertices, triangles, materialIndices, flipWinding: false);
+            if (ceiling.HasValue)
+                AddPolygonSurface(points, ceiling.Value, materialIndex, vertices, triangles, materialIndices, flipWinding: true);
         }
 
         private static void AddWallGeometry(
-            ShapeDefinition shape,
+            GeometryDefinition geometry,
             TrackWallDefinition wall,
             int materialIndex,
             List<IPL.Vector3> vertices,
             List<IPL.Triangle> triangles,
             List<int> materialIndices)
         {
+            if (geometry == null)
+                return;
+
+            if (geometry.Type == GeometryType.Mesh)
+            {
+                AddMeshGeometry(geometry, materialIndex, vertices, triangles, materialIndices);
+                return;
+            }
+
             var baseHeight = wall.ElevationMeters;
             var top = baseHeight + Math.Max(0f, wall.HeightMeters);
             if (top <= baseHeight + 0.01f)
                 return;
 
-            switch (shape.Type)
+            var points2D = ProjectToXZ(geometry.Points);
+            switch (geometry.Type)
             {
-                case ShapeType.Rectangle:
-                    AddRectangleWalls(shape, baseHeight, top, materialIndex, vertices, triangles, materialIndices);
+                case GeometryType.Polygon:
+                    AddPolygonWalls(points2D, baseHeight, top, materialIndex, vertices, triangles, materialIndices, closed: true);
                     break;
-                case ShapeType.Circle:
-                    AddCircleWalls(shape, baseHeight, top, materialIndex, vertices, triangles, materialIndices, wall.WidthMeters);
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
+                    AddPolygonWalls(points2D, baseHeight, top, materialIndex, vertices, triangles, materialIndices, closed: false);
                     break;
-                case ShapeType.Ring:
-                    AddRingWalls(shape, baseHeight, top, materialIndex, vertices, triangles, materialIndices, wall.WidthMeters);
-                    break;
-                case ShapeType.Polygon:
-                    AddPolygonWalls(shape.Points, baseHeight, top, materialIndex, vertices, triangles, materialIndices, closed: true);
-                    break;
-                case ShapeType.Polyline:
-                    AddPolygonWalls(shape.Points, baseHeight, top, materialIndex, vertices, triangles, materialIndices, closed: false);
+                case GeometryType.Undefined:
+                default:
                     break;
             }
         }
 
-        private static void AddRectangleSurface(
-            ShapeDefinition shape,
-            float y,
+        private static void AddMeshGeometry(
+            GeometryDefinition geometry,
             int materialIndex,
             List<IPL.Vector3> vertices,
             List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            bool flipWinding)
+            List<int> materialIndices)
         {
-            var minX = Math.Min(shape.X, shape.X + shape.Width);
-            var maxX = Math.Max(shape.X, shape.X + shape.Width);
-            var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-
-            AddRectangle(minX, minZ, maxX, maxZ, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
-        }
-
-        private static void AddRectangle(
-            float minX,
-            float minZ,
-            float maxX,
-            float maxZ,
-            float y,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            bool flipWinding)
-        {
-            if (maxX <= minX || maxZ <= minZ)
+            if (geometry == null || geometry.Type != GeometryType.Mesh)
                 return;
 
-            IPL.Vector3 a;
-            IPL.Vector3 b;
-            IPL.Vector3 c;
-            IPL.Vector3 d;
-
-            if (!flipWinding)
-            {
-                a = new IPL.Vector3 { X = minX, Y = y, Z = minZ };
-                b = new IPL.Vector3 { X = minX, Y = y, Z = maxZ };
-                c = new IPL.Vector3 { X = maxX, Y = y, Z = maxZ };
-                d = new IPL.Vector3 { X = maxX, Y = y, Z = minZ };
-            }
-            else
-            {
-                a = new IPL.Vector3 { X = minX, Y = y, Z = minZ };
-                b = new IPL.Vector3 { X = maxX, Y = y, Z = minZ };
-                c = new IPL.Vector3 { X = maxX, Y = y, Z = maxZ };
-                d = new IPL.Vector3 { X = minX, Y = y, Z = maxZ };
-            }
-
-            AddQuad(a, b, c, d, materialIndex, vertices, triangles, materialIndices, doubleSided: false);
-        }
-
-        private static void AddCircleSurface(
-            ShapeDefinition shape,
-            float y,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            bool flipWinding)
-        {
-            var radius = Math.Abs(shape.Radius);
-            if (radius <= 0.01f)
+            var points = geometry.Points;
+            if (points == null || points.Count < 3)
                 return;
 
-            var center = new Vector2(shape.X, shape.Z);
-            var segments = GetCircleSegments(radius);
-            var points = BuildCirclePoints(center, radius, segments);
-            if (!AddTriangulatedSurface(points, null, y, materialIndex, vertices, triangles, materialIndices, flipWinding))
-                AddPolygonFan(points, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
-        }
-
-        private static void AddRingSurface(
-            ShapeDefinition shape,
-            float y,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            bool flipWinding)
-        {
-            var ringWidth = Math.Abs(shape.RingWidth);
-            if (ringWidth <= 0.01f)
-                return;
-
-            if (shape.Radius > 0f)
+            var indices = geometry.TriangleIndices;
+            if (indices == null || indices.Count == 0)
             {
-                var inner = Math.Abs(shape.Radius);
-                var outer = inner + ringWidth;
-                var center = new Vector2(shape.X, shape.Z);
-                var segments = GetCircleSegments(outer);
-                var outerPoints = BuildCirclePoints(center, outer, segments);
-                var innerPoints = BuildCirclePoints(center, inner, segments);
-                ReverseLoop(innerPoints);
-                var holes = new List<IReadOnlyList<Vector2>> { innerPoints };
-                if (!AddTriangulatedSurface(outerPoints, holes, y, materialIndex, vertices, triangles, materialIndices, flipWinding))
-                    AddRingAnnulus(center, inner, outer, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
+                if ((points.Count % 3) != 0)
+                    return;
+                for (var i = 0; i < points.Count; i += 3)
+                {
+                    var a = points[i];
+                    var b = points[i + 1];
+                    var c = points[i + 2];
+                    AddTriangle(
+                        new IPL.Vector3 { X = a.X, Y = a.Y, Z = a.Z },
+                        new IPL.Vector3 { X = b.X, Y = b.Y, Z = b.Z },
+                        new IPL.Vector3 { X = c.X, Y = c.Y, Z = c.Z },
+                        materialIndex,
+                        vertices,
+                        triangles,
+                        materialIndices);
+                }
                 return;
             }
 
-            var innerMinX = Math.Min(shape.X, shape.X + shape.Width);
-            var innerMaxX = Math.Max(shape.X, shape.X + shape.Width);
-            var innerMinZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var innerMaxZ = Math.Max(shape.Z, shape.Z + shape.Height);
+            if ((indices.Count % 3) != 0)
+                return;
 
-            var outerMinX = innerMinX - ringWidth;
-            var outerMaxX = innerMaxX + ringWidth;
-            var outerMinZ = innerMinZ - ringWidth;
-            var outerMaxZ = innerMaxZ + ringWidth;
-
-            var outerLoop = BuildRectangleLoop(outerMinX, outerMinZ, outerMaxX, outerMaxZ, ccw: true);
-            var innerLoop = BuildRectangleLoop(innerMinX, innerMinZ, innerMaxX, innerMaxZ, ccw: false);
-            var holeLoops = new List<IReadOnlyList<Vector2>> { innerLoop };
-            if (!AddTriangulatedSurface(outerLoop, holeLoops, y, materialIndex, vertices, triangles, materialIndices, flipWinding))
+            for (var i = 0; i < indices.Count; i += 3)
             {
-                AddRectangle(outerMinX, outerMinZ, outerMaxX, innerMinZ, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
-                AddRectangle(outerMinX, innerMaxZ, outerMaxX, outerMaxZ, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
-                AddRectangle(outerMinX, innerMinZ, innerMinX, innerMaxZ, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
-                AddRectangle(innerMaxX, innerMinZ, outerMaxX, innerMaxZ, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
+                var ia = indices[i];
+                var ib = indices[i + 1];
+                var ic = indices[i + 2];
+                if ((uint)ia >= (uint)points.Count || (uint)ib >= (uint)points.Count || (uint)ic >= (uint)points.Count)
+                    continue;
+                var a = points[ia];
+                var b = points[ib];
+                var c = points[ic];
+                AddTriangle(
+                    new IPL.Vector3 { X = a.X, Y = a.Y, Z = a.Z },
+                    new IPL.Vector3 { X = b.X, Y = b.Y, Z = b.Z },
+                    new IPL.Vector3 { X = c.X, Y = c.Y, Z = c.Z },
+                    materialIndex,
+                    vertices,
+                    triangles,
+                    materialIndices);
             }
         }
 
         private static void AddPolygonSurface(
-            ShapeDefinition shape,
+            IReadOnlyList<Vector2> points,
             float y,
             int materialIndex,
             List<IPL.Vector3> vertices,
@@ -549,15 +477,15 @@ namespace TopSpeed.Tracks.Acoustics
             List<int> materialIndices,
             bool flipWinding)
         {
-            if (shape.Points == null || shape.Points.Count < 3)
+            if (points == null || points.Count < 3)
                 return;
 
-            var points = NormalizePolygonPoints(shape.Points);
-            if (points.Length < 3)
+            var normalized = NormalizePolygonPoints(points);
+            if (normalized.Length < 3)
                 return;
 
-            if (!AddTriangulatedSurface(points, null, y, materialIndex, vertices, triangles, materialIndices, flipWinding))
-                AddPolygonFan(points, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
+            if (!AddTriangulatedSurface(normalized, null, y, materialIndex, vertices, triangles, materialIndices, flipWinding))
+                AddPolygonFan(normalized, y, materialIndex, vertices, triangles, materialIndices, flipWinding);
         }
 
         private static void AddPolygonFan(
@@ -607,6 +535,18 @@ namespace TopSpeed.Tracks.Acoustics
                 list.RemoveAt(list.Count - 1);
 
             return list.ToArray();
+        }
+
+        private static List<Vector2> ProjectToXZ(IReadOnlyList<Vector3> points)
+        {
+            var projected = new List<Vector2>();
+            if (points == null || points.Count == 0)
+                return projected;
+
+            projected.Capacity = points.Count;
+            foreach (var point in points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
         }
 
         private static bool AddTriangulatedSurface(
@@ -717,42 +657,6 @@ namespace TopSpeed.Tracks.Acoustics
             return vertices;
         }
 
-        private static void ReverseLoop(IReadOnlyList<Vector2> points)
-        {
-            if (points is Vector2[] array)
-            {
-                Array.Reverse(array);
-                return;
-            }
-
-            if (points is List<Vector2> list)
-            {
-                list.Reverse();
-            }
-        }
-
-        private static Vector2[] BuildRectangleLoop(float minX, float minZ, float maxX, float maxZ, bool ccw)
-        {
-            if (ccw)
-            {
-                return new[]
-                {
-                    new Vector2(minX, minZ),
-                    new Vector2(maxX, minZ),
-                    new Vector2(maxX, maxZ),
-                    new Vector2(minX, maxZ)
-                };
-            }
-
-            return new[]
-            {
-                new Vector2(minX, minZ),
-                new Vector2(minX, maxZ),
-                new Vector2(maxX, maxZ),
-                new Vector2(maxX, minZ)
-            };
-        }
-
         private readonly struct Triangle2D
         {
             public Triangle2D(Vector2 a, Vector2 b, Vector2 c)
@@ -765,150 +669,6 @@ namespace TopSpeed.Tracks.Acoustics
             public Vector2 A { get; }
             public Vector2 B { get; }
             public Vector2 C { get; }
-        }
-
-        private static void AddRingAnnulus(
-            Vector2 center,
-            float innerRadius,
-            float outerRadius,
-            float y,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            bool flipWinding)
-        {
-            if (outerRadius <= innerRadius || outerRadius <= 0.01f)
-                return;
-
-            var segments = GetCircleSegments(outerRadius);
-            var innerPoints = BuildCirclePoints(center, innerRadius, segments);
-            var outerPoints = BuildCirclePoints(center, outerRadius, segments);
-
-            for (var i = 0; i < segments; i++)
-            {
-                var next = (i + 1) % segments;
-                var inner0 = innerPoints[i];
-                var inner1 = innerPoints[next];
-                var outer1 = outerPoints[next];
-                var outer0 = outerPoints[i];
-
-                var a = new IPL.Vector3 { X = inner0.X, Y = y, Z = inner0.Y };
-                var b = new IPL.Vector3 { X = inner1.X, Y = y, Z = inner1.Y };
-                var c = new IPL.Vector3 { X = outer1.X, Y = y, Z = outer1.Y };
-                var d = new IPL.Vector3 { X = outer0.X, Y = y, Z = outer0.Y };
-
-                AddQuad(a, b, c, d, materialIndex, vertices, triangles, materialIndices, doubleSided: false, flipWinding: flipWinding);
-            }
-        }
-
-        private static void AddRectangleWalls(
-            ShapeDefinition shape,
-            float baseHeight,
-            float topHeight,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices)
-        {
-            var minX = Math.Min(shape.X, shape.X + shape.Width);
-            var maxX = Math.Max(shape.X, shape.X + shape.Width);
-            var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-
-            var p0 = new Vector2(minX, minZ);
-            var p1 = new Vector2(maxX, minZ);
-            var p2 = new Vector2(maxX, maxZ);
-            var p3 = new Vector2(minX, maxZ);
-
-            AddWallSegment(p0, p1, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices);
-            AddWallSegment(p1, p2, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices);
-            AddWallSegment(p2, p3, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices);
-            AddWallSegment(p3, p0, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices);
-        }
-
-        private static void AddCircleWalls(
-            ShapeDefinition shape,
-            float baseHeight,
-            float topHeight,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            float widthMeters)
-        {
-            var radius = Math.Abs(shape.Radius);
-            if (radius <= 0.01f)
-                return;
-
-            if (widthMeters > 0.01f)
-            {
-                var inner = Math.Max(0.01f, radius - widthMeters);
-                AddRingWalls(shape, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, widthMeters, inner);
-                return;
-            }
-
-            var center = new Vector2(shape.X, shape.Z);
-            var segments = GetCircleSegments(radius);
-            var points = BuildCirclePoints(center, radius, segments);
-            AddPolygonWalls(points, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, closed: true);
-        }
-
-        private static void AddRingWalls(
-            ShapeDefinition shape,
-            float baseHeight,
-            float topHeight,
-            int materialIndex,
-            List<IPL.Vector3> vertices,
-            List<IPL.Triangle> triangles,
-            List<int> materialIndices,
-            float widthMeters,
-            float? innerOverride = null)
-        {
-            var ringWidth = Math.Abs(shape.RingWidth);
-            if (ringWidth <= 0.01f && widthMeters > 0.01f)
-                ringWidth = widthMeters;
-
-            if (shape.Radius > 0f)
-            {
-                var innerRadius = innerOverride ?? Math.Abs(shape.Radius);
-                var outerRadius = innerRadius + ringWidth;
-                var center = new Vector2(shape.X, shape.Z);
-                var segments = GetCircleSegments(outerRadius);
-                var outerPoints = BuildCirclePoints(center, outerRadius, segments);
-                var innerPoints = BuildCirclePoints(center, innerRadius, segments);
-                AddPolygonWalls(outerPoints, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, closed: true);
-                AddPolygonWalls(innerPoints, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, closed: true);
-                return;
-            }
-
-            var innerMinX = Math.Min(shape.X, shape.X + shape.Width);
-            var innerMaxX = Math.Max(shape.X, shape.X + shape.Width);
-            var innerMinZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var innerMaxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-            var outerMinX = innerMinX - ringWidth;
-            var outerMaxX = innerMaxX + ringWidth;
-            var outerMinZ = innerMinZ - ringWidth;
-            var outerMaxZ = innerMaxZ + ringWidth;
-
-            var outerLoop = new[]
-            {
-                new Vector2(outerMinX, outerMinZ),
-                new Vector2(outerMaxX, outerMinZ),
-                new Vector2(outerMaxX, outerMaxZ),
-                new Vector2(outerMinX, outerMaxZ)
-            };
-
-            var innerLoop = new[]
-            {
-                new Vector2(innerMinX, innerMinZ),
-                new Vector2(innerMaxX, innerMinZ),
-                new Vector2(innerMaxX, innerMaxZ),
-                new Vector2(innerMinX, innerMaxZ)
-            };
-
-            AddPolygonWalls(outerLoop, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, closed: true);
-            AddPolygonWalls(innerLoop, baseHeight, topHeight, materialIndex, vertices, triangles, materialIndices, closed: true);
         }
 
         private static void AddPolygonWalls(
@@ -953,30 +713,6 @@ namespace TopSpeed.Tracks.Acoustics
             var v3 = new IPL.Vector3 { X = a.X, Y = topHeight, Z = a.Y };
 
             AddQuad(v0, v1, v2, v3, materialIndex, vertices, triangles, materialIndices, doubleSided: true);
-        }
-
-        private static int GetCircleSegments(float radius)
-        {
-            var estimate = (int)Math.Ceiling(radius * 1.5f);
-            if (estimate < MinCircleSegments)
-                return MinCircleSegments;
-            if (estimate > MaxCircleSegments)
-                return MaxCircleSegments;
-            return estimate;
-        }
-
-        private static Vector2[] BuildCirclePoints(Vector2 center, float radius, int segments)
-        {
-            var points = new Vector2[segments];
-            var step = (float)(Math.PI * 2.0 / segments);
-            for (var i = 0; i < segments; i++)
-            {
-                var angle = step * i;
-                points[i] = new Vector2(
-                    center.X + (float)Math.Cos(angle) * radius,
-                    center.Y + (float)Math.Sin(angle) * radius);
-            }
-            return points;
         }
 
         private static void AddQuad(

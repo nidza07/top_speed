@@ -7,106 +7,79 @@ default_noise=nonoise
 default_width=12
 base_height=0
 default_area_height=8
+min_x=0
+min_z=0
 weather=sunny
 ambience=noambience
-start_x=0
-start_z=0
+start_x=60
+start_z=15
 start_heading=east
 safe_zone_ring=50
 
-# Legacy grid removed; path/area topology only.
+# Geometry
+[geometry: corner_sw_zone]
+type=polygon
+points3d=0 0 0, 30 0 0, 30 0 40, 0 0 40
 
-# Shapes
-[shape: outer_grass_ring]
-type=ring
-x=-50
-z=-50
-width=350
-height=350
-ring_width=100
+[geometry: beacon_zone]
+type=polygon
+points3d=127 0 125, 126.414 0 126.414, 125 0 127, 123.586 0 126.414, 123 0 125, 123.586 0 123.586, 125 0 123, 126.414 0 123.586
 
-[shape: corner_sw_zone]
-type=rectangle
-x=0
-z=0
-width=30
-height=40
+[geometry: intersection_zone]
+type=polygon
+points3d=118 0 118, 132 0 118, 132 0 132, 118 0 132
 
-[shape: beacon_zone]
-type=circle
-x=125
-z=125
-radius=2
+[geometry: east_turn_zone]
+type=polygon
+points3d=205 0 0, 250 0 0, 250 0 60, 205 0 60
 
-[shape: intersection_zone]
-type=rectangle
-x=118
-z=118
-width=14
-height=14
+[geometry: loop_south_zone]
+type=polygon
+points3d=30 0 0, 205 0 0, 205 0 40, 30 0 40
 
-[shape: east_turn_zone]
-type=rectangle
-x=205
-z=0
-width=45
-height=60
+[geometry: loop_west_zone]
+type=polygon
+points3d=0 0 40, 40 0 40, 40 0 210, 0 0 210
 
-[shape: loop_south_zone]
-type=rectangle
-x=30
-z=0
-width=175
-height=40
+[geometry: loop_north_zone]
+type=polygon
+points3d=40 0 210, 210 0 210, 210 0 250, 40 0 250
 
-[shape: loop_west_zone]
-type=rectangle
-x=0
-z=40
-width=40
-height=170
+[geometry: loop_east_zone]
+type=polygon
+points3d=205 0 60, 250 0 60, 250 0 210, 205 0 210
 
-[shape: loop_north_zone]
-type=rectangle
-x=40
-z=210
-width=170
-height=40
+[geometry: corner_nw_zone]
+type=polygon
+points3d=0 0 210, 40 0 210, 40 0 250, 0 0 250
 
-[shape: loop_east_zone]
-type=rectangle
-x=205
-z=60
-width=45
-height=150
+[geometry: corner_ne_zone]
+type=polygon
+points3d=210 0 210, 250 0 210, 250 0 250, 210 0 250
 
-[shape: corner_nw_zone]
-type=rectangle
-x=0
-z=210
-width=40
-height=40
+[geometry: east_turn_beacon_zone]
+type=polygon
+points3d=205 0 0, 250 0 0, 250 0 60, 205 0 60
 
-[shape: corner_ne_zone]
-type=rectangle
-x=210
-z=210
-width=40
-height=40
+[geometry: start_zone]
+type=polygon
+points3d=40 0 0, 80 0 0, 80 0 30, 40 0 30
 
-[shape: east_turn_beacon_zone]
-type=rectangle
-x=205
-z=0
-width=45
-height=250
+[geometry: outer_grass_south]
+type=polygon
+points3d=-50 0 -50, 300 0 -50, 300 0 50, -50 0 50
 
-[shape: start_zone]
-type=rectangle
-x=40
-z=0
-width=40
-height=30
+[geometry: outer_grass_north]
+type=polygon
+points3d=-50 0 200, 300 0 200, 300 0 300, -50 0 300
+
+[geometry: outer_grass_west]
+type=polygon
+points3d=-50 0 50, 50 0 50, 50 0 200, -50 0 200
+
+[geometry: outer_grass_east]
+type=polygon
+points3d=200 0 50, 300 0 50, 300 0 200, 200 0 200
 
 # Rooms
 [room: demo_room]
@@ -122,7 +95,8 @@ diffusion=1.0
 # Areas
 [area: loop_area]
 type=zone
-shape=loop_south_zone
+geometry=loop_south_zone
+surface=loop_south_surface
 material=asphalt
 noise=nonoise
 room=demo_room
@@ -134,7 +108,8 @@ wall_collision=block
 
 [area: loop_west]
 type=zone
-shape=loop_west_zone
+geometry=loop_west_zone
+surface=loop_west_surface
 material=asphalt
 noise=nonoise
 room=demo_room
@@ -146,7 +121,8 @@ wall_collision=block
 
 [area: loop_north]
 type=zone
-shape=loop_north_zone
+geometry=loop_north_zone
+surface=loop_north_surface
 material=asphalt
 noise=nonoise
 room=demo_room
@@ -158,7 +134,8 @@ wall_collision=block
 
 [area: loop_east]
 type=zone
-shape=loop_east_zone
+geometry=loop_east_zone
+surface=loop_east_surface
 material=asphalt
 noise=nonoise
 room=demo_room
@@ -170,31 +147,56 @@ wall_collision=block
 
 [area: corner_nw_area]
 type=zone
-shape=corner_nw_zone
+geometry=corner_nw_zone
+surface=corner_nw_surface
 material=asphalt
 noise=nonoise
 room=demo_room
 
 [area: corner_ne_area]
 type=zone
-shape=corner_ne_zone
+geometry=corner_ne_zone
+surface=corner_ne_surface
 material=asphalt
 noise=nonoise
 room=demo_room
 
-[area: outer_grass]
+[area: outer_grass_south]
 type=boundary
-name=Outer grass ring
-shape=outer_grass_ring
+name=Outer grass south
+geometry=outer_grass_south
 material=sand
 noise=nonoise
 room=demo_room
 
+[area: outer_grass_north]
+type=boundary
+name=Outer grass north
+geometry=outer_grass_north
+material=sand
+noise=nonoise
+room=demo_room
+
+[area: outer_grass_west]
+type=boundary
+name=Outer grass west
+geometry=outer_grass_west
+material=sand
+noise=nonoise
+room=demo_room
+
+[area: outer_grass_east]
+type=boundary
+name=Outer grass east
+geometry=outer_grass_east
+material=sand
+noise=nonoise
+room=demo_room
 
 [area: main_intersection]
 type=intersection
 name=Intersection
-shape=intersection_zone
+geometry=intersection_zone
 material=asphalt
 noise=trackside
 room=demo_room
@@ -204,7 +206,8 @@ intersection_length=20
 [area: corner_sw_area]
 type=zone
 name=South west corner
-shape=corner_sw_zone
+geometry=corner_sw_zone
+surface=corner_sw_surface
 material=asphalt
 noise=trackside
 room=demo_room
@@ -212,7 +215,8 @@ room=demo_room
 [area: east_turn_area]
 type=zone
 name=East corner turn
-shape=east_turn_zone
+geometry=east_turn_zone
+surface=east_turn_surface
 material=asphalt
 noise=trackside
 room=demo_room
@@ -225,7 +229,8 @@ wall_collision=block
 [area: start_area]
 type=start
 name=Start zone
-shape=start_zone
+geometry=start_zone
+surface=loop_south_surface
 material=asphalt
 noise=trackside
 room=demo_room
@@ -238,6 +243,56 @@ grid_row_spacing=12
 grid_col_spacing=4
 grid_margin=2
 grid_max_vehicles=8
+
+
+# Profiles
+[profile: east_turn_profile]
+type=plane
+origin_x=205
+origin_z=0
+roll=6
+
+# Surfaces
+[surface: loop_south_surface]
+type=polygon
+geometry=loop_south_zone
+material=asphalt
+
+[surface: loop_west_surface]
+type=polygon
+geometry=loop_west_zone
+material=asphalt
+
+[surface: loop_north_surface]
+type=polygon
+geometry=loop_north_zone
+material=asphalt
+
+[surface: loop_east_surface]
+type=polygon
+geometry=loop_east_zone
+material=asphalt
+
+[surface: corner_sw_surface]
+type=polygon
+geometry=corner_sw_zone
+material=asphalt
+
+[surface: corner_nw_surface]
+type=polygon
+geometry=corner_nw_zone
+material=asphalt
+
+[surface: corner_ne_surface]
+type=polygon
+geometry=corner_ne_zone
+material=asphalt
+
+[surface: east_turn_surface]
+type=polygon
+geometry=east_turn_zone
+material=asphalt
+profile=east_turn_profile
 
 
 # Sector (track-native)
@@ -284,8 +339,8 @@ area=east_turn_area
 # Portals (entry/exit geometry)
 [portal: p_loop_entry]
 sector=corner_sw
-x=0
-z=0
+x=10
+z=10
 width=12
 entry_heading=east
 role=entry
@@ -300,16 +355,16 @@ role=exit
 
 [portal: p_sw_entry_a]
 sector=corner_sw
-x=0
-z=30
+x=5
+z=40
 width=12
 entry_heading=south
 role=entry
 
 [portal: p_sw_entry_c]
 sector=corner_sw
-x=15
-z=30
+x=25
+z=40
 width=12
 entry_heading=south
 role=entry
@@ -317,14 +372,14 @@ role=entry
 [portal: p_sw_exit]
 sector=corner_sw
 x=30
-z=0
+z=20
 width=12
 exit_heading=east
 role=exit
 
 [portal: p_ne_entry]
 sector=corner_ne
-x=235
+x=230
 z=210
 width=12
 entry_heading=north
@@ -333,7 +388,7 @@ role=entry
 [portal: p_ne_exit]
 sector=corner_ne
 x=210
-z=235
+z=230
 width=12
 exit_heading=west
 role=exit
@@ -341,14 +396,14 @@ role=exit
 [portal: p_nw_entry]
 sector=corner_nw
 x=40
-z=235
+z=230
 width=12
 entry_heading=west
 role=entry
 
 [portal: p_nw_exit]
 sector=corner_nw
-x=15
+x=20
 z=210
 width=12
 exit_heading=south
@@ -356,8 +411,8 @@ role=exit
 
 [portal: p_east_entry]
 sector=east_turn
-x=235
-z=15
+x=205
+z=20
 width=12
 entry_heading=east
 role=entry
@@ -365,7 +420,7 @@ role=entry
 [portal: p_east_north]
 sector=east_turn
 x=235
-z=15
+z=60
 width=12
 exit_heading=north
 role=exit
@@ -381,8 +436,8 @@ exit_heading=north
 side=exit
 turn_range=60
 beacon_range=0
-turn_shape=east_turn_zone
-beacon_shape=east_turn_beacon_zone
+turn_geometry=east_turn_zone
+beacon_geometry=east_turn_beacon_zone
 
 [guide: sw_turn_guide]
 area=corner_sw_area
@@ -394,7 +449,7 @@ exit_heading=east
 side=exit
 turn_range=60
 beacon_range=0
-centerline_shape=corner_sw_zone
+centerline_geometry=corner_sw_zone
 
 [guide: ne_turn_guide]
 area=corner_ne_area
@@ -406,7 +461,7 @@ exit_heading=west
 side=exit
 turn_range=60
 beacon_range=0
-centerline_shape=corner_ne_zone
+centerline_geometry=corner_ne_zone
 
 [guide: nw_turn_guide]
 area=corner_nw_area
@@ -418,7 +473,7 @@ exit_heading=south
 side=exit
 turn_range=60
 beacon_range=0
-centerline_shape=corner_nw_zone
+centerline_geometry=corner_nw_zone
 
 # Branches (area-linked exits)
 [branch: sw_corner_branch]
@@ -445,7 +500,7 @@ dir=oneway
 type=voice
 role=guidance
 name=Center guide
-shape=beacon_zone
+geometry=beacon_zone
 x=125
 z=125
 heading=north
@@ -468,3 +523,4 @@ exit_heading=west
 width=12
 length=1000
 tolerance=8
+beacon_range=0

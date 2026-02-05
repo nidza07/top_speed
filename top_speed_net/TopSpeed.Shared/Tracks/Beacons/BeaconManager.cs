@@ -3,7 +3,8 @@ using System.Collections.Generic;
 using System.Globalization;
 using System.Numerics;
 using TopSpeed.Tracks.Areas;
-using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Geometry;
+using TopSpeed.Tracks.Volumes;
 
 namespace TopSpeed.Tracks.Beacons
 {
@@ -94,8 +95,82 @@ namespace TopSpeed.Tracks.Beacons
             return results;
         }
 
+        public IReadOnlyList<TrackBeaconDefinition> FindActiveBeacons(
+            Vector3 position,
+            float? rangeMeters = null,
+            TrackBeaconRole? role = null,
+            TrackBeaconType? type = null)
+        {
+            if (_beaconsById.Count == 0)
+                return Array.Empty<TrackBeaconDefinition>();
+
+            var hits = new List<(TrackBeaconDefinition Beacon, float Distance)>();
+            foreach (var beacon in _beaconsById.Values)
+            {
+                if (role.HasValue && beacon.Role != role.Value)
+                    continue;
+                if (type.HasValue && beacon.Type != type.Value)
+                    continue;
+
+                if (!IsActive(beacon, position, out var distance))
+                    continue;
+                if (rangeMeters.HasValue && distance > rangeMeters.Value)
+                    continue;
+                hits.Add((beacon, distance));
+            }
+
+            if (hits.Count == 0)
+                return Array.Empty<TrackBeaconDefinition>();
+
+            hits.Sort((left, right) => left.Distance.CompareTo(right.Distance));
+            var results = new List<TrackBeaconDefinition>(hits.Count);
+            foreach (var entry in hits)
+                results.Add(entry.Beacon);
+            return results;
+        }
+
         public bool TryGetNearestCue(
             Vector2 position,
+            float? headingDegrees,
+            out TrackBeaconCue cue,
+            float? rangeMeters = null,
+            TrackBeaconRole? role = null,
+            TrackBeaconType? type = null)
+        {
+            cue = default;
+            if (_beaconsById.Count == 0)
+                return false;
+
+            TrackBeaconDefinition? best = null;
+            var bestDistance = float.MaxValue;
+            foreach (var beacon in _beaconsById.Values)
+            {
+                if (role.HasValue && beacon.Role != role.Value)
+                    continue;
+                if (type.HasValue && beacon.Type != type.Value)
+                    continue;
+                if (!IsActive(beacon, position, out var distance))
+                    continue;
+                if (rangeMeters.HasValue && distance > rangeMeters.Value)
+                    continue;
+
+                if (distance < bestDistance)
+                {
+                    bestDistance = distance;
+                    best = beacon;
+                }
+            }
+
+            if (best == null)
+                return false;
+
+            var delta = GetHeadingDelta(best.OrientationDegrees, headingDegrees);
+            cue = new TrackBeaconCue(best, bestDistance, delta);
+            return true;
+        }
+
+        public bool TryGetNearestCue(
+            Vector3 position,
             float? headingDegrees,
             out TrackBeaconCue cue,
             float? rangeMeters = null,
@@ -139,22 +214,87 @@ namespace TopSpeed.Tracks.Beacons
             var beaconPos = new Vector2(beacon.X, beacon.Z);
             distanceMeters = Vector2.Distance(position, beaconPos);
 
-            if (!string.IsNullOrWhiteSpace(beacon.ShapeId) &&
-                _areaManager.TryGetShape(beacon.ShapeId!, out var shape))
+            if (!string.IsNullOrWhiteSpace(beacon.GeometryId) &&
+                _areaManager.TryGetGeometry(beacon.GeometryId!, out var geometry))
             {
-                if (shape.Type == ShapeType.Polyline)
+                if (geometry.Type == GeometryType.Polyline || geometry.Type == GeometryType.Spline)
                 {
-                    var width = ResolvePolylineWidth(beacon, shape);
-                    return _areaManager.ContainsShape(shape.Id, position, width);
+                    var width = ResolvePolylineWidth(beacon);
+                    return _areaManager.ContainsGeometry(geometry.Id, position, width);
                 }
-                return _areaManager.ContainsShape(shape.Id, position);
+                return _areaManager.ContainsGeometry(geometry.Id, position);
             }
 
             var radius = beacon.ActivationRadiusMeters ?? _defaultActivationRadiusMeters;
             return distanceMeters <= radius;
         }
 
-        private float ResolvePolylineWidth(TrackBeaconDefinition beacon, ShapeDefinition shape)
+        private bool IsActive(TrackBeaconDefinition beacon, Vector3 position, out float distanceMeters)
+        {
+            var beaconPos = new Vector3(beacon.X, beacon.Y, beacon.Z);
+            distanceMeters = Vector3.Distance(position, beaconPos);
+
+            if (!IsWithinVolume(beacon, position.Y))
+                return false;
+
+            if (!string.IsNullOrWhiteSpace(beacon.GeometryId) &&
+                _areaManager.TryGetGeometry(beacon.GeometryId!, out var geometry))
+            {
+                if (geometry.Type == GeometryType.Mesh)
+                {
+                    if (beacon.VolumeMode != TrackAreaVolumeMode.ClosedMesh)
+                        return false;
+                    if (!_areaManager.TryGetMeshContainment(geometry.Id, out var mesh) || !mesh.IsClosed)
+                        return false;
+                    return mesh.Contains(position, MeshContainment.DefaultSurfaceEpsilon);
+                }
+                if (geometry.Type == GeometryType.Polyline || geometry.Type == GeometryType.Spline)
+                {
+                    var width = ResolvePolylineWidth(beacon);
+                    return _areaManager.ContainsGeometry(geometry.Id, new Vector2(position.X, position.Z), width);
+                }
+                return _areaManager.ContainsGeometry(geometry.Id, new Vector2(position.X, position.Z));
+            }
+
+            var radius = beacon.ActivationRadiusMeters ?? _defaultActivationRadiusMeters;
+            return distanceMeters <= radius;
+        }
+
+        private static bool IsWithinVolume(TrackBeaconDefinition beacon, float y)
+        {
+            if (!HasVolume(beacon))
+                return true;
+
+            if (!VolumeBounds.TryResolve(
+                    beacon.Y,
+                    beacon.VolumeMode,
+                    beacon.VolumeOffsetMode,
+                    beacon.VolumeOffsetSpace,
+                    beacon.VolumeMinMaxSpace,
+                    beacon.VolumeThicknessMeters,
+                    beacon.VolumeOffsetMeters,
+                    beacon.VolumeMinY,
+                    beacon.VolumeMaxY,
+                    out var minY,
+                    out var maxY))
+            {
+                return true;
+            }
+
+            return y >= minY && y <= maxY;
+        }
+
+        private static bool HasVolume(TrackBeaconDefinition beacon)
+        {
+            if (beacon == null)
+                return false;
+            return beacon.VolumeThicknessMeters.HasValue ||
+                   beacon.VolumeOffsetMeters.HasValue ||
+                   beacon.VolumeMinY.HasValue ||
+                   beacon.VolumeMaxY.HasValue;
+        }
+
+        private float ResolvePolylineWidth(TrackBeaconDefinition beacon)
         {
             if (TryGetMetadataFloat(beacon.Metadata, out var width, "width", "activation_width", "lane_width"))
                 return Math.Max(0.1f, width);

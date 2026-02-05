@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Globalization;
 using TopSpeed.Tracks.Sectors;
 using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Areas;
 
 namespace TopSpeed.Tracks.Guidance
 {
@@ -180,6 +181,14 @@ namespace TopSpeed.Tracks.Guidance
             var width = GetFloat(metadata, "width", "lane_width", "approach_width");
             var length = GetFloat(metadata, "length", "approach_length");
             var tolerance = GetFloat(metadata, "tolerance", "alignment_tolerance", "align_tol");
+            var volumeThickness = GetFloat(metadata, "height", "thickness", "volume_thickness", "volume_height");
+            var volumeOffset = GetFloat(metadata, "offset", "volume_offset", "volume_center");
+            var minY = GetFloat(metadata, "min_y", "miny");
+            var maxY = GetFloat(metadata, "max_y", "maxy");
+            var volumeMode = GetVolumeMode(metadata);
+            var volumeOffsetMode = GetVolumeOffsetMode(metadata);
+            var volumeOffsetSpace = GetVolumeSpace(metadata, "volume_offset_space", "offset_space");
+            var volumeMinMaxSpace = GetVolumeSpace(metadata, "volume_minmax_space", "minmax_space", "bounds_space", "volume_bounds_space");
 
             var portals = _portalManager.GetPortalsForSector(sector.Id);
             if (string.IsNullOrWhiteSpace(entryPortalId))
@@ -206,7 +215,15 @@ namespace TopSpeed.Tracks.Guidance
                 width,
                 length,
                 tolerance,
-                metadata);
+                metadata,
+                volumeThickness,
+                volumeOffset,
+                minY,
+                maxY,
+                volumeMode,
+                volumeOffsetMode,
+                volumeOffsetSpace,
+                volumeMinMaxSpace);
         }
 
         private static bool HasGuidanceMetadata(TrackSectorDefinition sector)
@@ -389,6 +406,25 @@ namespace TopSpeed.Tracks.Guidance
             return null;
         }
 
+        private static bool TryGetString(
+            IReadOnlyDictionary<string, string> metadata,
+            out string value,
+            params string[] keys)
+        {
+            value = string.Empty;
+            if (metadata == null || metadata.Count == 0)
+                return false;
+            foreach (var key in keys)
+            {
+                if (metadata.TryGetValue(key, out var raw) && !string.IsNullOrWhiteSpace(raw))
+                {
+                    value = raw.Trim();
+                    return true;
+                }
+            }
+            return false;
+        }
+
         private static float? GetFloat(
             IReadOnlyDictionary<string, string> metadata,
             params string[] keys)
@@ -403,6 +439,82 @@ namespace TopSpeed.Tracks.Guidance
                     return parsed;
             }
             return null;
+        }
+
+        private static TrackAreaVolumeMode GetVolumeMode(IReadOnlyDictionary<string, string> metadata)
+        {
+            if (!TryGetString(metadata, out var raw, "volume_mode"))
+                return TrackAreaVolumeMode.LocalBand;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "world":
+                case "world_band":
+                case "world_y":
+                case "worldy":
+                    return TrackAreaVolumeMode.WorldBand;
+                case "closed":
+                case "closed_mesh":
+                    return TrackAreaVolumeMode.ClosedMesh;
+                case "local":
+                case "local_band":
+                case "band":
+                default:
+                    return TrackAreaVolumeMode.LocalBand;
+            }
+        }
+
+        private static TrackAreaVolumeOffsetMode GetVolumeOffsetMode(IReadOnlyDictionary<string, string> metadata)
+        {
+            if (!TryGetString(metadata, out var raw, "volume_offset_mode", "offset_mode", "offset_anchor", "volume_offset_anchor", "offset_align", "volume_offset_align"))
+                return TrackAreaVolumeOffsetMode.Bottom;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "center":
+                case "centre":
+                case "middle":
+                case "mid":
+                    return TrackAreaVolumeOffsetMode.Center;
+                case "top":
+                case "max":
+                case "upper":
+                case "end":
+                    return TrackAreaVolumeOffsetMode.Top;
+                case "bottom":
+                case "min":
+                case "lower":
+                case "start":
+                default:
+                    return TrackAreaVolumeOffsetMode.Bottom;
+            }
+        }
+
+        private static TrackAreaVolumeSpace GetVolumeSpace(IReadOnlyDictionary<string, string> metadata, params string[] keys)
+        {
+            if (!TryGetString(metadata, out var raw, keys))
+                return TrackAreaVolumeSpace.Inherit;
+
+            var trimmed = raw.Trim().ToLowerInvariant();
+            switch (trimmed)
+            {
+                case "local":
+                case "relative":
+                case "elevation":
+                case "area":
+                    return TrackAreaVolumeSpace.Local;
+                case "world":
+                case "absolute":
+                case "global":
+                    return TrackAreaVolumeSpace.World;
+                case "inherit":
+                case "default":
+                case "auto":
+                default:
+                    return TrackAreaVolumeSpace.Inherit;
+            }
         }
 
         private static float? GetHeading(

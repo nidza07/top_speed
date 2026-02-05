@@ -20,6 +20,7 @@ namespace TopSpeed.Input
         ReportSpeed,
         ReportWheelAngle,
         ReportHeading,
+        ReportSurface,
         TrackName,
         Pause
     }

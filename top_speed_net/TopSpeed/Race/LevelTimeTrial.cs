@@ -185,6 +185,7 @@ namespace TopSpeed.Race
             HandleDistanceReportRequest();
             HandleWheelAngleReportRequest();
             HandleHeadingReportRequest();
+            HandleSurfaceReportRequest();
             HandleCoordinateReportRequest();
             HandlePauseRequest(ref _pauseKeyReleased);
 

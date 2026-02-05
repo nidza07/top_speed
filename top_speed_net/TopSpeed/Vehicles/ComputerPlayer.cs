@@ -596,9 +596,29 @@ namespace TopSpeed.Vehicles
                 _worldPosition = _mapState.WorldPosition;
                 _positionY = _mapState.DistanceMeters;
                 var worldVelocity = elapsed > 0f ? (_worldPosition - previousPosition) / elapsed : Vector3.Zero;
-                _worldForward = MapMovement.HeadingVector(headingDegrees);
-                _worldUp = Vector3.UnitY;
+                if (_track.TryGetSurfaceOrientation(_worldPosition, headingDegrees, out var surfaceForward, out var surfaceUp))
+                {
+                    _worldForward = surfaceForward;
+                    _worldUp = surfaceUp;
+                }
+                else
+                {
+                    _worldForward = MapMovement.HeadingVector(headingDegrees);
+                    _worldUp = Vector3.UnitY;
+                }
                 _worldVelocity = worldVelocity;
+
+                var forwardAxis = _worldForward.LengthSquared() > 0.0001f ? Vector3.Normalize(_worldForward) : Vector3.UnitZ;
+                var upAxis = _worldUp.LengthSquared() > 0.0001f ? Vector3.Normalize(_worldUp) : Vector3.UnitY;
+                var rightAxis = Vector3.Cross(upAxis, forwardAxis);
+                if (rightAxis.LengthSquared() > 0.0001f)
+                    rightAxis = Vector3.Normalize(rightAxis);
+                else
+                    rightAxis = new Vector3(forwardAxis.Z, 0f, -forwardAxis.X);
+
+                var lateralDelta = Vector3.Dot(_worldPosition - previousPosition, rightAxis);
+                if (!float.IsNaN(lateralDelta) && !float.IsInfinity(lateralDelta))
+                    _positionX += lateralDelta;
 
                 if (_frame % 4 == 0)
                 {

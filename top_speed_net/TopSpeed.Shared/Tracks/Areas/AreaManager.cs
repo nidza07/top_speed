@@ -1,26 +1,36 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
-using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Geometry;
+using TopSpeed.Tracks.Volumes;
 
 namespace TopSpeed.Tracks.Areas
 {
     public sealed class TrackAreaManager
     {
-        private readonly Dictionary<string, ShapeDefinition> _shapes;
+        private readonly Dictionary<string, GeometryDefinition> _geometries;
+        private readonly Dictionary<string, IReadOnlyList<Vector2>> _geometryPoints2D;
+        private readonly Dictionary<string, MeshContainment> _meshContainment;
+        private readonly TrackVolumeManager? _volumeManager;
         private readonly Dictionary<string, TrackAreaDefinition> _areasById;
         private readonly List<TrackAreaDefinition> _areas;
 
-        public TrackAreaManager(IEnumerable<ShapeDefinition> shapes, IEnumerable<TrackAreaDefinition> areas)
+        public TrackAreaManager(
+            IEnumerable<GeometryDefinition> geometries,
+            IEnumerable<TrackAreaDefinition> areas,
+            IEnumerable<TrackVolumeDefinition>? volumes = null)
         {
-            _shapes = new Dictionary<string, ShapeDefinition>(StringComparer.OrdinalIgnoreCase);
+            _geometries = new Dictionary<string, GeometryDefinition>(StringComparer.OrdinalIgnoreCase);
+            _geometryPoints2D = new Dictionary<string, IReadOnlyList<Vector2>>(StringComparer.OrdinalIgnoreCase);
+            _meshContainment = new Dictionary<string, MeshContainment>(StringComparer.OrdinalIgnoreCase);
+            _volumeManager = volumes == null ? null : new TrackVolumeManager(volumes, geometries);
             _areasById = new Dictionary<string, TrackAreaDefinition>(StringComparer.OrdinalIgnoreCase);
             _areas = new List<TrackAreaDefinition>();
 
-            if (shapes != null)
+            if (geometries != null)
             {
-                foreach (var shape in shapes)
-                    AddShape(shape);
+                foreach (var geometry in geometries)
+                    AddGeometry(geometry);
             }
 
             if (areas != null)
@@ -32,11 +42,14 @@ namespace TopSpeed.Tracks.Areas
 
         public IReadOnlyList<TrackAreaDefinition> Areas => _areas;
 
-        public void AddShape(ShapeDefinition shape)
+        public void AddGeometry(GeometryDefinition geometry)
         {
-            if (shape == null)
-                throw new ArgumentNullException(nameof(shape));
-            _shapes[shape.Id] = shape;
+            if (geometry == null)
+                throw new ArgumentNullException(nameof(geometry));
+            _geometries[geometry.Id] = geometry;
+            _geometryPoints2D[geometry.Id] = ProjectToXZ(geometry.Points);
+            if (geometry.Type == GeometryType.Mesh && MeshContainment.TryCreate(geometry, out var containment))
+                _meshContainment[geometry.Id] = containment;
         }
 
         public void AddArea(TrackAreaDefinition area)
@@ -47,12 +60,12 @@ namespace TopSpeed.Tracks.Areas
             _areas.Add(area);
         }
 
-        public bool TryGetShape(string id, out ShapeDefinition shape)
+        public bool TryGetGeometry(string id, out GeometryDefinition geometry)
         {
-            shape = null!;
+            geometry = null!;
             if (string.IsNullOrWhiteSpace(id))
                 return false;
-            return _shapes.TryGetValue(id.Trim(), out shape!);
+            return _geometries.TryGetValue(id.Trim(), out geometry!);
         }
 
         public bool TryGetArea(string id, out TrackAreaDefinition area)
@@ -77,23 +90,88 @@ namespace TopSpeed.Tracks.Areas
             return hits;
         }
 
+        public IReadOnlyList<TrackAreaDefinition> FindAreasContaining(Vector3 position)
+        {
+            if (_areas.Count == 0)
+                return Array.Empty<TrackAreaDefinition>();
+
+            var hits = new List<TrackAreaDefinition>();
+            foreach (var area in _areas)
+            {
+                if (Contains(area, position))
+                    hits.Add(area);
+            }
+            return hits;
+        }
+
         public bool Contains(TrackAreaDefinition area, Vector2 position)
         {
             if (area == null)
                 return false;
-            if (!TryGetShape(area.ShapeId, out var shape))
+            if (!TryGetGeometry(area.GeometryId, out var geometry))
                 return false;
             var width = area.WidthMeters.GetValueOrDefault();
             var centered = IsCenteredClosedWidth(area.Metadata);
-            return Contains(shape, position, width, centered);
+            return Contains(geometry, position, width, centered);
         }
 
-        public bool ContainsShape(string shapeId, Vector2 position, float? widthMeters = null)
+        public bool Contains(TrackAreaDefinition area, Vector3 position)
         {
-            if (!TryGetShape(shapeId, out var shape))
+            if (area == null)
+                return false;
+            if (!string.IsNullOrWhiteSpace(area.VolumeId) &&
+                _volumeManager != null &&
+                _volumeManager.Contains(area.VolumeId!, position))
+            {
+                if (HasVolumeOverrides(area) && TryGetVolumeBounds(area, out var minYOverride, out var maxYOverride))
+                    return position.Y >= minYOverride && position.Y <= maxYOverride;
+                return true;
+            }
+            if (!TryGetGeometry(area.GeometryId, out var geometry))
+                return false;
+
+            if (geometry.Type == GeometryType.Mesh)
+            {
+                if (area.VolumeMode != TrackAreaVolumeMode.ClosedMesh)
+                    return false;
+                if (!TryGetMeshContainment(geometry.Id, out var mesh) || !mesh.IsClosed)
+                    return false;
+                if (!mesh.Contains(position, MeshContainment.DefaultSurfaceEpsilon))
+                    return false;
+                if (HasVolumeOverrides(area) && TryGetVolumeBounds(area, out var minY, out var maxY))
+                    return position.Y >= minY && position.Y <= maxY;
+                return true;
+            }
+
+            if (!Contains(area, new Vector2(position.X, position.Z)))
+                return false;
+            if (!TryGetVolumeBounds(area, out var minY2, out var maxY2))
+                return false;
+            return position.Y >= minY2 && position.Y <= maxY2;
+        }
+
+        public bool ContainsGeometry(string geometryId, Vector2 position, float? widthMeters = null)
+        {
+            if (!TryGetGeometry(geometryId, out var geometry))
                 return false;
             var width = widthMeters.GetValueOrDefault();
-            return Contains(shape, position, width, false);
+            return Contains(geometry, position, width, false);
+        }
+
+        internal bool TryGetMeshContainment(string geometryId, out MeshContainment containment)
+        {
+            containment = null!;
+            if (string.IsNullOrWhiteSpace(geometryId))
+                return false;
+            return _meshContainment.TryGetValue(geometryId.Trim(), out containment!);
+        }
+
+        internal bool TryGetVolume(string volumeId, out TrackVolume volume)
+        {
+            volume = null!;
+            if (string.IsNullOrWhiteSpace(volumeId) || _volumeManager == null)
+                return false;
+            return _volumeManager.TryGetVolume(volumeId.Trim(), out volume!);
         }
 
         public bool ContainsTrackArea(Vector2 position)
@@ -117,141 +195,46 @@ namespace TopSpeed.Tracks.Areas
             return false;
         }
 
-        private static bool Contains(ShapeDefinition shape, Vector2 position, float widthMeters, bool closedCentered)
+        public bool ContainsTrackArea(Vector3 position)
         {
-            switch (shape.Type)
+            if (_areas.Count == 0)
+                return false;
+
+            foreach (var area in _areas)
             {
-                case ShapeType.Rectangle:
-                    return widthMeters > 0f
-                        ? ContainsRectanglePath(shape, position, widthMeters)
-                        : ContainsRectangle(shape, position);
-                case ShapeType.Circle:
-                    return widthMeters > 0f
-                        ? ContainsCirclePath(shape, position, widthMeters)
-                        : ContainsCircle(shape, position);
-                case ShapeType.Ring:
-                    return widthMeters > 0f
-                        ? ContainsRingPath(shape, position, widthMeters)
-                        : ContainsRing(shape, position);
-                case ShapeType.Polygon:
-                    return ContainsPolygonPath(shape.Points, position, widthMeters, closedCentered);
-                case ShapeType.Polyline:
-                    return ContainsPolylinePath(shape.Points, position, widthMeters, closedCentered);
+                if (area == null)
+                    continue;
+                if (area.Type == TrackAreaType.Boundary || area.Type == TrackAreaType.OffTrack)
+                    continue;
+                if (area.Type == TrackAreaType.Start || area.Type == TrackAreaType.Finish ||
+                    area.Type == TrackAreaType.Checkpoint || area.Type == TrackAreaType.Intersection)
+                    continue;
+                if (Contains(area, position))
+                    return true;
+            }
+
+            return false;
+        }
+
+        private bool Contains(GeometryDefinition geometry, Vector2 position, float widthMeters, bool closedCentered)
+        {
+            if (geometry == null)
+                return false;
+            if (!_geometryPoints2D.TryGetValue(geometry.Id, out var points2D))
+                points2D = ProjectToXZ(geometry.Points);
+
+            switch (geometry.Type)
+            {
+                case GeometryType.Polygon:
+                    return ContainsPolygonPath(points2D, position, widthMeters, closedCentered);
+                case GeometryType.Polyline:
+                case GeometryType.Spline:
+                    return ContainsPolylinePath(points2D, position, widthMeters, closedCentered);
+                case GeometryType.Mesh:
+                case GeometryType.Undefined:
                 default:
                     return false;
             }
-        }
-
-        private static bool ContainsRectangle(ShapeDefinition shape, Vector2 position)
-        {
-            var minX = shape.X;
-            var minZ = shape.Z;
-            var maxX = shape.X + shape.Width;
-            var maxZ = shape.Z + shape.Height;
-            return position.X >= minX && position.X <= maxX &&
-                   position.Y >= minZ && position.Y <= maxZ;
-        }
-
-        private static bool ContainsCircle(ShapeDefinition shape, Vector2 position)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            return (dx * dx + dz * dz) <= (shape.Radius * shape.Radius);
-        }
-
-        private static bool ContainsRectanglePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            if (widthMeters <= 0f)
-                return false;
-
-            var minX = Math.Min(shape.X, shape.X + shape.Width);
-            var maxX = Math.Max(shape.X, shape.X + shape.Width);
-            var minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-            var maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-            var centerX = (minX + maxX) * 0.5f;
-            var centerZ = (minZ + maxZ) * 0.5f;
-            var lengthX = Math.Abs(shape.Width);
-            var lengthZ = Math.Abs(shape.Height);
-            var halfWidth = widthMeters * 0.5f;
-            if (lengthX >= lengthZ)
-            {
-                if (position.X < minX || position.X > maxX)
-                    return false;
-                return Math.Abs(position.Y - centerZ) <= halfWidth;
-            }
-
-            if (position.Y < minZ || position.Y > maxZ)
-                return false;
-            return Math.Abs(position.X - centerX) <= halfWidth;
-        }
-
-        private static bool ContainsCirclePath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var radius = Math.Abs(shape.Radius);
-            if (radius <= 0f || widthMeters <= 0f)
-                return false;
-
-            var dist = Vector2.Distance(new Vector2(shape.X, shape.Z), position);
-            var inner = Math.Max(0f, radius - widthMeters);
-            return dist >= inner && dist <= radius;
-        }
-
-        private static bool ContainsRing(ShapeDefinition shape, Vector2 position)
-        {
-            var ringWidth = Math.Abs(shape.RingWidth);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingPath(ShapeDefinition shape, Vector2 position, float widthMeters)
-        {
-            var ringWidth = Math.Abs(widthMeters);
-            if (ringWidth <= 0f)
-                return false;
-
-            if (shape.Radius > 0f)
-                return ContainsRingCircle(shape, position, ringWidth);
-
-            return ContainsRingRectangle(shape, position, ringWidth);
-        }
-
-        private static bool ContainsRingCircle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var dx = position.X - shape.X;
-            var dz = position.Y - shape.Z;
-            var distSq = dx * dx + dz * dz;
-            var inner = Math.Abs(shape.Radius);
-            var outer = inner + ringWidth;
-            return distSq >= (inner * inner) && distSq <= (outer * outer);
-        }
-
-        private static bool ContainsRingRectangle(ShapeDefinition shape, Vector2 position, float ringWidth)
-        {
-            var innerMinX = shape.X;
-            var innerMinZ = shape.Z;
-            var innerMaxX = shape.X + shape.Width;
-            var innerMaxZ = shape.Z + shape.Height;
-            if (innerMaxX <= innerMinX || innerMaxZ <= innerMinZ)
-                return false;
-
-            var outerMinX = innerMinX - ringWidth;
-            var outerMinZ = innerMinZ - ringWidth;
-            var outerMaxX = innerMaxX + ringWidth;
-            var outerMaxZ = innerMaxZ + ringWidth;
-
-            var insideOuter = position.X >= outerMinX && position.X <= outerMaxX &&
-                              position.Y >= outerMinZ && position.Y <= outerMaxZ;
-            if (!insideOuter)
-                return false;
-
-            var insideInner = position.X >= innerMinX && position.X <= innerMaxX &&
-                              position.Y >= innerMinZ && position.Y <= innerMaxZ;
-            return !insideInner;
         }
 
         private static bool ContainsPolygon(IReadOnlyList<Vector2> points, Vector2 position)
@@ -387,6 +370,54 @@ namespace TopSpeed.Tracks.Areas
             if (points == null || points.Count < 3)
                 return false;
             return Vector2.DistanceSquared(points[0], points[points.Count - 1]) <= 0.0001f;
+        }
+
+        private static bool TryGetVolumeBounds(TrackAreaDefinition area, out float minY, out float maxY)
+        {
+            minY = 0f;
+            maxY = 0f;
+            if (area == null)
+                return false;
+
+            var thickness = area.VolumeThicknessMeters ?? area.HeightMeters;
+            if (thickness <= 0f)
+                thickness = area.HeightMeters;
+            if (thickness <= 0f)
+                return false;
+
+            return VolumeBounds.TryResolve(
+                area.ElevationMeters,
+                area.VolumeMode,
+                area.VolumeOffsetMode,
+                area.VolumeOffsetSpace,
+                area.VolumeMinMaxSpace,
+                thickness,
+                area.VolumeOffsetMeters,
+                area.VolumeMinY,
+                area.VolumeMaxY,
+                out minY,
+                out maxY);
+        }
+
+        private static bool HasVolumeOverrides(TrackAreaDefinition area)
+        {
+            if (area == null)
+                return false;
+            return area.VolumeThicknessMeters.HasValue ||
+                   area.VolumeOffsetMeters.HasValue ||
+                   area.VolumeMinY.HasValue ||
+                   area.VolumeMaxY.HasValue;
+        }
+
+        private static IReadOnlyList<Vector2> ProjectToXZ(IReadOnlyList<Vector3> points)
+        {
+            if (points == null || points.Count == 0)
+                return Array.Empty<Vector2>();
+
+            var projected = new List<Vector2>(points.Count);
+            foreach (var point in points)
+                projected.Add(new Vector2(point.X, point.Z));
+            return projected;
         }
 
         private static bool IsCenteredClosedWidth(IReadOnlyDictionary<string, string> metadata)

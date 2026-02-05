@@ -7,9 +7,12 @@ using TopSpeed.Tracks.Rooms;
 using TopSpeed.Tracks.Areas;
 using TopSpeed.Tracks.Beacons;
 using TopSpeed.Tracks.Guidance;
+using TopSpeed.Tracks.Geometry;
 using TopSpeed.Tracks.Markers;
 using TopSpeed.Tracks.Sectors;
+using TopSpeed.Tracks.Surfaces;
 using TopSpeed.Tracks.Topology;
+using TopSpeed.Tracks.Volumes;
 using TopSpeed.Tracks.Walls;
 
 namespace TopSpeed.Tracks.Map
@@ -17,7 +20,8 @@ namespace TopSpeed.Tracks.Map
     internal sealed class TrackMap
     {
         private readonly List<TrackSectorDefinition> _sectors;
-        private readonly List<ShapeDefinition> _shapes;
+        private readonly List<GeometryDefinition> _geometries;
+        private readonly List<TrackVolumeDefinition> _volumes;
         private readonly List<TrackAreaDefinition> _areas;
         private readonly List<PortalDefinition> _portals;
         private readonly List<LinkDefinition> _links;
@@ -28,13 +32,17 @@ namespace TopSpeed.Tracks.Map
         private readonly List<TrackWallDefinition> _walls;
         private readonly List<TrackMaterialDefinition> _materials;
         private readonly List<TrackRoomDefinition> _rooms;
+        private readonly List<TrackSurfaceDefinition> _surfaces;
+        private readonly List<TrackProfileDefinition> _profiles;
+        private readonly List<TrackBankDefinition> _banks;
 
         public TrackMap(string name, float cellSizeMeters)
         {
             Name = string.IsNullOrWhiteSpace(name) ? "Track" : name.Trim();
             CellSizeMeters = Math.Max(0.1f, cellSizeMeters);
             _sectors = new List<TrackSectorDefinition>();
-            _shapes = new List<ShapeDefinition>();
+            _geometries = new List<GeometryDefinition>();
+            _volumes = new List<TrackVolumeDefinition>();
             _areas = new List<TrackAreaDefinition>();
             _portals = new List<PortalDefinition>();
             _links = new List<LinkDefinition>();
@@ -45,13 +53,17 @@ namespace TopSpeed.Tracks.Map
             _walls = new List<TopSpeed.Tracks.Walls.TrackWallDefinition>();
             _materials = new List<TrackMaterialDefinition>();
             _rooms = new List<TrackRoomDefinition>();
+            _surfaces = new List<TrackSurfaceDefinition>();
+            _profiles = new List<TrackProfileDefinition>();
+            _banks = new List<TrackBankDefinition>();
         }
 
         public string Name { get; }
         public float CellSizeMeters { get; }
         public IReadOnlyList<TrackSectorDefinition> Sectors => _sectors;
         public IReadOnlyList<TrackAreaDefinition> Areas => _areas;
-        public IReadOnlyList<ShapeDefinition> Shapes => _shapes;
+        public IReadOnlyList<GeometryDefinition> Geometries => _geometries;
+        public IReadOnlyList<TrackVolumeDefinition> Volumes => _volumes;
         public IReadOnlyList<PortalDefinition> Portals => _portals;
         public IReadOnlyList<LinkDefinition> Links => _links;
         public IReadOnlyList<TrackBeaconDefinition> Beacons => _beacons;
@@ -61,6 +73,9 @@ namespace TopSpeed.Tracks.Map
         public IReadOnlyList<TrackWallDefinition> Walls => _walls;
         public IReadOnlyList<TrackMaterialDefinition> Materials => _materials;
         public IReadOnlyList<TrackRoomDefinition> Rooms => _rooms;
+        public IReadOnlyList<TrackSurfaceDefinition> Surfaces => _surfaces;
+        public IReadOnlyList<TrackProfileDefinition> Profiles => _profiles;
+        public IReadOnlyList<TrackBankDefinition> Banks => _banks;
         public TrackWeather Weather { get; set; } = TrackWeather.Sunny;
         public TrackAmbience Ambience { get; set; } = TrackAmbience.NoAmbience;
         public string DefaultMaterialId { get; set; } = "asphalt";
@@ -69,12 +84,17 @@ namespace TopSpeed.Tracks.Map
         public float BaseHeightMeters { get; set; } = 0f;
         public float DefaultAreaHeightMeters { get; set; } = 5f;
         public float? DefaultCeilingHeightMeters { get; set; }
+        public float? MinX { get; set; }
+        public float? MinZ { get; set; }
+        public float? MaxX { get; set; }
+        public float? MaxZ { get; set; }
         public float StartX { get; set; }
         public float StartZ { get; set; }
         public float StartHeadingDegrees { get; set; } = 0f;
         public MapDirection StartHeading { get; set; } = MapDirection.North;
         public string? StartAreaId { get; set; }
         public string? FinishAreaId { get; set; }
+        public float SurfaceResolutionMeters { get; set; } = 5f;
 
 
         public void AddSector(TrackSectorDefinition sector)
@@ -84,11 +104,18 @@ namespace TopSpeed.Tracks.Map
             _sectors.Add(sector);
         }
 
-        public void AddShape(ShapeDefinition shape)
+        public void AddGeometry(GeometryDefinition geometry)
         {
-            if (shape == null)
-                throw new ArgumentNullException(nameof(shape));
-            _shapes.Add(shape);
+            if (geometry == null)
+                throw new ArgumentNullException(nameof(geometry));
+            _geometries.Add(geometry);
+        }
+
+        public void AddVolume(TrackVolumeDefinition volume)
+        {
+            if (volume == null)
+                throw new ArgumentNullException(nameof(volume));
+            _volumes.Add(volume);
         }
 
         public void AddArea(TrackAreaDefinition area)
@@ -141,6 +168,27 @@ namespace TopSpeed.Tracks.Map
             _rooms.Add(room);
         }
 
+        public void AddSurface(TrackSurfaceDefinition surface)
+        {
+            if (surface == null)
+                throw new ArgumentNullException(nameof(surface));
+            _surfaces.Add(surface);
+        }
+
+        public void AddProfile(TrackProfileDefinition profile)
+        {
+            if (profile == null)
+                throw new ArgumentNullException(nameof(profile));
+            _profiles.Add(profile);
+        }
+
+        public void AddBank(TrackBankDefinition bank)
+        {
+            if (bank == null)
+                throw new ArgumentNullException(nameof(bank));
+            _banks.Add(bank);
+        }
+
         public void AddMaterial(TrackMaterialDefinition material)
         {
             if (material == null)
@@ -164,7 +212,17 @@ namespace TopSpeed.Tracks.Map
 
         public TrackAreaManager BuildAreaManager()
         {
-            return new TrackAreaManager(_shapes, _areas);
+            return new TrackAreaManager(_geometries, _areas, _volumes);
+        }
+
+        public TrackVolumeManager BuildVolumeManager()
+        {
+            return new TrackVolumeManager(_volumes, _geometries);
+        }
+
+        public TrackSurfaceSystem BuildSurfaceSystem()
+        {
+            return new TrackSurfaceSystem(this);
         }
 
 
@@ -214,22 +272,22 @@ namespace TopSpeed.Tracks.Map
                     break;
                 }
             }
-            if (area == null || string.IsNullOrWhiteSpace(area.ShapeId))
+            if (area == null || string.IsNullOrWhiteSpace(area.GeometryId))
                 return false;
 
-            ShapeDefinition? shape = null;
-            foreach (var candidate in _shapes)
+            GeometryDefinition? geometry = null;
+            foreach (var candidate in _geometries)
             {
-                if (candidate != null && string.Equals(candidate.Id, area.ShapeId, StringComparison.OrdinalIgnoreCase))
+                if (candidate != null && string.Equals(candidate.Id, area.GeometryId, StringComparison.OrdinalIgnoreCase))
                 {
-                    shape = candidate;
+                    geometry = candidate;
                     break;
                 }
             }
-            if (shape == null)
+            if (geometry == null)
                 return false;
 
-            return TryGetShapeBounds(shape, out minX, out minZ, out maxX, out maxZ);
+            return TryGetGeometryBounds(geometry, out minX, out minZ, out maxX, out maxZ);
         }
 
         public bool TryGetStartAreaDefinition(out TrackAreaDefinition area)
@@ -279,68 +337,28 @@ namespace TopSpeed.Tracks.Map
             return new TrackBranchManager(_sectors, _approaches, _branches, BuildPortalManager());
         }
 
-        private static bool TryGetShapeBounds(ShapeDefinition shape, out float minX, out float minZ, out float maxX, out float maxZ)
+        private static bool TryGetGeometryBounds(GeometryDefinition geometry, out float minX, out float minZ, out float maxX, out float maxZ)
         {
             minX = 0f;
             minZ = 0f;
             maxX = 0f;
             maxZ = 0f;
 
-            if (shape == null)
+            if (geometry == null || geometry.Points == null || geometry.Points.Count == 0)
                 return false;
 
-            switch (shape.Type)
+            minX = float.MaxValue;
+            minZ = float.MaxValue;
+            maxX = float.MinValue;
+            maxZ = float.MinValue;
+            foreach (var point in geometry.Points)
             {
-                case ShapeType.Rectangle:
-                    minX = Math.Min(shape.X, shape.X + shape.Width);
-                    maxX = Math.Max(shape.X, shape.X + shape.Width);
-                    minZ = Math.Min(shape.Z, shape.Z + shape.Height);
-                    maxZ = Math.Max(shape.Z, shape.Z + shape.Height);
-                    return true;
-                case ShapeType.Circle:
-                    minX = shape.X - shape.Radius;
-                    maxX = shape.X + shape.Radius;
-                    minZ = shape.Z - shape.Radius;
-                    maxZ = shape.Z + shape.Radius;
-                    return true;
-                case ShapeType.Ring:
-                    if (shape.Radius > 0f)
-                    {
-                        var outer = Math.Abs(shape.Radius) + Math.Abs(shape.RingWidth);
-                        minX = shape.X - outer;
-                        maxX = shape.X + outer;
-                        minZ = shape.Z - outer;
-                        maxZ = shape.Z + outer;
-                        return true;
-                    }
-                    var ringMinX = Math.Min(shape.X, shape.X + shape.Width) - Math.Abs(shape.RingWidth);
-                    var ringMaxX = Math.Max(shape.X, shape.X + shape.Width) + Math.Abs(shape.RingWidth);
-                    var ringMinZ = Math.Min(shape.Z, shape.Z + shape.Height) - Math.Abs(shape.RingWidth);
-                    var ringMaxZ = Math.Max(shape.Z, shape.Z + shape.Height) + Math.Abs(shape.RingWidth);
-                    minX = ringMinX;
-                    maxX = ringMaxX;
-                    minZ = ringMinZ;
-                    maxZ = ringMaxZ;
-                    return true;
-                case ShapeType.Polygon:
-                case ShapeType.Polyline:
-                    if (shape.Points == null || shape.Points.Count == 0)
-                        return false;
-                    minX = float.MaxValue;
-                    minZ = float.MaxValue;
-                    maxX = float.MinValue;
-                    maxZ = float.MinValue;
-                    foreach (var point in shape.Points)
-                    {
-                        if (point.X < minX) minX = point.X;
-                        if (point.X > maxX) maxX = point.X;
-                        if (point.Y < minZ) minZ = point.Y;
-                        if (point.Y > maxZ) maxZ = point.Y;
-                    }
-                    return true;
+                if (point.X < minX) minX = point.X;
+                if (point.X > maxX) maxX = point.X;
+                if (point.Z < minZ) minZ = point.Z;
+                if (point.Z > maxZ) maxZ = point.Z;
             }
-
-            return false;
+            return true;
         }
 
     }

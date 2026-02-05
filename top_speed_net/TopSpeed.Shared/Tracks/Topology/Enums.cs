@@ -1,15 +1,5 @@
 namespace TopSpeed.Tracks.Topology
 {
-    public enum ShapeType
-    {
-        Undefined = 0,
-        Rectangle,
-        Circle,
-        Ring,
-        Polygon,
-        Polyline
-    }
-
     public enum PortalRole
     {
         Undefined = 0,
