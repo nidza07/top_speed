@@ -1,0 +1,321 @@
+# Auto-authored international track: Marina Bay Street Circuit (Singapore)
+[meta]
+name=Marina Bay Street Circuit (Singapore)
+cell_size=1
+default_material=asphalt
+default_noise=nonoise
+default_width=42
+base_height=0
+default_area_height=8
+min_x=-50
+min_z=-50
+max_x=370
+max_z=290
+weather=storm
+ambience=noambience
+start_x=102
+start_z=21
+start_heading=east
+safe_zone_ring=44
+
+[geometry: corner_sw_geom]
+type=polygon
+points3d=0 0 0, 82 0 0, 82 0 82, 0 0 82
+
+[geometry: south_straight_geom]
+type=polygon
+points3d=82 0 0, 238 0 0, 238 0 42, 82 0 42
+
+[geometry: corner_se_geom]
+type=polygon
+points3d=238 0 0, 320 0 0, 320 0 82, 238 0 82
+
+[geometry: east_straight_geom]
+type=polygon
+points3d=278 0 82, 320 0 82, 320 0 158, 278 0 158
+
+[geometry: corner_ne_geom]
+type=polygon
+points3d=238 0 158, 320 0 158, 320 0 240, 238 0 240
+
+[geometry: north_straight_geom]
+type=polygon
+points3d=82 0 198, 238 0 198, 238 0 240, 82 0 240
+
+[geometry: corner_nw_geom]
+type=polygon
+points3d=0 0 158, 82 0 158, 82 0 240, 0 0 240
+
+[geometry: west_straight_geom]
+type=polygon
+points3d=0 0 82, 42 0 82, 42 0 158, 0 0 158
+
+[geometry: start_geom]
+type=polygon
+points3d=94 0 0, 146 0 0, 146 0 38, 94 0 38
+
+[area: south_straight_area]
+type=zone
+name=South straight
+geometry=south_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: east_straight_area]
+type=zone
+name=East straight
+geometry=east_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: north_straight_area]
+type=zone
+name=North straight
+geometry=north_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: west_straight_area]
+type=zone
+name=West straight
+geometry=west_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_se_area]
+type=zone
+name=South east corner
+geometry=corner_se_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_ne_area]
+type=zone
+name=North east corner
+geometry=corner_ne_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_nw_area]
+type=zone
+name=North west corner
+geometry=corner_nw_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_sw_area]
+type=zone
+name=South west corner
+geometry=corner_sw_geom
+material=asphalt
+noise=nonoise
+
+[area: start_area]
+type=start
+name=Start zone
+geometry=start_geom
+material=asphalt
+noise=nonoise
+start_x=102
+start_z=21
+start_heading=east
+grid_cols=4
+grid_rows=2
+grid_row_spacing=12
+grid_col_spacing=4
+grid_margin=2
+grid_max_vehicles=8
+
+[sector: south_straight]
+type=straight
+area=south_straight_area
+
+[sector: east_straight]
+type=straight
+area=east_straight_area
+
+[sector: north_straight]
+type=straight
+area=north_straight_area
+
+[sector: west_straight]
+type=straight
+area=west_straight_area
+
+[sector: corner_se]
+type=curve
+area=corner_se_area
+
+[sector: corner_ne]
+type=curve
+area=corner_ne_area
+
+[sector: corner_nw]
+type=curve
+area=corner_nw_area
+
+[sector: corner_sw]
+type=curve
+area=corner_sw_area
+
+[portal: p_se_entry]
+sector=corner_se
+x=253
+z=21
+width=42
+entry_heading=east
+role=entry
+
+[portal: p_se_exit]
+sector=corner_se
+x=299
+z=82
+width=42
+exit_heading=north
+role=exit
+
+[portal: p_ne_entry]
+sector=corner_ne
+x=299
+z=158
+width=42
+entry_heading=north
+role=entry
+
+[portal: p_ne_exit]
+sector=corner_ne
+x=238
+z=219
+width=42
+exit_heading=west
+role=exit
+
+[portal: p_nw_entry]
+sector=corner_nw
+x=82
+z=219
+width=42
+entry_heading=west
+role=entry
+
+[portal: p_nw_exit]
+sector=corner_nw
+x=21
+z=158
+width=42
+exit_heading=south
+role=exit
+
+[portal: p_sw_entry]
+sector=corner_sw
+x=21
+z=82
+width=42
+entry_heading=south
+role=entry
+
+[portal: p_sw_exit]
+sector=corner_sw
+x=82
+z=21
+width=42
+exit_heading=east
+role=exit
+
+[guide: guide_se]
+area=corner_se_area
+name=South east turn
+entry_portal=p_se_entry
+exit_portal=p_se_exit
+entry_heading=east
+exit_heading=north
+side=exit
+turn_range=165
+beacon_range=145
+beacon_mode=heading
+turn_geometry=corner_se_geom
+beacon_geometry=corner_se_geom
+
+[guide: guide_ne]
+area=corner_ne_area
+name=North east turn
+entry_portal=p_ne_entry
+exit_portal=p_ne_exit
+entry_heading=north
+exit_heading=west
+side=exit
+turn_range=165
+beacon_range=145
+beacon_mode=heading
+turn_geometry=corner_ne_geom
+beacon_geometry=corner_ne_geom
+
+[guide: guide_nw]
+area=corner_nw_area
+name=North west turn
+entry_portal=p_nw_entry
+exit_portal=p_nw_exit
+entry_heading=west
+exit_heading=south
+side=exit
+turn_range=165
+beacon_range=145
+beacon_mode=heading
+turn_geometry=corner_nw_geom
+beacon_geometry=corner_nw_geom
+
+[guide: guide_sw]
+area=corner_sw_area
+name=South west turn
+entry_portal=p_sw_entry
+exit_portal=p_sw_exit
+entry_heading=south
+exit_heading=east
+side=exit
+turn_range=165
+beacon_range=145
+beacon_mode=heading
+turn_geometry=corner_sw_geom
+beacon_geometry=corner_sw_geom
+
+[branch: branch_se]
+area=corner_se_area
+role=connector
+entry_portal=p_se_entry
+exits=p_se_exit
+preferred_exit=p_se_exit
+
+[branch: branch_ne]
+area=corner_ne_area
+role=connector
+entry_portal=p_ne_entry
+exits=p_ne_exit
+preferred_exit=p_ne_exit
+
+[branch: branch_nw]
+area=corner_nw_area
+role=connector
+entry_portal=p_nw_entry
+exits=p_nw_exit
+preferred_exit=p_nw_exit
+
+[branch: branch_sw]
+area=corner_sw_area
+role=connector
+entry_portal=p_sw_entry
+exits=p_sw_exit
+preferred_exit=p_sw_exit
+
+[approach: lap_length]
+name=Lap distance anchor
+sector=south_straight
+entry_portal=p_sw_exit
+exit_portal=p_se_entry
+entry_heading=east
+exit_heading=east
+width=42
+length=847
+tolerance=12
+side=none
+beacon_enabled=false
+turn_enabled=false

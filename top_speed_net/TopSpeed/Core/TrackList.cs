@@ -23,21 +23,29 @@ namespace TopSpeed.Core
         {
             new TrackInfo("america", "Circuit of the Americas (USA)"),
             new TrackInfo("austria", "Red Bull Ring (Austria)"),
+            new TrackInfo("australia", "Albert Park Circuit (Australia)"),
             new TrackInfo("belgium", "Spa-Francorchamps (Belgium)"),
             new TrackInfo("brazil", "Interlagos (Brazil)"),
+            new TrackInfo("canada", "Circuit Gilles Villeneuve (Canada)"),
             new TrackInfo("china", "Shanghai International Circuit (China)"),
             new TrackInfo("england", "Silverstone Circuit (England)"),
             new TrackInfo("finland", "KymiRing (Finland)"),
             new TrackInfo("france", "Circuit Paul Ricard (France)"),
             new TrackInfo("germany", "Nurburgring GP (Germany)"),
+            new TrackInfo("hungary", "Hungaroring (Hungary)"),
             new TrackInfo("ireland", "Mondello Park (Ireland)"),
             new TrackInfo("italy", "Monza (Italy)"),
+            new TrackInfo("japan", "Suzuka Circuit (Japan)"),
+            new TrackInfo("mexico", "Autodromo Hermanos Rodriguez (Mexico)"),
             new TrackInfo("netherlands", "Circuit Zandvoort (Netherlands)"),
             new TrackInfo("portugal", "Algarve International Circuit (Portugal)"),
+            new TrackInfo("qatar", "Lusail International Circuit (Qatar)"),
             new TrackInfo("russia", "Sochi Autodrom (Russia)"),
+            new TrackInfo("singapore", "Marina Bay Street Circuit (Singapore)"),
             new TrackInfo("spain", "Circuit de Barcelona-Catalunya (Spain)"),
             new TrackInfo("sweden", "Scandinavian Raceway (Sweden)"),
-            new TrackInfo("switserland", "Zurich Street Circuit (Switzerland)")
+            new TrackInfo("switserland", "Zurich Street Circuit (Switzerland)"),
+            new TrackInfo("uae", "Yas Marina Circuit (United Arab Emirates)")
         };
 
         public static readonly TrackInfo[] AdventureTracks =

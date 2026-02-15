@@ -1,0 +1,321 @@
+# Auto-authored international track: Lusail International Circuit (Qatar)
+[meta]
+name=Lusail International Circuit (Qatar)
+cell_size=1
+default_material=asphalt
+default_noise=nonoise
+default_width=48
+base_height=0
+default_area_height=8
+min_x=-50
+min_z=-50
+max_x=415
+max_z=305
+weather=sunny
+ambience=desert
+start_x=110
+start_z=24
+start_heading=east
+safe_zone_ring=50
+
+[geometry: corner_sw_geom]
+type=polygon
+points3d=0 0 0, 90 0 0, 90 0 90, 0 0 90
+
+[geometry: south_straight_geom]
+type=polygon
+points3d=90 0 0, 275 0 0, 275 0 48, 90 0 48
+
+[geometry: corner_se_geom]
+type=polygon
+points3d=275 0 0, 365 0 0, 365 0 90, 275 0 90
+
+[geometry: east_straight_geom]
+type=polygon
+points3d=317 0 90, 365 0 90, 365 0 165, 317 0 165
+
+[geometry: corner_ne_geom]
+type=polygon
+points3d=275 0 165, 365 0 165, 365 0 255, 275 0 255
+
+[geometry: north_straight_geom]
+type=polygon
+points3d=90 0 207, 275 0 207, 275 0 255, 90 0 255
+
+[geometry: corner_nw_geom]
+type=polygon
+points3d=0 0 165, 90 0 165, 90 0 255, 0 0 255
+
+[geometry: west_straight_geom]
+type=polygon
+points3d=0 0 90, 48 0 90, 48 0 165, 0 0 165
+
+[geometry: start_geom]
+type=polygon
+points3d=102 0 0, 154 0 0, 154 0 43, 102 0 43
+
+[area: south_straight_area]
+type=zone
+name=South straight
+geometry=south_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: east_straight_area]
+type=zone
+name=East straight
+geometry=east_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: north_straight_area]
+type=zone
+name=North straight
+geometry=north_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: west_straight_area]
+type=zone
+name=West straight
+geometry=west_straight_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_se_area]
+type=zone
+name=South east corner
+geometry=corner_se_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_ne_area]
+type=zone
+name=North east corner
+geometry=corner_ne_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_nw_area]
+type=zone
+name=North west corner
+geometry=corner_nw_geom
+material=asphalt
+noise=nonoise
+
+[area: corner_sw_area]
+type=zone
+name=South west corner
+geometry=corner_sw_geom
+material=asphalt
+noise=nonoise
+
+[area: start_area]
+type=start
+name=Start zone
+geometry=start_geom
+material=asphalt
+noise=nonoise
+start_x=110
+start_z=24
+start_heading=east
+grid_cols=4
+grid_rows=2
+grid_row_spacing=12
+grid_col_spacing=4
+grid_margin=2
+grid_max_vehicles=8
+
+[sector: south_straight]
+type=straight
+area=south_straight_area
+
+[sector: east_straight]
+type=straight
+area=east_straight_area
+
+[sector: north_straight]
+type=straight
+area=north_straight_area
+
+[sector: west_straight]
+type=straight
+area=west_straight_area
+
+[sector: corner_se]
+type=curve
+area=corner_se_area
+
+[sector: corner_ne]
+type=curve
+area=corner_ne_area
+
+[sector: corner_nw]
+type=curve
+area=corner_nw_area
+
+[sector: corner_sw]
+type=curve
+area=corner_sw_area
+
+[portal: p_se_entry]
+sector=corner_se
+x=292
+z=24
+width=48
+entry_heading=east
+role=entry
+
+[portal: p_se_exit]
+sector=corner_se
+x=341
+z=90
+width=48
+exit_heading=north
+role=exit
+
+[portal: p_ne_entry]
+sector=corner_ne
+x=341
+z=165
+width=48
+entry_heading=north
+role=entry
+
+[portal: p_ne_exit]
+sector=corner_ne
+x=275
+z=231
+width=48
+exit_heading=west
+role=exit
+
+[portal: p_nw_entry]
+sector=corner_nw
+x=90
+z=231
+width=48
+entry_heading=west
+role=entry
+
+[portal: p_nw_exit]
+sector=corner_nw
+x=24
+z=165
+width=48
+exit_heading=south
+role=exit
+
+[portal: p_sw_entry]
+sector=corner_sw
+x=24
+z=90
+width=48
+entry_heading=south
+role=entry
+
+[portal: p_sw_exit]
+sector=corner_sw
+x=90
+z=24
+width=48
+exit_heading=east
+role=exit
+
+[guide: guide_se]
+area=corner_se_area
+name=South east turn
+entry_portal=p_se_entry
+exit_portal=p_se_exit
+entry_heading=east
+exit_heading=north
+side=exit
+turn_range=160
+beacon_range=140
+beacon_mode=heading
+turn_geometry=corner_se_geom
+beacon_geometry=corner_se_geom
+
+[guide: guide_ne]
+area=corner_ne_area
+name=North east turn
+entry_portal=p_ne_entry
+exit_portal=p_ne_exit
+entry_heading=north
+exit_heading=west
+side=exit
+turn_range=160
+beacon_range=140
+beacon_mode=heading
+turn_geometry=corner_ne_geom
+beacon_geometry=corner_ne_geom
+
+[guide: guide_nw]
+area=corner_nw_area
+name=North west turn
+entry_portal=p_nw_entry
+exit_portal=p_nw_exit
+entry_heading=west
+exit_heading=south
+side=exit
+turn_range=160
+beacon_range=140
+beacon_mode=heading
+turn_geometry=corner_nw_geom
+beacon_geometry=corner_nw_geom
+
+[guide: guide_sw]
+area=corner_sw_area
+name=South west turn
+entry_portal=p_sw_entry
+exit_portal=p_sw_exit
+entry_heading=south
+exit_heading=east
+side=exit
+turn_range=160
+beacon_range=140
+beacon_mode=heading
+turn_geometry=corner_sw_geom
+beacon_geometry=corner_sw_geom
+
+[branch: branch_se]
+area=corner_se_area
+role=connector
+entry_portal=p_se_entry
+exits=p_se_exit
+preferred_exit=p_se_exit
+
+[branch: branch_ne]
+area=corner_ne_area
+role=connector
+entry_portal=p_ne_entry
+exits=p_ne_exit
+preferred_exit=p_ne_exit
+
+[branch: branch_nw]
+area=corner_nw_area
+role=connector
+entry_portal=p_nw_entry
+exits=p_nw_exit
+preferred_exit=p_nw_exit
+
+[branch: branch_sw]
+area=corner_sw_area
+role=connector
+entry_portal=p_sw_entry
+exits=p_sw_exit
+preferred_exit=p_sw_exit
+
+[approach: lap_length]
+name=Lap distance anchor
+sector=south_straight
+entry_portal=p_sw_exit
+exit_portal=p_se_entry
+entry_heading=east
+exit_heading=east
+width=48
+length=935
+tolerance=12
+side=none
+beacon_enabled=false
+turn_enabled=false
