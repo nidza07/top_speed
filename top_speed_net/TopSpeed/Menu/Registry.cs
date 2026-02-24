@@ -107,7 +107,6 @@ namespace TopSpeed.Menu
             _menu.Register(BuildOptionsControlsKeyboardMenu());
             _menu.Register(BuildOptionsControlsJoystickMenu());
             _menu.Register(BuildOptionsRaceSettingsMenu());
-            // Copilot and difficulty are now direct radio-button items.
             _menu.Register(BuildOptionsRestoreMenu());
             _menu.Register(BuildOptionsServerSettingsMenu());
         }
@@ -195,26 +194,6 @@ namespace TopSpeed.Menu
             return _menu.CreateMenu("multiplayer_saved_server_form", items, "Server details");
         }
 
-        private MenuScreen BuildMultiplayerSavedServerDiscardMenu()
-        {
-            var items = new List<MenuItem>
-            {
-                new MenuItem("Save changes", MenuAction.None),
-                new MenuItem("Discard changes", MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_saved_server_discard", items, "Save changes before closing?");
-        }
-
-        private MenuScreen BuildMultiplayerSavedServerDeleteMenu()
-        {
-            var items = new List<MenuItem>
-            {
-                new MenuItem("Yes, delete this server", MenuAction.None),
-                new MenuItem("No, keep this server", MenuAction.Back)
-            };
-            return _menu.CreateMenu("multiplayer_saved_server_delete", items, "Delete this server?");
-        }
-
         private MenuScreen BuildMultiplayerRoomsMenu()
         {
             var items = new List<MenuItem>
@@ -252,16 +231,6 @@ namespace TopSpeed.Menu
                 BackItem()
             };
             return _menu.CreateMenu("multiplayer_room_options", items, "Change game options");
-        }
-
-        private MenuScreen BuildMultiplayerLeaveRoomConfirmMenu()
-        {
-            var items = new List<MenuItem>
-            {
-                new MenuItem("Yes, leave this game room", MenuAction.None),
-                new MenuItem("No, stay in this game room", MenuAction.Back)
-            };
-            return _menu.CreateMenu("multiplayer_leave_room_confirm", items, "Leave this game room?");
         }
 
         private MenuScreen BuildMultiplayerLoadoutVehicleMenu()

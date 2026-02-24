@@ -9,6 +9,7 @@ using TopSpeed.Menu;
 using TopSpeed.Network;
 using TopSpeed.Protocol;
 using TopSpeed.Race;
+using TopSpeed.Core.Multiplayer;
 using TopSpeed.Speech;
 using TopSpeed.Windowing;
 
