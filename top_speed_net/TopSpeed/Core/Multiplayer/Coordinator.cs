@@ -71,6 +71,10 @@ namespace TopSpeed.Core.Multiplayer
         private AudioSourceHandle? _connectedSound;
         private AudioSourceHandle? _onlineSound;
         private AudioSourceHandle? _offlineSound;
+        private AudioSourceHandle? _pingStartSound;
+        private AudioSourceHandle? _pingStopSound;
+        private bool _pingPending;
+        private long _pingStartedAtMs;
         private SavedServerEntry _savedServerDraft = new SavedServerEntry();
         private SavedServerEntry? _savedServerOriginal;
         private int _savedServerEditIndex = -1;
@@ -161,6 +165,8 @@ namespace TopSpeed.Core.Multiplayer
             _savedServerOriginal = null;
             _savedServerEditIndex = -1;
             _pendingDeleteServerIndex = -1;
+            _pingPending = false;
+            _pingStartedAtMs = 0;
             RebuildLobbyMenu();
             RebuildCreateRoomMenu();
             RebuildSavedServersMenu();

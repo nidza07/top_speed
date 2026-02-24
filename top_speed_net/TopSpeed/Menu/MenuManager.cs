@@ -40,6 +40,12 @@ namespace TopSpeed.Menu
             screen.ReplaceItems(items, preserveSelection);
         }
 
+        public void SetShortcuts(string id, IEnumerable<MenuShortcut>? shortcuts)
+        {
+            var screen = GetScreen(id);
+            screen.SetShortcuts(shortcuts);
+        }
+
         public void SetCloseHandler(string id, Func<MenuCloseSource, bool>? closeHandler)
         {
             var screen = GetScreen(id);

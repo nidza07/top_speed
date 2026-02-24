@@ -15,6 +15,11 @@ namespace TopSpeed.Core.Multiplayer
 
         public void ConfigureMenuCloseHandlers()
         {
+            _menu.SetShortcuts(MultiplayerLobbyMenuId, new[]
+            {
+                new MenuShortcut(SharpDX.DirectInput.Key.F1, CheckCurrentPing)
+            });
+
             _menu.SetCloseHandler(MultiplayerLobbyMenuId, _ =>
             {
                 OpenDisconnectConfirmation();
@@ -531,6 +536,7 @@ namespace TopSpeed.Core.Multiplayer
 
         private void Disconnect()
         {
+            _pingPending = false;
             _clearSession();
             _speech.Speak("Disconnected from server.");
             _menu.ShowRoot("main");
@@ -576,7 +582,10 @@ namespace TopSpeed.Core.Multiplayer
                         GameRoomType.PlayersRace => "race without bots",
                         _ => "race with bots"
                     };
-                    var label = $"{typeText} game with {roomCopy.PlayerCount} people";
+                    var label = typeText;
+                    if (!string.IsNullOrWhiteSpace(roomCopy.RoomName))
+                        label += $", {roomCopy.RoomName}";
+                    label += $" game with {roomCopy.PlayerCount} people";
                     label += $", maximum {roomCopy.PlayersToStart} players";
                     if (roomCopy.RaceStarted)
                         label += ", in progress";

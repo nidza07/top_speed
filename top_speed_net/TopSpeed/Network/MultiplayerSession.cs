@@ -252,6 +252,11 @@ namespace TopSpeed.Network
             SafeSendStream(payload, PacketStream.RaceEvent);
         }
 
+        public void SendPing()
+        {
+            SafeSendStream(ClientPacketSerializer.WriteGeneral(Command.Ping), PacketStream.Control);
+        }
+
         public void SendRoomListRequest()
         {
             SafeSendStream(ClientPacketSerializer.WriteRoomListRequest(), PacketStream.Room);

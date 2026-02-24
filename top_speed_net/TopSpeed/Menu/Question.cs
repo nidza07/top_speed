@@ -146,7 +146,7 @@ namespace TopSpeed.Menu
             _activeQuestion = null;
 
             if (IsQuestionMenu(_menu.CurrentId) && _menu.CanPop)
-                _menu.PopToPrevious(announceTitle: false);
+                _menu.PopToPrevious();
 
             question.OnResult?.Invoke(resultId);
             buttonAction?.Invoke();

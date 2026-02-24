@@ -9,6 +9,7 @@ namespace TopSpeed.Core
         {
             _mpPktReg.Add("control", Command.Disconnect, HandleMpDisconnectPacket);
             _mpPktReg.Add("control", Command.PlayerNumber, HandleMpPlayerNumberPacket);
+            _mpPktReg.Add("control", Command.Pong, HandleMpPongPacket);
         }
 
         private bool HandleMpDisconnectPacket(IncomingPacket _)
@@ -26,6 +27,12 @@ namespace TopSpeed.Core
 
             if (ClientPacketSerializer.TryReadPlayer(packet.Payload, out var assigned) && assigned.PlayerId == session.PlayerId)
                 session.UpdatePlayerNumber(assigned.PlayerNumber);
+            return true;
+        }
+
+        private bool HandleMpPongPacket(IncomingPacket _)
+        {
+            _multiplayerCoordinator.HandlePingReply();
             return true;
         }
     }

@@ -141,6 +141,7 @@ namespace TopSpeed.Core.Multiplayer
         {
             _speech.Speak("Attempting to connect, please wait...");
             _clearSession();
+            _pingPending = false;
             StartConnectingPulse();
             _connectCts?.Cancel();
             _connectCts?.Dispose();
@@ -234,6 +235,10 @@ namespace TopSpeed.Core.Multiplayer
                 handle = GetNetworkSound(ref _offlineSound, fileName);
             else if (string.Equals(fileName, "connecting.wav", StringComparison.OrdinalIgnoreCase))
                 handle = GetNetworkSound(ref _connectingSound, fileName);
+            else if (string.Equals(fileName, "ping_start.ogg", StringComparison.OrdinalIgnoreCase))
+                handle = GetNetworkSound(ref _pingStartSound, fileName);
+            else if (string.Equals(fileName, "ping_stop.ogg", StringComparison.OrdinalIgnoreCase))
+                handle = GetNetworkSound(ref _pingStopSound, fileName);
             else
                 handle = GetNetworkSound(ref _connectedSound, fileName);
 
@@ -301,6 +306,40 @@ namespace TopSpeed.Core.Multiplayer
         private MultiplayerSession? SessionOrNull()
         {
             return _getSession();
+        }
+
+        private void CheckCurrentPing()
+        {
+            var session = SessionOrNull();
+            if (session == null)
+            {
+                _speech.Speak("Not connected to a server.");
+                return;
+            }
+
+            if (_pingPending)
+            {
+                _speech.Speak("Ping check already in progress.");
+                return;
+            }
+
+            _pingPending = true;
+            _pingStartedAtMs = DateTime.UtcNow.Ticks;
+            PlayNetworkSound("ping_start.ogg");
+            session.SendPing();
+        }
+
+        public void HandlePingReply()
+        {
+            if (!_pingPending)
+                return;
+
+            _pingPending = false;
+            var elapsed = TimeSpan.FromTicks(DateTime.UtcNow.Ticks - _pingStartedAtMs).TotalMilliseconds;
+            if (elapsed < 0)
+                elapsed = 0;
+            PlayNetworkSound("ping_stop.ogg");
+            _speech.Speak($"The ping took {(int)Math.Round(elapsed)} milliseconds.");
         }
     }
 }

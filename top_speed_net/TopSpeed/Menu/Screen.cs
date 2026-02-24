@@ -22,6 +22,7 @@ namespace TopSpeed.Menu
         private const int JoystickThreshold = 50;
         private const int NoSelection = -1;
         private readonly List<MenuItem> _items;
+        private readonly List<MenuShortcut> _shortcuts;
         private readonly AudioManager _audio;
         private readonly SpeechService _speech;
         private readonly Func<bool> _usageHintsEnabled;
@@ -89,6 +90,7 @@ namespace TopSpeed.Menu
             _speech = speech;
             _usageHintsEnabled = usageHintsEnabled ?? (() => false);
             _items = new List<MenuItem>(items);
+            _shortcuts = new List<MenuShortcut>();
             _defaultMenuSoundRoot = Path.Combine(AssetPaths.SoundsRoot, "En", "Menu");
             _legacySoundRoot = Path.Combine(AssetPaths.SoundsRoot, "Legacy");
             _musicRoot = Path.Combine(AssetPaths.SoundsRoot, "En", "Music");
@@ -98,6 +100,15 @@ namespace TopSpeed.Menu
         }
 
         public string Title => _titleProvider?.Invoke() ?? _title;
+
+        public void SetShortcuts(IEnumerable<MenuShortcut>? shortcuts)
+        {
+            _shortcuts.Clear();
+            if (shortcuts == null)
+                return;
+
+            _shortcuts.AddRange(shortcuts);
+        }
 
         public void Initialize()
         {
@@ -179,6 +190,9 @@ namespace TopSpeed.Menu
             }
 
             if (input.ShouldIgnoreMenuBack())
+                return MenuUpdateResult.None;
+
+            if (TryHandleShortcut(input))
                 return MenuUpdateResult.None;
 
             if (_ignoreHeldInput)
@@ -361,6 +375,26 @@ namespace TopSpeed.Menu
             }
 
             return MenuUpdateResult.None;
+        }
+
+        private bool TryHandleShortcut(InputManager input)
+        {
+            if (_shortcuts.Count == 0)
+                return false;
+
+            foreach (var shortcut in _shortcuts)
+            {
+                if (shortcut == null)
+                    continue;
+                if (!input.WasPressed(shortcut.Key))
+                    continue;
+
+                CancelHint();
+                shortcut.OnTrigger();
+                return true;
+            }
+
+            return false;
         }
 
         public void ResetSelection(int? preferredSelectionIndex = null)

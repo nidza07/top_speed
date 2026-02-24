@@ -9,6 +9,10 @@ namespace TopSpeed.Server.Network
         private void RegisterCorePackets()
         {
             _pktReg.Add("core", Command.KeepAlive, (_, _, _) => { });
+            _pktReg.Add("core", Command.Ping, (player, _, _) =>
+            {
+                SendStream(player, PacketSerializer.WriteGeneral(Command.Pong), PacketStream.Control);
+            });
             _pktReg.Add("core", Command.PlayerHello, (player, payload, endPoint) =>
             {
                 if (PacketSerializer.TryReadPlayerHello(payload, out var hello))
