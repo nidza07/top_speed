@@ -165,6 +165,7 @@ namespace TopSpeed.Core.Multiplayer
                 if (!string.IsNullOrWhiteSpace(result.Motd))
                     welcome += $" Message of the day: {result.Motd}.";
                 _speech.Speak(welcome);
+                _menu.FadeOutMenuMusic();
                 _menu.ShowRoot(MultiplayerLobbyMenuId);
                 _enterMenuState();
                 return;

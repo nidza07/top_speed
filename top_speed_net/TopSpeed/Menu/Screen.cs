@@ -195,6 +195,9 @@ namespace TopSpeed.Menu
             if (TryHandleShortcut(input))
                 return MenuUpdateResult.None;
 
+            if (TryHandleLetterNavigation(input))
+                return MenuUpdateResult.None;
+
             if (_ignoreHeldInput)
             {
                 if (input.IsMenuBackHeld())
@@ -395,6 +398,96 @@ namespace TopSpeed.Menu
             }
 
             return false;
+        }
+
+        private bool TryHandleLetterNavigation(InputManager input)
+        {
+            if (_items.Count == 0)
+                return false;
+
+            if (!TryGetPressedLetter(input, out var letter))
+                return false;
+
+            var start = _index == NoSelection ? 0 : (_index + 1) % _items.Count;
+            for (var i = 0; i < _items.Count; i++)
+            {
+                var idx = (start + i) % _items.Count;
+                if (!ItemStartsWithLetter(_items[idx], letter))
+                    continue;
+
+                _activeActionIndex = NoSelection;
+                MoveToIndex(idx);
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool TryGetPressedLetter(InputManager input, out char letter)
+        {
+            letter = '\0';
+            for (var c = 'A'; c <= 'Z'; c++)
+            {
+                if (!input.WasPressed(ToLetterKey(c)))
+                    continue;
+
+                letter = c;
+                return true;
+            }
+
+            return false;
+        }
+
+        private static bool ItemStartsWithLetter(MenuItem item, char letter)
+        {
+            var text = item.GetDisplayText();
+            if (string.IsNullOrWhiteSpace(text))
+                return false;
+
+            for (var i = 0; i < text.Length; i++)
+            {
+                var ch = text[i];
+                if (!char.IsLetterOrDigit(ch))
+                    continue;
+
+                return char.ToUpperInvariant(ch) == letter;
+            }
+
+            return false;
+        }
+
+        private static Key ToLetterKey(char letter)
+        {
+            return letter switch
+            {
+                'A' => Key.A,
+                'B' => Key.B,
+                'C' => Key.C,
+                'D' => Key.D,
+                'E' => Key.E,
+                'F' => Key.F,
+                'G' => Key.G,
+                'H' => Key.H,
+                'I' => Key.I,
+                'J' => Key.J,
+                'K' => Key.K,
+                'L' => Key.L,
+                'M' => Key.M,
+                'N' => Key.N,
+                'O' => Key.O,
+                'P' => Key.P,
+                'Q' => Key.Q,
+                'R' => Key.R,
+                'S' => Key.S,
+                'T' => Key.T,
+                'U' => Key.U,
+                'V' => Key.V,
+                'W' => Key.W,
+                'X' => Key.X,
+                'Y' => Key.Y,
+                'Z' => Key.Z,
+                _ => Key.Unknown
+            };
         }
 
         public void ResetSelection(int? preferredSelectionIndex = null)
