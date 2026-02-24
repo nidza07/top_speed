@@ -125,7 +125,7 @@ namespace TopSpeed.Server.Network
             if (!room.RaceResults.Contains(player.PlayerNumber))
                 room.RaceResults.Add(player.PlayerNumber);
 
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayer(Command.PlayerFinished, player.Id, player.PlayerNumber));
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayer(Command.PlayerFinished, player.Id, player.PlayerNumber), PacketStream.RaceEvent);
             _logger.Debug($"Player finished: room={room.Id}, player={player.Id}, number={player.PlayerNumber}, results={room.RaceResults.Count}.");
             if (CountActiveRaceParticipants(room) == 0)
                 StopRace(room);
@@ -173,7 +173,7 @@ namespace TopSpeed.Server.Network
                 _logger.Debug($"PlayerCrashed payload mismatch: room={room.Id}, connectionPlayer={player.Id}/{player.PlayerNumber}, payload={crashed.PlayerId}/{crashed.PlayerNumber}.");
             }
 
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayer(Command.PlayerCrashed, player.Id, player.PlayerNumber));
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayer(Command.PlayerCrashed, player.Id, player.PlayerNumber), PacketStream.RaceEvent);
         }
     }
 }

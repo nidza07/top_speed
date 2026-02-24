@@ -78,7 +78,7 @@ namespace TopSpeed.Network
             var payload = new[] { ProtocolConstants.Version, (byte)Command.KeepAlive };
             while (!token.IsCancellationRequested)
             {
-                SafeSend(payload, DeliveryMethod.Unreliable);
+                SafeSendStream(payload, PacketStream.Control, PacketDeliveryKind.Unreliable);
 
                 try
                 {
@@ -99,7 +99,7 @@ namespace TopSpeed.Network
         public void SendPlayerState(PlayerState state)
         {
             var payload = ClientPacketSerializer.WritePlayerState(Command.PlayerState, PlayerId, PlayerNumber, state);
-            SafeSend(payload, DeliveryMethod.ReliableOrdered);
+            SafeSendStream(payload, PacketStream.Control);
         }
 
         public void SendPlayerData(
@@ -127,7 +127,7 @@ namespace TopSpeed.Network
                 radioLoaded,
                 radioPlaying,
                 radioMediaId);
-            SafeSend(payload, DeliveryMethod.Sequenced);
+            SafeSendStream(payload, PacketStream.RaceState, PacketDeliveryKind.Sequenced);
         }
 
         public bool SendRadioMedia(uint mediaId, string filePath)
@@ -154,7 +154,7 @@ namespace TopSpeed.Network
             if (extension.Length > ProtocolConstants.MaxMediaFileExtensionLength)
                 extension = extension.Substring(0, ProtocolConstants.MaxMediaFileExtensionLength);
 
-            SafeSend(ClientPacketSerializer.WritePlayerMediaBegin(PlayerId, PlayerNumber, mediaId, (uint)bytes.Length, extension), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WritePlayerMediaBegin(PlayerId, PlayerNumber, mediaId, (uint)bytes.Length, extension), PacketStream.Media);
 
             var chunkIndex = 0;
             var offset = 0;
@@ -163,105 +163,124 @@ namespace TopSpeed.Network
                 var length = Math.Min(RadioChunkSize, bytes.Length - offset);
                 var chunk = new byte[length];
                 Buffer.BlockCopy(bytes, offset, chunk, 0, length);
-                SafeSend(ClientPacketSerializer.WritePlayerMediaChunk(PlayerId, PlayerNumber, mediaId, (ushort)chunkIndex, chunk), DeliveryMethod.ReliableOrdered);
+                SafeSendStream(ClientPacketSerializer.WritePlayerMediaChunk(PlayerId, PlayerNumber, mediaId, (ushort)chunkIndex, chunk), PacketStream.Media);
                 chunkIndex++;
                 offset += length;
             }
 
-            SafeSend(ClientPacketSerializer.WritePlayerMediaEnd(PlayerId, PlayerNumber, mediaId), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WritePlayerMediaEnd(PlayerId, PlayerNumber, mediaId), PacketStream.Media);
             return true;
         }
 
         public void SendPlayerStarted()
         {
             var payload = ClientPacketSerializer.WritePlayer(Command.PlayerStarted, PlayerId, PlayerNumber);
-            SafeSend(payload, DeliveryMethod.ReliableOrdered);
+            SafeSendStream(payload, PacketStream.RaceEvent);
         }
 
         public void SendPlayerFinished()
         {
             var payload = ClientPacketSerializer.WritePlayer(Command.PlayerFinished, PlayerId, PlayerNumber);
-            SafeSend(payload, DeliveryMethod.ReliableOrdered);
+            SafeSendStream(payload, PacketStream.RaceEvent);
         }
 
         public void SendPlayerFinalize(PlayerState state)
         {
             var payload = ClientPacketSerializer.WritePlayerState(Command.PlayerFinalize, PlayerId, PlayerNumber, state);
-            SafeSend(payload, DeliveryMethod.ReliableOrdered);
+            SafeSendStream(payload, PacketStream.Control);
         }
 
         public void SendPlayerCrashed()
         {
             var payload = ClientPacketSerializer.WritePlayer(Command.PlayerCrashed, PlayerId, PlayerNumber);
-            SafeSend(payload, DeliveryMethod.ReliableOrdered);
+            SafeSendStream(payload, PacketStream.RaceEvent);
         }
 
         public void SendRoomListRequest()
         {
-            SafeSend(ClientPacketSerializer.WriteRoomListRequest(), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomListRequest(), PacketStream.Room);
         }
 
         public void SendRoomCreate(string roomName, GameRoomType roomType, byte playersToStart)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomCreate(roomName, roomType, playersToStart), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomCreate(roomName, roomType, playersToStart), PacketStream.Room);
         }
 
         public void SendRoomJoin(uint roomId)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomJoin(roomId), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomJoin(roomId), PacketStream.Room);
         }
 
         public void SendRoomLeave()
         {
-            SafeSend(ClientPacketSerializer.WriteRoomLeave(), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomLeave(), PacketStream.Room);
         }
 
         public void SendRoomSetTrack(string trackName)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomSetTrack(trackName), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomSetTrack(trackName), PacketStream.Room);
         }
 
         public void SendRoomSetLaps(byte laps)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomSetLaps(laps), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomSetLaps(laps), PacketStream.Room);
         }
 
         public void SendRoomStartRace()
         {
-            SafeSend(ClientPacketSerializer.WriteRoomStartRace(), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomStartRace(), PacketStream.Room);
         }
 
         public void SendRoomSetPlayersToStart(byte playersToStart)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomSetPlayersToStart(playersToStart), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomSetPlayersToStart(playersToStart), PacketStream.Room);
         }
 
         public void SendRoomAddBot()
         {
-            SafeSend(ClientPacketSerializer.WriteRoomAddBot(), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomAddBot(), PacketStream.Room);
         }
 
         public void SendRoomRemoveBot()
         {
-            SafeSend(ClientPacketSerializer.WriteRoomRemoveBot(), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomRemoveBot(), PacketStream.Room);
         }
 
         public void SendRoomPlayerReady(CarType car, bool automaticTransmission)
         {
-            SafeSend(ClientPacketSerializer.WriteRoomPlayerReady(car, automaticTransmission), DeliveryMethod.ReliableOrdered);
+            SafeSendStream(ClientPacketSerializer.WriteRoomPlayerReady(car, automaticTransmission), PacketStream.Room);
         }
 
-        private void SafeSend(byte[] payload, DeliveryMethod deliveryMethod)
+        private void SafeSendStream(byte[] payload, PacketStream stream)
+        {
+            var spec = PacketStreams.Get(stream);
+            SafeSendStream(payload, stream, spec.Delivery);
+        }
+
+        private void SafeSendStream(byte[] payload, PacketStream stream, PacketDeliveryKind deliveryOverride)
         {
             try
             {
-                if (_peer.ConnectionState == ConnectionState.Connected)
-                    _peer.Send(payload, deliveryMethod);
+                if (_peer.ConnectionState != ConnectionState.Connected)
+                    return;
+
+                var spec = PacketStreams.Get(stream);
+                _peer.Send(payload, spec.Channel, ToDelivery(deliveryOverride));
             }
             catch
             {
                 // Ignore send failures to keep the client running.
             }
+        }
+
+        private static DeliveryMethod ToDelivery(PacketDeliveryKind kind)
+        {
+            return kind switch
+            {
+                PacketDeliveryKind.Unreliable => DeliveryMethod.Unreliable,
+                PacketDeliveryKind.Sequenced => DeliveryMethod.Sequenced,
+                _ => DeliveryMethod.ReliableOrdered
+            };
         }
 
         public void Dispose()

@@ -76,7 +76,8 @@ namespace TopSpeed.Protocol
         RoomPlayerReady = 33,
         PlayerMediaBegin = 34,
         PlayerMediaChunk = 35,
-        PlayerMediaEnd = 36
+        PlayerMediaEnd = 36,
+        RaceSnapshot = 37
     }
 
     public enum ProtocolMessageCode : byte

@@ -22,7 +22,7 @@ namespace TopSpeed.Server.Network
         private readonly Logger _logger;
         private readonly object _lock = new object();
         private readonly UdpServerTransport _transport;
-        private readonly Dictionary<Command, Action<PlayerConnection, byte[], IPEndPoint>> _packetHandlers;
+        private readonly ServerPktReg _pktReg;
         private readonly Dictionary<uint, PlayerConnection> _players = new Dictionary<uint, PlayerConnection>();
         private readonly Dictionary<string, uint> _endpointIndex = new Dictionary<string, uint>(StringComparer.OrdinalIgnoreCase);
         private readonly Dictionary<uint, RaceRoom> _rooms = new Dictionary<uint, RaceRoom>();
@@ -35,6 +35,7 @@ namespace TopSpeed.Server.Network
         private float _simulationAccumulator;
         private float _snapshotAccumulator;
         private float _cleanupAccumulator;
+        private uint _simulationTick;
         private int _authorityDropsPlayerState;
         private int _authorityDropsPlayerData;
         private int _authorityDropsPlayerStarted;
@@ -59,7 +60,7 @@ namespace TopSpeed.Server.Network
             _config = config ?? throw new ArgumentNullException(nameof(config));
             _logger = logger ?? throw new ArgumentNullException(nameof(logger));
             _transport = new UdpServerTransport(_logger);
-            _packetHandlers = new Dictionary<Command, Action<PlayerConnection, byte[], IPEndPoint>>();
+            _pktReg = new ServerPktReg();
             RegisterPackets();
             _transport.PacketReceived += OnPacket;
             _transport.PeerDisconnected += OnPeerDisconnected;

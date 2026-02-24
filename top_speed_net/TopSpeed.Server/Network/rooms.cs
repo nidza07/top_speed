@@ -93,7 +93,8 @@ namespace TopSpeed.Server.Network
 
             if (notify)
             {
-                SendToRoom(room, PacketSerializer.WritePlayer(Command.PlayerDisconnected, player.Id, oldNumber));
+                var stream = room.RaceStarted ? PacketStream.RaceEvent : PacketStream.Room;
+                SendToRoomOnStream(room, PacketSerializer.WritePlayer(Command.PlayerDisconnected, player.Id, oldNumber), stream);
                 SendProtocolMessageToRoom(room, $"{leftName} has left the game.");
             }
 
@@ -198,7 +199,7 @@ namespace TopSpeed.Server.Network
             _logger.Info($"Race prepare started: room={room.Id} \"{room.Name}\", requestedBy={player.Id}, humans={room.PlayerIds.Count}, bots={room.Bots.Count}, required={room.PlayersToStart}.");
 
             SendProtocolMessageToRoom(room, $"{DescribePlayer(player)} is about to start the game. Choose your vehicle and transmission mode.");
-            SendToRoom(room, PacketSerializer.WriteGeneral(Command.RoomPrepareRace));
+            SendToRoomOnStream(room, PacketSerializer.WriteGeneral(Command.RoomPrepareRace), PacketStream.Room);
             TryStartRaceAfterLoadout(room);
         }
 
@@ -289,12 +290,12 @@ namespace TopSpeed.Server.Network
             room.Bots.Add(bot);
             BroadcastRoomState(room);
             BroadcastRoomList();
-            SendToRoom(room, PacketSerializer.WritePlayerJoined(new PacketPlayerJoined
+            SendToRoomOnStream(room, PacketSerializer.WritePlayerJoined(new PacketPlayerJoined
             {
                 PlayerId = bot.Id,
                 PlayerNumber = bot.PlayerNumber,
                 Name = FormatBotJoinName(bot)
-            }));
+            }), PacketStream.Room);
             if (room.PreparingRace)
                 TryStartRaceAfterLoadout(room);
         }
@@ -325,7 +326,7 @@ namespace TopSpeed.Server.Network
 
             var bot = room.Bots.OrderByDescending(b => b.AddedOrder).First();
             room.Bots.Remove(bot);
-            SendToRoom(room, PacketSerializer.WritePlayer(Command.PlayerDisconnected, bot.Id, bot.PlayerNumber));
+            SendToRoomOnStream(room, PacketSerializer.WritePlayer(Command.PlayerDisconnected, bot.Id, bot.PlayerNumber), PacketStream.Room);
             BroadcastRoomState(room);
             BroadcastRoomList();
             SendProtocolMessage(player, ProtocolMessageCode.Ok, $"Removed bot {bot.Name}.");
@@ -374,7 +375,7 @@ namespace TopSpeed.Server.Network
             player.PlayerNumber = (byte)FindFreeRoomNumber(room);
             player.State = PlayerState.NotReady;
 
-            _transport.Send(player.EndPoint, PacketSerializer.WritePlayerNumber(player.Id, player.PlayerNumber));
+            SendStream(player, PacketSerializer.WritePlayerNumber(player.Id, player.PlayerNumber), PacketStream.Control);
             SendTrack(room, player);
             SyncMediaTo(room, player);
             BroadcastRoomState(room);
@@ -383,7 +384,7 @@ namespace TopSpeed.Server.Network
                 ? $"Player {player.PlayerNumber + 1}"
                 : player.Name;
             var joined = new PacketPlayerJoined { PlayerId = player.Id, PlayerNumber = player.PlayerNumber, Name = joinedName };
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerJoined(joined));
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayerJoined(joined), PacketStream.Room);
             _logger.Debug($"Join room assignment: room={room.Id}, player={player.Id}, playerNumber={player.PlayerNumber}, host={room.HostId}.");
         }
 
@@ -422,6 +423,8 @@ namespace TopSpeed.Server.Network
             room.RaceStarted = true;
             room.RaceResults.Clear();
             room.ActiveBumpPairs.Clear();
+            room.RaceSnapshotSequence = 0;
+            room.RaceSnapshotTick = 0;
             var laneHalfWidth = GetLaneHalfWidth(room);
             var rowSpacing = GetStartRowSpacing(room);
             foreach (var id in room.PlayerIds)
@@ -465,7 +468,7 @@ namespace TopSpeed.Server.Network
             }
 
             SendTrackToRoom(room);
-            SendToRoom(room, PacketSerializer.WriteGeneral(Command.StartRace));
+            SendToRoomOnStream(room, PacketSerializer.WriteGeneral(Command.StartRace), PacketStream.RaceEvent);
             SendRaceSnapshot(room, DeliveryMethod.ReliableOrdered);
             BroadcastRoomState(room);
             _logger.Info($"Race started: room={room.Id} \"{room.Name}\", track={room.TrackName}, laps={room.Laps}, humans={room.PlayerIds.Count}, bots={room.Bots.Count}.");
@@ -479,13 +482,15 @@ namespace TopSpeed.Server.Network
             room.ActiveBumpPairs.Clear();
 
             var results = room.RaceResults.ToArray();
-            SendToRoom(room, PacketSerializer.WriteRaceResults(new PacketRaceResults
+            SendToRoomOnStream(room, PacketSerializer.WriteRaceResults(new PacketRaceResults
             {
                 NPlayers = (byte)Math.Min(results.Length, ProtocolConstants.MaxPlayers),
                 Results = results
-            }));
+            }), PacketStream.RaceEvent);
 
             room.RaceResults.Clear();
+            room.RaceSnapshotSequence = 0;
+            room.RaceSnapshotTick = 0;
             foreach (var id in room.PlayerIds)
             {
                 if (_players.TryGetValue(id, out var p))
@@ -542,7 +547,7 @@ namespace TopSpeed.Server.Network
                 return;
 
             var trackLength = (ushort)Math.Min(room.TrackData.Definitions.Length, ProtocolConstants.MaxMultiTrackLength);
-            _transport.Send(player.EndPoint, PacketSerializer.WriteLoadCustomTrack(new PacketLoadCustomTrack
+            SendStream(player, PacketSerializer.WriteLoadCustomTrack(new PacketLoadCustomTrack
             {
                 NrOfLaps = room.TrackData.Laps,
                 TrackName = room.TrackData.UserDefined ? "custom" : room.TrackName,
@@ -550,7 +555,7 @@ namespace TopSpeed.Server.Network
                 TrackAmbience = room.TrackData.Ambience,
                 TrackLength = trackLength,
                 Definitions = room.TrackData.Definitions
-            }));
+            }), PacketStream.Room);
         }
 
         private void SendRoomList(PlayerConnection player)
@@ -569,7 +574,7 @@ namespace TopSpeed.Server.Network
                 }).ToArray()
             };
 
-            _transport.Send(player.EndPoint, PacketSerializer.WriteRoomList(list));
+            SendStream(player, PacketSerializer.WriteRoomList(list), PacketStream.Room);
         }
 
         private void BroadcastRoomList()
@@ -582,14 +587,14 @@ namespace TopSpeed.Server.Network
         {
             if (room == null)
             {
-                _transport.Send(player.EndPoint, PacketSerializer.WriteRoomState(new PacketRoomState
+                SendStream(player, PacketSerializer.WriteRoomState(new PacketRoomState
                 {
                     InRoom = false,
                     HostPlayerId = 0,
                     RoomType = GameRoomType.BotsRace,
                     PlayersToStart = 0,
                     Players = Array.Empty<PacketRoomPlayer>()
-                }));
+                }), PacketStream.Room);
                 return;
             }
 
@@ -613,7 +618,7 @@ namespace TopSpeed.Server.Network
                 .OrderBy(p => p.PlayerNumber)
                 .ToArray();
 
-            _transport.Send(player.EndPoint, PacketSerializer.WriteRoomState(new PacketRoomState
+            SendStream(player, PacketSerializer.WriteRoomState(new PacketRoomState
             {
                 RoomId = room.Id,
                 HostPlayerId = room.HostId,
@@ -626,7 +631,7 @@ namespace TopSpeed.Server.Network
                 TrackName = room.TrackName,
                 Laps = room.Laps,
                 Players = players
-            }));
+            }), PacketStream.Room);
         }
 
         private void BroadcastRoomState(RaceRoom room)
@@ -682,11 +687,11 @@ namespace TopSpeed.Server.Network
 
         private void SendProtocolMessage(PlayerConnection player, ProtocolMessageCode code, string text)
         {
-            _transport.Send(player.EndPoint, PacketSerializer.WriteProtocolMessage(new PacketProtocolMessage
+            SendStream(player, PacketSerializer.WriteProtocolMessage(new PacketProtocolMessage
             {
                 Code = code,
                 Message = text ?? string.Empty
-            }));
+            }), PacketStream.Direct);
         }
 
         private void SendProtocolMessageToRoom(RaceRoom room, string text)
@@ -700,7 +705,7 @@ namespace TopSpeed.Server.Network
                 Message = text
             });
 
-            SendToRoom(room, payload);
+            SendToRoomOnStream(room, payload, PacketStream.Chat);
         }
 
         private void BroadcastLobbyAnnouncement(string text)
@@ -858,26 +863,6 @@ namespace TopSpeed.Server.Network
             };
         }
 
-        private void SendToRoom(RaceRoom room, byte[] payload, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered)
-        {
-            foreach (var id in room.PlayerIds)
-            {
-                if (_players.TryGetValue(id, out var player))
-                    _transport.Send(player.EndPoint, payload, deliveryMethod);
-            }
-        }
-
-        private void SendToRoomExcept(RaceRoom room, uint exceptId, byte[] payload, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered)
-        {
-            foreach (var id in room.PlayerIds)
-            {
-                if (id == exceptId)
-                    continue;
-                if (_players.TryGetValue(id, out var player))
-                    _transport.Send(player.EndPoint, payload, deliveryMethod);
-            }
-        }
-
         private int CountActiveRaceParticipants(RaceRoom room)
         {
             var humanRacers = room.PlayerIds.Count(id => _players.TryGetValue(id, out var player) && IsActiveRaceState(player.State));
@@ -894,56 +879,73 @@ namespace TopSpeed.Server.Network
         {
             _raceSnapshotSends++;
             _logger.Debug($"Race snapshot send: room={room.Id}, delivery={deliveryMethod}.");
-            foreach (var id in room.PlayerIds)
-            {
-                if (!_players.TryGetValue(id, out var player))
-                    continue;
-                if (player.State == PlayerState.NotReady || player.State == PlayerState.Undefined)
-                    continue;
+            var payload = BuildRaceSnapshotPayload(room);
+            if (payload == null)
+                return;
 
-                SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerData(player.ToPacket()), deliveryMethod);
-                _stateSyncFramesSent++;
-            }
-
-            foreach (var bot in room.Bots)
-            {
-                if (bot.State == PlayerState.NotReady || bot.State == PlayerState.Undefined)
-                    continue;
-
-                var payload = PacketSerializer.WritePlayerData(ToBotPacket(bot));
-                SendToRoom(room, payload, deliveryMethod);
-                _stateSyncFramesSent++;
-            }
+            var delivery = deliveryMethod == DeliveryMethod.ReliableOrdered
+                ? PacketDeliveryKind.ReliableOrdered
+                : deliveryMethod == DeliveryMethod.Sequenced
+                    ? PacketDeliveryKind.Sequenced
+                    : PacketDeliveryKind.Unreliable;
+            SendToRoomOnStream(room, payload, PacketStream.RaceState, delivery);
         }
 
         private void BroadcastPlayerData()
         {
             foreach (var room in _rooms.Values)
             {
-                foreach (var id in room.PlayerIds)
-                {
-                    if (!_players.TryGetValue(id, out var player))
-                        continue;
-                    if (player.State == PlayerState.NotReady || player.State == PlayerState.Undefined)
-                        continue;
-
-                    SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerData(player.ToPacket()), DeliveryMethod.Sequenced);
-                    _stateSyncFramesSent++;
-                }
-
                 if (!room.RaceStarted)
                     continue;
+                var payload = BuildRaceSnapshotPayload(room);
+                if (payload == null)
+                    continue;
+                SendToRoomOnStream(room, payload, PacketStream.RaceState, PacketDeliveryKind.Unreliable);
+            }
+        }
 
+        private byte[]? BuildRaceSnapshotPayload(RaceRoom room)
+        {
+            var max = ProtocolConstants.MaxPlayers;
+            var items = new PacketPlayerData[max];
+            var count = 0;
+
+            foreach (var id in room.PlayerIds)
+            {
+                if (!_players.TryGetValue(id, out var player))
+                    continue;
+                if (player.State == PlayerState.NotReady || player.State == PlayerState.Undefined)
+                    continue;
+                if (count >= max)
+                    break;
+                items[count++] = player.ToPacket();
+            }
+
+            if (count < max)
+            {
                 foreach (var bot in room.Bots)
                 {
                     if (bot.State == PlayerState.NotReady || bot.State == PlayerState.Undefined)
                         continue;
-
-                    var payload = PacketSerializer.WritePlayerData(ToBotPacket(bot));
-                    SendToRoom(room, payload, DeliveryMethod.Sequenced);
-                    _stateSyncFramesSent++;
+                    if (count >= max)
+                        break;
+                    items[count++] = ToBotPacket(bot);
                 }
             }
+
+            if (count == 0)
+                return null;
+
+            var players = new PacketPlayerData[count];
+            Array.Copy(items, players, count);
+            var snapshot = new PacketRaceSnapshot
+            {
+                Sequence = ++room.RaceSnapshotSequence,
+                Tick = room.RaceSnapshotTick = _simulationTick,
+                Players = players
+            };
+            _stateSyncFramesSent += count;
+            return PacketSerializer.WriteRaceSnapshot(snapshot);
         }
 
     }

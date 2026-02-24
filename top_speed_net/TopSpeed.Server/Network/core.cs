@@ -9,6 +9,7 @@ namespace TopSpeed.Server.Network
     {
         public void Start()
         {
+            ResetStreamTxMetrics();
             _transport.Start(_config.Port);
             _logger.Info("Race server started.");
         }
@@ -20,6 +21,7 @@ namespace TopSpeed.Server.Network
                 _rooms.Clear();
                 _players.Clear();
                 _endpointIndex.Clear();
+                ResetStreamTxMetrics();
             }
 
             _transport.Stop();
@@ -37,6 +39,7 @@ namespace TopSpeed.Server.Network
                 while (_simulationAccumulator >= ServerSimulationStepSeconds)
                 {
                     _simulationAccumulator -= ServerSimulationStepSeconds;
+                    _simulationTick++;
                     _cleanupAccumulator += ServerSimulationStepSeconds;
                     _snapshotAccumulator += ServerSimulationStepSeconds;
 
@@ -90,7 +93,7 @@ namespace TopSpeed.Server.Network
             if (player.RoomId.HasValue)
                 HandleLeaveRoom(player, notifyRoom);
             if (sendDisconnectPacket)
-                _transport.Send(player.EndPoint, TopSpeed.Server.Protocol.PacketSerializer.WriteGeneral(TopSpeed.Protocol.Command.Disconnect));
+                SendStream(player, TopSpeed.Server.Protocol.PacketSerializer.WriteGeneral(TopSpeed.Protocol.Command.Disconnect), TopSpeed.Protocol.PacketStream.Control);
             _endpointIndex.Remove(player.EndPoint.ToString());
             _players.Remove(player.Id);
             _logger.Info($"Connection removed: player={player.Id}, endpoint={player.EndPoint}, room={roomId?.ToString() ?? "none"}, reason={reason}.");

@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using System.Linq;
 using LiteNetLib;
 using TopSpeed.Bots;
+using TopSpeed.Data;
 using TopSpeed.Protocol;
 using TopSpeed.Server.Protocol;
 
@@ -23,11 +24,12 @@ namespace TopSpeed.Server.Network
                 if (definitions == null || definitions.Length == 0)
                     continue;
 
-                var lapDistance = GetLapDistance(room);
+                var laneHalfWidth = GetLaneHalfWidth(room);
+                var roadModel = new RoadModel(definitions, laneHalfWidth);
+                var lapDistance = roadModel.LapDistance;
                 var raceDistance = GetRaceDistance(room);
                 if (lapDistance <= 0f || raceDistance <= 0f)
                     continue;
-                var laneHalfWidth = GetLaneHalfWidth(room);
 
                 foreach (var bot in room.Bots)
                 {
@@ -154,9 +156,10 @@ namespace TopSpeed.Server.Network
                         continue;
                     }
 
-                    var currentRoad = BotRoadModel.RoadAtPosition(definitions, bot.PositionY, laneHalfWidth);
-                    var nextRoad = BotRoadModel.RoadAtPosition(definitions, bot.PositionY + BotAiLookaheadMeters, laneHalfWidth);
-                    var relPos = BotRaceRules.CalculateRelativeLanePosition(bot.PositionX, currentRoad.Left, laneHalfWidth);
+                    var currentRoad = roadModel.At(bot.PositionY);
+                    var nextRoad = roadModel.At(bot.PositionY + BotAiLookaheadMeters);
+                    var currentLaneHalfWidth = Math.Max(0.1f, Math.Abs(currentRoad.Right - currentRoad.Left) * 0.5f);
+                    var relPos = BotRaceRules.CalculateRelativeLanePosition(bot.PositionX, currentRoad.Left, currentLaneHalfWidth);
                     relPos = Math.Max(0f, Math.Min(1f, relPos));
                     var controlRandom = (bot.AddedOrder * 37) % 100;
                     BotSharedModel.GetControlInputs((int)bot.Difficulty, controlRandom, currentRoad.Type, nextRoad.Type, relPos, out var throttle, out var steering);
@@ -195,8 +198,9 @@ namespace TopSpeed.Server.Network
                     }
                     TryStartBotHorn(room, bot, raceDistance);
 
-                    var evalRoad = BotRoadModel.RoadAtPosition(definitions, bot.PositionY, laneHalfWidth);
-                    var evalRelPos = BotRaceRules.CalculateRelativeLanePosition(bot.PositionX, evalRoad.Left, laneHalfWidth);
+                    var evalRoad = roadModel.At(bot.PositionY);
+                    var evalLaneHalfWidth = Math.Max(0.1f, Math.Abs(evalRoad.Right - evalRoad.Left) * 0.5f);
+                    var evalRelPos = BotRaceRules.CalculateRelativeLanePosition(bot.PositionX, evalRoad.Left, evalLaneHalfWidth);
                     if (BotRaceRules.IsOutsideRoad(evalRelPos))
                     {
                         var center = BotRaceRules.RoadCenter(evalRoad.Left, evalRoad.Right);
@@ -221,7 +225,7 @@ namespace TopSpeed.Server.Network
                             bot.BackfireArmed = true;
                             _botCrashEvents++;
                             _logger.Debug($"Bot crashed: room={room.Id}, bot={bot.Id}, number={bot.PlayerNumber}, y={bot.PositionY:0.0}.");
-                            SendToRoom(room, PacketSerializer.WritePlayer(Command.PlayerCrashed, bot.Id, bot.PlayerNumber));
+                            SendToRoomOnStream(room, PacketSerializer.WritePlayer(Command.PlayerCrashed, bot.Id, bot.PlayerNumber), PacketStream.RaceEvent);
                             continue;
                         }
 
@@ -246,7 +250,7 @@ namespace TopSpeed.Server.Network
                     if (!room.RaceResults.Contains(bot.PlayerNumber))
                         room.RaceResults.Add(bot.PlayerNumber);
 
-                    SendToRoom(room, PacketSerializer.WritePlayer(Command.PlayerFinished, bot.Id, bot.PlayerNumber));
+                    SendToRoomOnStream(room, PacketSerializer.WritePlayer(Command.PlayerFinished, bot.Id, bot.PlayerNumber), PacketStream.RaceEvent);
                     _botFinishEvents++;
                     _logger.Debug($"Bot finished: room={room.Id}, bot={bot.Id}, number={bot.PlayerNumber}, place={room.RaceResults.Count}.");
                 }
@@ -269,7 +273,13 @@ namespace TopSpeed.Server.Network
 
         private float GetLaneHalfWidth(RaceRoom room)
         {
-            return BotRaceRules.GetLaneHalfWidthForTrack(room.TrackName);
+            if (room.TrackData == null || room.TrackData.Definitions == null || room.TrackData.Definitions.Length == 0)
+                return RoadModel.DefaultLaneHalfWidth;
+
+            var model = new RoadModel(room.TrackData.Definitions, RoadModel.DefaultLaneHalfWidth);
+            var startRoad = model.At(BotRaceRules.StartLineY);
+            var laneHalfWidth = Math.Abs(startRoad.Right - startRoad.Left) * 0.5f;
+            return laneHalfWidth > 0f ? laneHalfWidth : RoadModel.DefaultLaneHalfWidth;
         }
 
         private float GetStartRowSpacing(RaceRoom room)
@@ -503,23 +513,23 @@ namespace TopSpeed.Server.Network
                         if (room.ActiveBumpPairs.Contains(pairKey))
                             continue;
 
-                        _transport.Send(player.EndPoint, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
+                        SendStream(player, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
                         {
                             PlayerId = player.Id,
                             PlayerNumber = player.PlayerNumber,
                             BumpX = dx,
                             BumpY = dy,
                             BumpSpeed = (ushort)Math.Max(0, player.Speed - other.Speed)
-                        }), DeliveryMethod.Sequenced);
+                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
 
-                        _transport.Send(other.EndPoint, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
+                        SendStream(other, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
                         {
                             PlayerId = other.Id,
                             PlayerNumber = other.PlayerNumber,
                             BumpX = -dx,
                             BumpY = -dy,
                             BumpSpeed = (ushort)Math.Max(0, other.Speed - player.Speed)
-                        }), DeliveryMethod.Sequenced);
+                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
                         _bumpEventsHumanHuman++;
                     }
                 }
@@ -541,14 +551,14 @@ namespace TopSpeed.Server.Network
                             continue;
 
                         var botSpeed = (ushort)Math.Max(0, Math.Min(ushort.MaxValue, (int)Math.Round(bot.SpeedKph)));
-                        _transport.Send(player.EndPoint, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
+                        SendStream(player, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
                         {
                             PlayerId = player.Id,
                             PlayerNumber = player.PlayerNumber,
                             BumpX = dx,
                             BumpY = dy,
                             BumpSpeed = (ushort)Math.Max(0, player.Speed - botSpeed)
-                        }), DeliveryMethod.Sequenced);
+                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
 
                         bot.PositionX -= 2f * dx;
                         bot.PositionY -= dy;

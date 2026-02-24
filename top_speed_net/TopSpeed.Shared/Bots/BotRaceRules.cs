@@ -4,8 +4,6 @@ namespace TopSpeed.Bots
 {
     public static class BotRaceRules
     {
-        public const float DefaultLaneHalfWidth = 5.0f;
-        public const float AdventureLaneHalfWidth = 80.0f;
         public const float StartLineY = 140.0f;
         public const float StartGridMargin = 0.3f;
         public const float MinStartRowSpacing = 10.0f;
@@ -13,17 +11,6 @@ namespace TopSpeed.Bots
         public const float DefaultBotEngineStartSeconds = 1.35f;
         public const float DefaultBotCrashRecoverySeconds = 2.5f;
         public const float DefaultBotRestartDelaySeconds = 1.25f;
-
-        public static float GetLaneHalfWidthForTrack(string? trackName)
-        {
-            if (!string.IsNullOrWhiteSpace(trackName)
-                && trackName!.IndexOf("adv", StringComparison.OrdinalIgnoreCase) >= 0)
-            {
-                return AdventureLaneHalfWidth;
-            }
-
-            return DefaultLaneHalfWidth;
-        }
 
         public static float CalculateStartRowSpacing(float maxVehicleLength)
         {

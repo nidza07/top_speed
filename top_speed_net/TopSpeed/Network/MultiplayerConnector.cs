@@ -69,7 +69,8 @@ namespace TopSpeed.Network
 
             var manager = new NetManager(listener)
             {
-                UpdateTime = 1
+                UpdateTime = 1,
+                ChannelsCount = PacketStreams.Count
             };
 
             if (!manager.Start())

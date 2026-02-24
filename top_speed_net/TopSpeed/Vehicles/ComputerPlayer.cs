@@ -22,6 +22,9 @@ namespace TopSpeed.Vehicles
         private const float AutoShiftHysteresis = 0.05f;
         private const float AutoShiftCooldownSeconds = 0.15f;
         private const float AudioLateralBoost = 1.0f;
+        private const float RemoteInterpRate = 28.0f;
+        private const float RemoteInterpSnapDistance = 120.0f;
+        private const float RemoteInterpSnapLateral = 8.0f;
 
         private readonly AudioManager _audio;
         private readonly Track _track;
@@ -102,6 +105,10 @@ namespace TopSpeed.Vehicles
         private bool _remoteEngineStartPending;
         private float _remoteEngineStartRemaining;
         private int _remoteEnginePendingFrequency;
+        private bool _remoteNetInit;
+        private float _remoteTargetX;
+        private float _remoteTargetY;
+        private float _remoteTargetSpeed;
         private bool _crashLateralAnchored;
         private float _crashLateralFromCenter;
         private int _frame;
@@ -292,6 +299,10 @@ namespace TopSpeed.Vehicles
             _positionY = Math.Max(0f, positionY);
             _trackLength = trackLength;
             _laneWidth = _track.LaneWidth;
+            _remoteNetInit = false;
+            _remoteTargetX = _positionX;
+            _remoteTargetY = _positionY;
+            _remoteTargetSpeed = _speed;
             _audioInitialized = false;
             _lastAudioPosition = new Vector3(positionX, 0f, _positionY);
             _lastAudioUpdateTime = 0f;
@@ -579,11 +590,41 @@ namespace TopSpeed.Vehicles
             float playerY,
             float trackLength)
         {
-            _positionX = positionX;
-            _positionY = Math.Max(0f, positionY);
-            _speed = speed;
+            var incomingX = positionX;
+            var incomingY = Math.Max(0f, positionY);
+            var incomingSpeed = Math.Max(0f, speed);
             _trackLength = trackLength;
             var preserveCrashState = _state == ComputerState.Crashing && !engineRunning;
+            var snapToIncoming = !_remoteNetInit;
+
+            if (!_remoteNetInit)
+            {
+                _remoteNetInit = true;
+                _remoteTargetX = incomingX;
+                _remoteTargetY = incomingY;
+                _remoteTargetSpeed = incomingSpeed;
+                _positionX = incomingX;
+                _positionY = incomingY;
+                _speed = incomingSpeed;
+            }
+            else
+            {
+                var dx = incomingX - _positionX;
+                var dy = incomingY - _positionY;
+                if (Math.Abs(dx) > RemoteInterpSnapLateral || Math.Abs(dy) > RemoteInterpSnapDistance)
+                    snapToIncoming = true;
+
+                _remoteTargetX = incomingX;
+                _remoteTargetY = incomingY;
+                _remoteTargetSpeed = incomingSpeed;
+            }
+
+            if (snapToIncoming)
+            {
+                _positionX = incomingX;
+                _positionY = incomingY;
+                _speed = incomingSpeed;
+            }
 
             _diffX = _positionX - playerX;
             _diffY = _positionY - playerY;
@@ -600,7 +641,8 @@ namespace TopSpeed.Vehicles
                     elapsed = 0f;
             }
             _lastAudioUpdateTime = now;
-            UpdateSpatialAudio(playerX, playerY, _trackLength, elapsed);
+            if (snapToIncoming)
+                UpdateSpatialAudio(playerX, playerY, _trackLength, elapsed);
 
             if (engineRunning)
             {
@@ -635,7 +677,7 @@ namespace TopSpeed.Vehicles
             {
                 if (!_soundBrake.IsPlaying)
                     _soundBrake.Play(loop: true);
-                var targetBrakeFrequency = (int)(11025 + 22050 * _speed / _topSpeed);
+                var targetBrakeFrequency = (int)(11025 + 22050 * incomingSpeed / _topSpeed);
                 if (_prevBrakeFrequency != targetBrakeFrequency)
                 {
                     _soundBrake.SetFrequency(targetBrakeFrequency);
@@ -679,6 +721,7 @@ namespace TopSpeed.Vehicles
         public void UpdateRemoteAudio(float playerX, float playerY, float trackLength, float elapsed)
         {
             _trackLength = trackLength;
+            AdvanceRemoteInterpolation(elapsed);
             UpdateSpatialAudio(playerX, playerY, _trackLength, elapsed);
             if (_remoteEngineStartPending)
             {
@@ -695,6 +738,30 @@ namespace TopSpeed.Vehicles
                     }
                 }
             }
+        }
+
+        private void AdvanceRemoteInterpolation(float elapsed)
+        {
+            if (!_remoteNetInit)
+                return;
+
+            var dt = Math.Max(0f, elapsed);
+            if (dt <= 0f)
+                return;
+
+            var alpha = 1f - (float)Math.Exp(-RemoteInterpRate * dt);
+            if (alpha <= 0f)
+                return;
+            if (alpha > 1f)
+                alpha = 1f;
+
+            _positionX += (_remoteTargetX - _positionX) * alpha;
+            _positionY += (_remoteTargetY - _positionY) * alpha;
+            if (_positionY < 0f)
+                _positionY = 0f;
+            _speed += (_remoteTargetSpeed - _speed) * alpha;
+            if (_speed < 0f)
+                _speed = 0f;
         }
 
         public void ApplyRadioState(bool loaded, bool playing, uint mediaId)
@@ -731,7 +798,8 @@ namespace TopSpeed.Vehicles
             {
                 if (_frame % 4 == 0)
                 {
-                    _relPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, road.Left, _laneWidth);
+                    var laneHalfWidth = Math.Max(0.1f, Math.Abs(road.Right - road.Left) * 0.5f);
+                    _relPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, road.Left, laneHalfWidth);
                     if (BotRaceRules.IsOutsideRoad(_relPos))
                     {
                         var fullCrash = BotRaceRules.IsFullCrash(_gear, _speed);
@@ -795,9 +863,11 @@ namespace TopSpeed.Vehicles
         private void AI()
         {
             var road = _track.RoadComputer(_positionY);
-            _relPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, road.Left, _laneWidth);
+            var laneHalfWidth = Math.Max(0.1f, Math.Abs(road.Right - road.Left) * 0.5f);
+            _relPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, road.Left, laneHalfWidth);
             var nextRoad = _track.RoadComputer(_positionY + CallLength);
-            _nextRelPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, nextRoad.Left, _laneWidth);
+            var nextLaneHalfWidth = Math.Max(0.1f, Math.Abs(nextRoad.Right - nextRoad.Left) * 0.5f);
+            _nextRelPos = BotRaceRules.CalculateRelativeLanePosition(_positionX, nextRoad.Left, nextLaneHalfWidth);
             BotSharedModel.GetControlInputs(_difficulty, _random, road.Type, nextRoad.Type, _relPos, out var throttle, out var steering);
             _currentThrottle = (int)Math.Round(throttle);
             _currentSteering = (int)Math.Round(steering);

@@ -99,6 +99,8 @@ namespace TopSpeed.Server.Network
         public List<byte> RaceResults { get; } = new List<byte>();
         public HashSet<ulong> ActiveBumpPairs { get; } = new HashSet<ulong>();
         public Dictionary<uint, MediaBlob> MediaMap { get; } = new Dictionary<uint, MediaBlob>();
+        public uint RaceSnapshotSequence { get; set; }
+        public uint RaceSnapshotTick { get; set; }
     }
 
     internal sealed class MediaBlob

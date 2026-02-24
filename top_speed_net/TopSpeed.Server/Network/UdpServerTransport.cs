@@ -56,7 +56,8 @@ namespace TopSpeed.Server.Network
             _server = new NetManager(_listener)
             {
                 ReuseAddress = true,
-                UpdateTime = 1
+                UpdateTime = 1,
+                ChannelsCount = PacketStreams.Count
             };
 
             if (!_server.Start(port))
@@ -85,6 +86,11 @@ namespace TopSpeed.Server.Network
 
         public void Send(IPEndPoint endPoint, byte[] payload, DeliveryMethod deliveryMethod = DeliveryMethod.ReliableOrdered)
         {
+            Send(endPoint, payload, deliveryMethod, channel: 0);
+        }
+
+        public void Send(IPEndPoint endPoint, byte[] payload, DeliveryMethod deliveryMethod, byte channel)
+        {
             if (_server == null || payload == null || payload.Length == 0)
                 return;
 
@@ -97,7 +103,7 @@ namespace TopSpeed.Server.Network
 
             try
             {
-                peer.Send(payload, deliveryMethod);
+                peer.Send(payload, channel, deliveryMethod);
             }
             catch (Exception ex)
             {

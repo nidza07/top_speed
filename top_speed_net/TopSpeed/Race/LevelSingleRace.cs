@@ -361,7 +361,7 @@ namespace TopSpeed.Race
         {
             var halfWidth = Math.Max(0.1f, vehicleWidth * 0.5f);
             var margin = 0.3f;
-            var laneHalfWidth = _track.LaneWidth;
+            var laneHalfWidth = _track.LaneHalfWidthAtPosition(StartLineY);
             var laneOffset = laneHalfWidth - halfWidth - margin;
             if (laneOffset < 0f)
                 laneOffset = 0f;

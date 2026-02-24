@@ -1,0 +1,141 @@
+using System;
+using TopSpeed.Data;
+using TopSpeed.Protocol;
+
+namespace TopSpeed.Network
+{
+    internal static partial class ClientPacketSerializer
+    {
+        public static bool TryReadRaceSnapshot(byte[] data, out PacketRaceSnapshot packet)
+        {
+            packet = new PacketRaceSnapshot();
+            if (data.Length < 2 + 4 + 4 + 1)
+                return false;
+            if (data[0] != ProtocolConstants.Version || data[1] != (byte)Command.RaceSnapshot)
+                return false;
+
+            var reader = new PacketReader(data);
+            reader.ReadByte();
+            reader.ReadByte();
+            packet.Sequence = reader.ReadUInt32();
+            packet.Tick = reader.ReadUInt32();
+            var count = reader.ReadByte();
+            var available = Math.Max(0, (data.Length - (2 + 4 + 4 + 1)) / PlayerDataFieldSize);
+            var actualCount = Math.Min(count, available);
+            var players = new PacketPlayerData[actualCount];
+            for (var i = 0; i < actualCount; i++)
+            {
+                var item = new PacketPlayerData();
+                ReadPlayerDataFields(ref reader, item);
+                players[i] = item;
+            }
+            packet.Players = players;
+            return true;
+        }
+
+        public static bool TryReadPlayerBumped(byte[] data, out PacketPlayerBumped packet)
+        {
+            packet = new PacketPlayerBumped();
+            if (data.Length < 2 + 4 + 1 + 4 + 4 + 2)
+                return false;
+            var reader = new PacketReader(data);
+            reader.ReadByte();
+            reader.ReadByte();
+            packet.PlayerId = reader.ReadUInt32();
+            packet.PlayerNumber = reader.ReadByte();
+            packet.BumpX = reader.ReadSingle();
+            packet.BumpY = reader.ReadSingle();
+            packet.BumpSpeed = reader.ReadUInt16();
+            return true;
+        }
+
+        public static bool TryReadLoadCustomTrack(byte[] data, out PacketLoadCustomTrack packet)
+        {
+            packet = new PacketLoadCustomTrack();
+            const int headerSize = 2;
+            const int baseSize = 1 + 12 + 1 + 1 + 2;
+            if (data.Length < headerSize + baseSize)
+                return false;
+            if (data[0] != ProtocolConstants.Version || data[1] != (byte)Command.LoadCustomTrack)
+                return false;
+            var reader = new PacketReader(data);
+            reader.ReadByte();
+            reader.ReadByte();
+            packet.NrOfLaps = reader.ReadByte();
+            packet.TrackName = reader.ReadFixedString(12);
+            packet.TrackWeather = (TrackWeather)reader.ReadByte();
+            packet.TrackAmbience = (TrackAmbience)reader.ReadByte();
+            packet.TrackLength = reader.ReadUInt16();
+            var availableDefs = Math.Max(0, (data.Length - headerSize - baseSize) / 7);
+            var definitionCount = Math.Min(packet.TrackLength, (ushort)availableDefs);
+            var definitions = new TrackDefinition[definitionCount];
+            for (var i = 0; i < definitionCount; i++)
+            {
+                var type = (TrackType)reader.ReadByte();
+                var surface = (TrackSurface)reader.ReadByte();
+                var noise = (TrackNoise)reader.ReadByte();
+                var segmentLength = reader.ReadSingle();
+                definitions[i] = new TrackDefinition(type, surface, noise, segmentLength);
+            }
+
+            packet.Definitions = definitions;
+            return true;
+        }
+
+        public static bool TryReadRaceResults(byte[] data, out PacketRaceResults packet)
+        {
+            packet = new PacketRaceResults();
+            if (data.Length < 2 + 1)
+                return false;
+            if (data[0] != ProtocolConstants.Version || data[1] != (byte)Command.StopRace)
+                return false;
+            var reader = new PacketReader(data);
+            reader.ReadByte();
+            reader.ReadByte();
+            var count = reader.ReadByte();
+            var max = Math.Min(count, (byte)Math.Max(0, data.Length - 3));
+            var results = new byte[max];
+            for (var i = 0; i < max; i++)
+                results[i] = reader.ReadByte();
+            packet.Results = results;
+            packet.NPlayers = max;
+            return true;
+        }
+
+        public static byte[] WritePlayerDataToServer(
+            uint playerId,
+            byte playerNumber,
+            CarType car,
+            PlayerRaceData raceData,
+            PlayerState state,
+            bool engineRunning,
+            bool braking,
+            bool horning,
+            bool backfiring,
+            bool mediaLoaded,
+            bool mediaPlaying,
+            uint mediaId)
+        {
+            var buffer = WritePacketHeader(Command.PlayerDataToServer, 4 + 1 + 1 + 4 + 4 + 2 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 4);
+            var writer = new PacketWriter(buffer);
+            writer.WriteByte(ProtocolConstants.Version);
+            writer.WriteByte((byte)Command.PlayerDataToServer);
+            writer.WriteUInt32(playerId);
+            writer.WriteByte(playerNumber);
+            writer.WriteByte((byte)car);
+            writer.WriteSingle(raceData.PositionX);
+            writer.WriteSingle(raceData.PositionY);
+            writer.WriteUInt16(raceData.Speed);
+            writer.WriteInt32(raceData.Frequency);
+            writer.WriteByte((byte)state);
+            writer.WriteBool(engineRunning);
+            writer.WriteBool(braking);
+            writer.WriteBool(horning);
+            writer.WriteBool(backfiring);
+            writer.WriteBool(mediaLoaded);
+            writer.WriteBool(mediaPlaying);
+            writer.WriteUInt32(mediaId);
+            return buffer;
+        }
+    }
+}

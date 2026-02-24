@@ -18,6 +18,9 @@ namespace TopSpeed.Race
         private const int MaxPlayers = ProtocolConstants.MaxPlayers;
         private const float SendIntervalSeconds = 1f / 60f;
         private const float StartLineY = 140.0f;
+        private const float ServerTickRate = 125.0f;
+        private const float SnapshotDelayTicks = 4.0f;
+        private const int SnapshotBufferMax = 8;
 
         private sealed class RemotePlayer
         {
@@ -44,11 +47,18 @@ namespace TopSpeed.Race
             public bool IsComplete => Data.Length > 0 && Offset >= Data.Length;
         }
 
+        private sealed class RaceSnapshotFrame
+        {
+            public uint Tick { get; set; }
+            public PacketPlayerData[] Players { get; set; } = Array.Empty<PacketPlayerData>();
+        }
+
         private readonly MultiplayerSession _session;
         private readonly uint _playerId;
         private readonly byte _playerNumber;
         private readonly Dictionary<byte, RemotePlayer> _remotePlayers;
         private readonly Dictionary<byte, RemoteMediaTransfer> _remoteMediaTransfers;
+        private readonly List<RaceSnapshotFrame> _snapshotFrames;
         private readonly AudioSourceHandle?[] _soundPosition;
         private readonly AudioSourceHandle?[] _soundPlayerNr;
         private readonly AudioSourceHandle?[] _soundFinished;
@@ -67,6 +77,11 @@ namespace TopSpeed.Race
         private bool _serverStopReceived;
         private PlayerState _currentState;
         private CarState _lastCarState;
+        private uint _lastRaceSnapshotSequence;
+        private uint _lastRaceSnapshotTick;
+        private bool _hasRaceSnapshotSequence;
+        private float _snapshotTickNow;
+        private bool _hasSnapshotTickNow;
 
         public LevelMultiplayer(
             AudioManager audio,
@@ -90,6 +105,7 @@ namespace TopSpeed.Race
             _playerNumber = playerNumber;
             _remotePlayers = new Dictionary<byte, RemotePlayer>();
             _remoteMediaTransfers = new Dictionary<byte, RemoteMediaTransfer>();
+            _snapshotFrames = new List<RaceSnapshotFrame>(SnapshotBufferMax);
             _soundPosition = new AudioSourceHandle?[MaxPlayers];
             _soundPlayerNr = new AudioSourceHandle?[MaxPlayers];
             _soundFinished = new AudioSourceHandle?[MaxPlayers];
@@ -109,6 +125,12 @@ namespace TopSpeed.Race
             _sentFinish = false;
             _serverStopReceived = false;
             _lastCarState = _car.State;
+            _lastRaceSnapshotSequence = 0;
+            _lastRaceSnapshotTick = 0;
+            _hasRaceSnapshotSequence = false;
+            _snapshotFrames.Clear();
+            _snapshotTickNow = 0f;
+            _hasSnapshotTickNow = false;
 
             var rowSpacing = Math.Max(10.0f, _car.LengthM * 1.5f);
             var positionX = CalculateStartX(_playerNumber, _car.WidthM);
@@ -149,6 +171,7 @@ namespace TopSpeed.Race
             }
             _remotePlayers.Clear();
             _remoteMediaTransfers.Clear();
+            _snapshotFrames.Clear();
 
             for (var i = 0; i < _soundPosition.Length; i++)
             {
@@ -221,6 +244,7 @@ namespace TopSpeed.Race
                 }
             }
 
+            ApplyBufferedRaceSnapshots(elapsed);
             UpdatePositions();
             UpdateVehiclePanels(elapsed);
             _car.Run(elapsed);
@@ -408,24 +432,10 @@ namespace TopSpeed.Race
 
         public void ApplyRemoteData(PacketPlayerData data)
         {
-            if (data.PlayerNumber == _playerNumber)
-                return;
-
-            var remote = GetOrCreateRemotePlayer(data.PlayerNumber, data.Car, data.RaceData.PositionX, data.RaceData.PositionY);
-
-            remote.State = data.State;
-            if (data.State == PlayerState.Finished && !remote.Finished)
-            {
-                remote.Finished = true;
-                remote.Player.Stop();
-                if ((int)data.PlayerNumber < _soundPlayerNr.Length)
-                {
-                    SpeakIfAvailable(_soundPlayerNr[data.PlayerNumber], true);
-                    SpeakIfAvailable(_soundFinished[Math.Min(_positionFinish++, _soundFinished.Length - 1)], true);
-                }
-            }
-
-            remote.Player.ApplyNetworkState(
+            ApplyRemoteDataCore(
+                data.PlayerNumber,
+                data.Car,
+                data.State,
                 data.RaceData.PositionX,
                 data.RaceData.PositionY,
                 data.RaceData.Speed,
@@ -436,11 +446,22 @@ namespace TopSpeed.Race
                 data.Backfiring,
                 data.MediaLoaded,
                 data.MediaPlaying,
-                data.MediaId,
-                _car.PositionX,
-                _car.PositionY,
-                GetSpatialTrackLength());
-            TryApplyPendingRemoteMedia(data.PlayerNumber, remote);
+                data.MediaId);
+        }
+
+        public void ApplyRaceSnapshot(PacketRaceSnapshot snapshot)
+        {
+            if (snapshot == null)
+                return;
+
+            if (_hasRaceSnapshotSequence && snapshot.Sequence <= _lastRaceSnapshotSequence)
+                return;
+
+            _lastRaceSnapshotSequence = snapshot.Sequence;
+            _lastRaceSnapshotTick = snapshot.Tick;
+            _hasRaceSnapshotSequence = true;
+            EnqueueRaceSnapshot(snapshot);
+            ApplyBufferedRaceSnapshots(0f);
         }
 
         public void ApplyRemoteMediaBegin(PacketPlayerMediaBegin media)
@@ -534,6 +555,8 @@ namespace TopSpeed.Race
                 return;
 
             _serverStopReceived = true;
+            _snapshotFrames.Clear();
+            _hasSnapshotTickNow = false;
             if (!_sentFinish)
             {
                 _sentFinish = true;
@@ -568,6 +591,264 @@ namespace TopSpeed.Race
             _remoteMediaTransfers.Remove(playerNumber);
         }
 
+        private void ApplyRemoteDataCore(
+            byte playerNumber,
+            CarType car,
+            PlayerState state,
+            float positionX,
+            float positionY,
+            ushort speed,
+            int frequency,
+            bool engineRunning,
+            bool braking,
+            bool horning,
+            bool backfiring,
+            bool mediaLoaded,
+            bool mediaPlaying,
+            uint mediaId)
+        {
+            if (playerNumber == _playerNumber)
+                return;
+
+            var remote = GetOrCreateRemotePlayer(playerNumber, car, positionX, positionY);
+            remote.State = state;
+            if (state == PlayerState.Finished && !remote.Finished)
+            {
+                remote.Finished = true;
+                remote.Player.Stop();
+                if ((int)playerNumber < _soundPlayerNr.Length)
+                {
+                    SpeakIfAvailable(_soundPlayerNr[playerNumber], true);
+                    SpeakIfAvailable(_soundFinished[Math.Min(_positionFinish++, _soundFinished.Length - 1)], true);
+                }
+            }
+
+            remote.Player.ApplyNetworkState(
+                positionX,
+                positionY,
+                speed,
+                frequency,
+                engineRunning,
+                braking,
+                horning,
+                backfiring,
+                mediaLoaded,
+                mediaPlaying,
+                mediaId,
+                _car.PositionX,
+                _car.PositionY,
+                GetSpatialTrackLength());
+            TryApplyPendingRemoteMedia(playerNumber, remote);
+        }
+
+        private void EnqueueRaceSnapshot(PacketRaceSnapshot snapshot)
+        {
+            var frame = new RaceSnapshotFrame
+            {
+                Tick = snapshot.Tick,
+                Players = ClonePlayers(snapshot.Players)
+            };
+
+            if (_snapshotFrames.Count > 0)
+            {
+                var last = _snapshotFrames[_snapshotFrames.Count - 1];
+                if (frame.Tick < last.Tick)
+                    return;
+                if (frame.Tick == last.Tick)
+                {
+                    _snapshotFrames[_snapshotFrames.Count - 1] = frame;
+                }
+                else
+                {
+                    _snapshotFrames.Add(frame);
+                }
+            }
+            else
+            {
+                _snapshotFrames.Add(frame);
+            }
+
+            while (_snapshotFrames.Count > SnapshotBufferMax)
+                _snapshotFrames.RemoveAt(0);
+
+            if (!_hasSnapshotTickNow)
+            {
+                _snapshotTickNow = frame.Tick;
+                _hasSnapshotTickNow = true;
+            }
+            else if (frame.Tick > _snapshotTickNow)
+            {
+                _snapshotTickNow = frame.Tick;
+            }
+        }
+
+        private static PacketPlayerData[] ClonePlayers(PacketPlayerData[]? source)
+        {
+            if (source == null || source.Length == 0)
+                return Array.Empty<PacketPlayerData>();
+
+            var result = new PacketPlayerData[source.Length];
+            for (var i = 0; i < source.Length; i++)
+            {
+                var item = source[i];
+                if (item == null)
+                    continue;
+
+                result[i] = new PacketPlayerData
+                {
+                    PlayerId = item.PlayerId,
+                    PlayerNumber = item.PlayerNumber,
+                    Car = item.Car,
+                    RaceData = item.RaceData,
+                    State = item.State,
+                    EngineRunning = item.EngineRunning,
+                    Braking = item.Braking,
+                    Horning = item.Horning,
+                    Backfiring = item.Backfiring,
+                    MediaLoaded = item.MediaLoaded,
+                    MediaPlaying = item.MediaPlaying,
+                    MediaId = item.MediaId
+                };
+            }
+
+            return result;
+        }
+
+        private void ApplyBufferedRaceSnapshots(float elapsed)
+        {
+            if (_snapshotFrames.Count == 0)
+                return;
+
+            if (!_hasSnapshotTickNow)
+            {
+                _snapshotTickNow = _snapshotFrames[_snapshotFrames.Count - 1].Tick;
+                _hasSnapshotTickNow = true;
+            }
+
+            if (elapsed > 0f)
+                _snapshotTickNow += elapsed * ServerTickRate;
+
+            var latestTick = (float)_snapshotFrames[_snapshotFrames.Count - 1].Tick;
+            var maxTickNow = latestTick + SnapshotDelayTicks;
+            if (_snapshotTickNow > maxTickNow)
+                _snapshotTickNow = maxTickNow;
+
+            var renderTick = _snapshotTickNow - SnapshotDelayTicks;
+            if (renderTick < 0f)
+                renderTick = 0f;
+
+            while (_snapshotFrames.Count > 2 && renderTick >= _snapshotFrames[1].Tick)
+                _snapshotFrames.RemoveAt(0);
+
+            if (_snapshotFrames.Count == 1)
+            {
+                ApplySnapshotFrame(_snapshotFrames[0]);
+                return;
+            }
+
+            var from = _snapshotFrames[0];
+            var to = _snapshotFrames[1];
+            if (renderTick <= from.Tick)
+            {
+                ApplySnapshotFrame(from);
+                return;
+            }
+
+            if (renderTick >= to.Tick)
+            {
+                ApplySnapshotFrame(to);
+                return;
+            }
+
+            var span = (float)(to.Tick - from.Tick);
+            if (span <= 0f)
+            {
+                ApplySnapshotFrame(to);
+                return;
+            }
+
+            var alpha = (renderTick - from.Tick) / span;
+            if (alpha < 0f)
+                alpha = 0f;
+            else if (alpha > 1f)
+                alpha = 1f;
+
+            ApplyInterpolatedSnapshotFrame(from, to, alpha);
+        }
+
+        private void ApplySnapshotFrame(RaceSnapshotFrame frame)
+        {
+            var players = frame.Players ?? Array.Empty<PacketPlayerData>();
+            for (var i = 0; i < players.Length; i++)
+            {
+                var data = players[i];
+                if (data == null)
+                    continue;
+                ApplyRemoteData(data);
+            }
+        }
+
+        private void ApplyInterpolatedSnapshotFrame(RaceSnapshotFrame from, RaceSnapshotFrame to, float alpha)
+        {
+            var players = to.Players ?? Array.Empty<PacketPlayerData>();
+            for (var i = 0; i < players.Length; i++)
+            {
+                var target = players[i];
+                if (target == null)
+                    continue;
+
+                if (!TryGetPlayerFrameData(from, target.PlayerNumber, out var source) || source == null)
+                {
+                    ApplyRemoteData(target);
+                    continue;
+                }
+
+                var posX = Lerp(source.RaceData.PositionX, target.RaceData.PositionX, alpha);
+                var posY = Lerp(source.RaceData.PositionY, target.RaceData.PositionY, alpha);
+                var speed = (ushort)Math.Max(0, Math.Min(ushort.MaxValue, (int)Math.Round(Lerp(source.RaceData.Speed, target.RaceData.Speed, alpha))));
+                var freq = (int)Math.Round(Lerp(source.RaceData.Frequency, target.RaceData.Frequency, alpha));
+
+                ApplyRemoteDataCore(
+                    target.PlayerNumber,
+                    target.Car,
+                    target.State,
+                    posX,
+                    posY,
+                    speed,
+                    freq,
+                    target.EngineRunning,
+                    target.Braking,
+                    target.Horning,
+                    target.Backfiring,
+                    target.MediaLoaded,
+                    target.MediaPlaying,
+                    target.MediaId);
+            }
+        }
+
+        private static bool TryGetPlayerFrameData(RaceSnapshotFrame frame, byte playerNumber, out PacketPlayerData? data)
+        {
+            var players = frame.Players ?? Array.Empty<PacketPlayerData>();
+            for (var i = 0; i < players.Length; i++)
+            {
+                var item = players[i];
+                if (item == null)
+                    continue;
+                if (item.PlayerNumber != playerNumber)
+                    continue;
+                data = item;
+                return true;
+            }
+
+            data = null;
+            return false;
+        }
+
+        private static float Lerp(float a, float b, float alpha)
+        {
+            return a + ((b - a) * alpha);
+        }
+
         private void UpdatePositions()
         {
             _position = 1;
@@ -582,7 +863,7 @@ namespace TopSpeed.Race
         {
             var halfWidth = Math.Max(0.1f, vehicleWidth * 0.5f);
             var margin = 0.3f;
-            var laneHalfWidth = _track.LaneWidth;
+            var laneHalfWidth = _track.LaneHalfWidthAtPosition(StartLineY);
             var laneOffset = laneHalfWidth - halfWidth - margin;
             if (laneOffset < 0f)
                 laneOffset = 0f;

@@ -14,7 +14,7 @@ using TopSpeed.Windowing;
 
 namespace TopSpeed.Core
 {
-    internal sealed class Game : IDisposable, IMenuActions
+    internal sealed partial class Game : IDisposable, IMenuActions
     {
         private enum AppState
         {
@@ -39,6 +39,7 @@ namespace TopSpeed.Core
         private readonly RaceSelection _selection;
         private readonly MenuRegistry _menuRegistry;
         private readonly MultiplayerCoordinator _multiplayerCoordinator;
+        private readonly ClientPktReg _mpPktReg;
         private MultiplayerSession? _session;
         private readonly InputMappingHandler _inputMapping;
         private LogoScreen? _logo;
@@ -107,6 +108,8 @@ namespace TopSpeed.Core
                 ClearSession,
                 ResetPendingMultiplayerState,
                 SetMultiplayerLoadout);
+            _mpPktReg = new ClientPktReg();
+            RegisterMultiplayerPacketHandlers();
             _menuRegistry.RegisterAll();
             _needsCalibration = _settings.ScreenReaderRateMs <= 0f;
         }
@@ -481,101 +484,20 @@ namespace TopSpeed.Core
 
             while (session.TryDequeuePacket(out var packet))
             {
-                switch (packet.Command)
-                {
-                    case Command.Disconnect:
-                        _speech.Speak("Disconnected from server.");
-                        DisconnectFromServer();
-                        return;
-                    case Command.PlayerNumber:
-                        if (ClientPacketSerializer.TryReadPlayer(packet.Payload, out var assigned) && assigned.PlayerId == session.PlayerId)
-                            session.UpdatePlayerNumber(assigned.PlayerNumber);
-                        break;
-                    case Command.PlayerJoined:
-                        if (ClientPacketSerializer.TryReadPlayerJoined(packet.Payload, out var joined))
-                        {
-                            if (joined.PlayerNumber != session.PlayerNumber)
-                            {
-                                var name = string.IsNullOrWhiteSpace(joined.Name)
-                                    ? $"Player {joined.PlayerNumber + 1}"
-                                    : joined.Name;
-                                _speech.Speak($"{name} has joined the game.");
-                            }
-                        }
-                        break;
-                    case Command.LoadCustomTrack:
-                        if (ClientPacketSerializer.TryReadLoadCustomTrack(packet.Payload, out var track))
-                        {
-                            var name = string.IsNullOrWhiteSpace(track.TrackName) ? "custom" : track.TrackName;
-                            var userDefined = string.Equals(name, "custom", StringComparison.OrdinalIgnoreCase);
-                            _pendingMultiplayerTrack = new TrackData(userDefined, track.TrackWeather, track.TrackAmbience, track.Definitions);
-                            _pendingMultiplayerTrackName = name;
-                            _pendingMultiplayerLaps = track.NrOfLaps;
-                            if (_pendingMultiplayerStart)
-                                StartMultiplayerRace();
-                        }
-                        break;
-                    case Command.StartRace:
-                        StartMultiplayerRace();
-                        break;
-                    case Command.RoomPrepareRace:
-                        _multiplayerCoordinator.BeginRaceLoadoutSelection();
-                        break;
-                    case Command.PlayerData:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayerData(packet.Payload, out var playerData))
-                            _multiplayerRace.ApplyRemoteData(playerData);
-                        break;
-                    case Command.PlayerMediaBegin:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayerMediaBegin(packet.Payload, out var mediaBegin))
-                            _multiplayerRace.ApplyRemoteMediaBegin(mediaBegin);
-                        break;
-                    case Command.PlayerMediaChunk:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayerMediaChunk(packet.Payload, out var mediaChunk))
-                            _multiplayerRace.ApplyRemoteMediaChunk(mediaChunk);
-                        break;
-                    case Command.PlayerMediaEnd:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayerMediaEnd(packet.Payload, out var mediaEnd))
-                            _multiplayerRace.ApplyRemoteMediaEnd(mediaEnd);
-                        break;
-                    case Command.PlayerBumped:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayerBumped(packet.Payload, out var bump))
-                            _multiplayerRace.ApplyBump(bump);
-                        break;
-                    case Command.PlayerCrashed:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayer(packet.Payload, out var crashed))
-                            _multiplayerRace.ApplyRemoteCrash(crashed);
-                        break;
-                    case Command.PlayerDisconnected:
-                        if (_multiplayerRace != null && ClientPacketSerializer.TryReadPlayer(packet.Payload, out var disconnected))
-                            _multiplayerRace.RemoveRemotePlayer(disconnected.PlayerNumber);
-                        break;
-                    case Command.StopRace:
-                        if (_state == AppState.MultiplayerRace && _multiplayerRace != null)
-                        {
-                            if (ClientPacketSerializer.TryReadRaceResults(packet.Payload, out var results))
-                                _multiplayerRace.HandleServerRaceStopped(results);
-                            else
-                                _multiplayerRace.HandleServerRaceStopped(new PacketRaceResults());
-                        }
-                        break;
-                    case Command.RaceAborted:
-                        if (_state == AppState.MultiplayerRace)
-                            EndMultiplayerRace();
-                        break;
-                    case Command.RoomList:
-                        if (ClientPacketSerializer.TryReadRoomList(packet.Payload, out var roomList))
-                            _multiplayerCoordinator.HandleRoomList(roomList);
-                        break;
-                    case Command.RoomState:
-                        if (ClientPacketSerializer.TryReadRoomState(packet.Payload, out var roomState))
-                            _multiplayerCoordinator.HandleRoomState(roomState);
-                        break;
-                    case Command.ProtocolMessage:
-                        if (ClientPacketSerializer.TryReadProtocolMessage(packet.Payload, out var message))
-                            _multiplayerCoordinator.HandleProtocolMessage(message);
-                        break;
-                }
+                _mpPktReg.TryDispatch(packet);
+                if (!ReferenceEquals(_session, session))
+                    return;
             }
+        }
+
+        private void RegisterMultiplayerPacketHandlers()
+        {
+            RegisterMultiplayerControlPacketHandlers();
+            RegisterMultiplayerRoomPacketHandlers();
+            RegisterMultiplayerRaceStatePacketHandlers();
+            RegisterMultiplayerRaceEventPacketHandlers();
+            RegisterMultiplayerMediaPacketHandlers();
+            RegisterMultiplayerChatPacketHandlers();
         }
 
         private void StartMultiplayerRace()

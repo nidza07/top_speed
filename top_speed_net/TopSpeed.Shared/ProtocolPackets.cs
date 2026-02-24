@@ -51,6 +51,13 @@ namespace TopSpeed.Protocol
         public uint MediaId;
     }
 
+    public sealed class PacketRaceSnapshot
+    {
+        public uint Sequence;
+        public uint Tick;
+        public PacketPlayerData[] Players = Array.Empty<PacketPlayerData>();
+    }
+
     public sealed class PacketPlayerMediaBegin
     {
         public uint PlayerId;

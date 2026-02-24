@@ -42,14 +42,14 @@ namespace TopSpeed.Server.Network
                 Offset = 0
             };
 
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerMediaBegin(new PacketPlayerMediaBegin
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayerMediaBegin(new PacketPlayerMediaBegin
             {
                 PlayerId = player.Id,
                 PlayerNumber = player.PlayerNumber,
                 MediaId = begin.MediaId,
                 TotalBytes = begin.TotalBytes,
                 FileExtension = extension
-            }), DeliveryMethod.ReliableOrdered);
+            }), PacketStream.Media);
         }
 
         private void OnMediaChunk(PlayerConnection player, PacketPlayerMediaChunk chunk)
@@ -79,14 +79,14 @@ namespace TopSpeed.Server.Network
             transfer.Offset += chunk.Data.Length;
             transfer.NextChunk++;
 
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerMediaChunk(new PacketPlayerMediaChunk
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayerMediaChunk(new PacketPlayerMediaChunk
             {
                 PlayerId = player.Id,
                 PlayerNumber = player.PlayerNumber,
                 MediaId = transfer.MediaId,
                 ChunkIndex = chunk.ChunkIndex,
                 Data = chunk.Data
-            }), DeliveryMethod.ReliableOrdered);
+            }), PacketStream.Media);
         }
 
         private void OnMediaEnd(PlayerConnection player, PacketPlayerMediaEnd end)
@@ -112,12 +112,12 @@ namespace TopSpeed.Server.Network
             };
             player.IncomingMedia = null;
 
-            SendToRoomExcept(room, player.Id, PacketSerializer.WritePlayerMediaEnd(new PacketPlayerMediaEnd
+            SendToRoomExceptOnStream(room, player.Id, PacketSerializer.WritePlayerMediaEnd(new PacketPlayerMediaEnd
             {
                 PlayerId = player.Id,
                 PlayerNumber = player.PlayerNumber,
                 MediaId = transfer.MediaId
-            }), DeliveryMethod.ReliableOrdered);
+            }), PacketStream.Media);
         }
 
         private void SyncMediaTo(RaceRoom room, PlayerConnection receiver)
@@ -133,14 +133,14 @@ namespace TopSpeed.Server.Network
                 if (media.MediaId == 0 || media.Data == null || media.Data.Length == 0)
                     continue;
 
-                _transport.Send(receiver.EndPoint, PacketSerializer.WritePlayerMediaBegin(new PacketPlayerMediaBegin
+                SendStream(receiver, PacketSerializer.WritePlayerMediaBegin(new PacketPlayerMediaBegin
                 {
                     PlayerId = owner.Id,
                     PlayerNumber = owner.PlayerNumber,
                     MediaId = media.MediaId,
                     TotalBytes = (uint)media.Data.Length,
                     FileExtension = media.Extension
-                }), DeliveryMethod.ReliableOrdered);
+                }), PacketStream.Media);
 
                 var chunkIndex = 0;
                 var offset = 0;
@@ -149,24 +149,24 @@ namespace TopSpeed.Server.Network
                     var length = Math.Min(ProtocolConstants.MaxMediaChunkBytes, media.Data.Length - offset);
                     var chunk = new byte[length];
                     Buffer.BlockCopy(media.Data, offset, chunk, 0, length);
-                    _transport.Send(receiver.EndPoint, PacketSerializer.WritePlayerMediaChunk(new PacketPlayerMediaChunk
+                    SendStream(receiver, PacketSerializer.WritePlayerMediaChunk(new PacketPlayerMediaChunk
                     {
                         PlayerId = owner.Id,
                         PlayerNumber = owner.PlayerNumber,
                         MediaId = media.MediaId,
                         ChunkIndex = (ushort)chunkIndex,
                         Data = chunk
-                    }), DeliveryMethod.ReliableOrdered);
+                    }), PacketStream.Media);
                     offset += length;
                     chunkIndex++;
                 }
 
-                _transport.Send(receiver.EndPoint, PacketSerializer.WritePlayerMediaEnd(new PacketPlayerMediaEnd
+                SendStream(receiver, PacketSerializer.WritePlayerMediaEnd(new PacketPlayerMediaEnd
                 {
                     PlayerId = owner.Id,
                     PlayerNumber = owner.PlayerNumber,
                     MediaId = media.MediaId
-                }), DeliveryMethod.ReliableOrdered);
+                }), PacketStream.Media);
             }
         }
     }

@@ -310,6 +310,7 @@ namespace TopSpeed.Tracks
         private readonly Random _random;
         private readonly string _sourceDirectory;
         private readonly float[] _segmentStartDistances;
+        private RoadModel? _roadModel;
 
         private float _laneWidth;
         private float _curveScale;
@@ -406,6 +407,7 @@ namespace TopSpeed.Tracks
         {
             _laneWidth = laneWidth;
             UpdateCurveScale();
+            _roadModel = null;
         }
 
         public float LaneHalfWidthAtPosition(float position)
@@ -438,39 +440,15 @@ namespace TopSpeed.Tracks
         public void Initialize()
         {
             _lapDistance = 0;
-            _lapCenter = 0;
             for (var i = 0; i < _segmentCount; i++)
             {
                 _segmentStartDistances[i] = _lapDistance;
                 _lapDistance += _definition[i].Length;
-                switch (_definition[i].Type)
-                {
-                    case TrackType.EasyLeft:
-                        _lapCenter -= (_definition[i].Length * _curveScale) / 2;
-                        break;
-                    case TrackType.Left:
-                        _lapCenter -= (_definition[i].Length * _curveScale) * 2 / 3;
-                        break;
-                    case TrackType.HardLeft:
-                        _lapCenter -= _definition[i].Length * _curveScale;
-                        break;
-                    case TrackType.HairpinLeft:
-                        _lapCenter -= (_definition[i].Length * _curveScale) * 3 / 2;
-                        break;
-                    case TrackType.EasyRight:
-                        _lapCenter += (_definition[i].Length * _curveScale) / 2;
-                        break;
-                    case TrackType.Right:
-                        _lapCenter += (_definition[i].Length * _curveScale) * 2 / 3;
-                        break;
-                    case TrackType.HardRight:
-                        _lapCenter += _definition[i].Length * _curveScale;
-                        break;
-                    case TrackType.HairpinRight:
-                        _lapCenter += (_definition[i].Length * _curveScale) * 3 / 2;
-                        break;
-                }
             }
+
+            _roadModel = new RoadModel(_definition, _laneWidth);
+            _lapDistance = _roadModel.LapDistance;
+            _lapCenter = _roadModel.LapCenter;
 
             if (_weather == TrackWeather.Rain)
                 _soundRain?.Play(loop: true);
@@ -581,69 +559,34 @@ namespace TopSpeed.Tracks
         {
             if (_lapDistance == 0)
                 Initialize();
-
-            var lap = (int)Math.Floor(position / _lapDistance);
-            var pos = WrapPosition(position);
-            var dist = 0.0f;
-            var center = lap * _lapCenter;
-
-            for (var i = 0; i < _segmentCount; i++)
+            var model = GetRoadModel();
+            var seg = model.At(position);
+            _prevRelPos = _relPos;
+            _relPos = seg.RelPos;
+            _currentRoad = seg.Index >= 0 ? seg.Index : 0;
+            return new Road
             {
-                if (dist <= pos && dist + _definition[i].Length > pos)
-                {
-                    _prevRelPos = _relPos;
-                    _relPos = pos - dist;
-                    _currentRoad = i;
-                    var road = new Road
-                    {
-                        Type = _definition[i].Type,
-                        Surface = _definition[i].Surface,
-                        Length = _definition[i].Length
-                    };
-
-                    ApplyRoadOffset(ref road, center, _relPos, _definition[i].Type);
-                    return road;
-                }
-
-                center = UpdateCenter(center, _definition[i]);
-                dist += _definition[i].Length;
-            }
-
-            return new Road { Left = 0, Right = 0, Surface = TrackSurface.Asphalt, Type = TrackType.Straight, Length = MinPartLengthMeters };
+                Left = seg.Left,
+                Right = seg.Right,
+                Surface = seg.Surface,
+                Type = seg.Type,
+                Length = seg.Length
+            };
         }
 
         public Road RoadComputer(float position)
         {
             if (_lapDistance == 0)
                 Initialize();
-
-            var lap = (int)Math.Floor(position / _lapDistance);
-            var pos = WrapPosition(position);
-            var dist = 0.0f;
-            var center = lap * _lapCenter;
-            var relPos = 0.0f;
-
-            for (var i = 0; i < _segmentCount; i++)
+            var seg = GetRoadModel().At(position);
+            return new Road
             {
-                if (dist <= pos && dist + _definition[i].Length > pos)
-                {
-                    relPos = pos - dist;
-                    var road = new Road
-                    {
-                        Type = _definition[i].Type,
-                        Surface = _definition[i].Surface,
-                        Length = _definition[i].Length
-                    };
-
-                    ApplyRoadOffset(ref road, center, relPos, _definition[i].Type);
-                    return road;
-                }
-
-                center = UpdateCenter(center, _definition[i]);
-                dist += _definition[i].Length;
-            }
-
-            return new Road { Left = 0, Right = 0, Surface = TrackSurface.Asphalt, Type = TrackType.Straight, Length = MinPartLengthMeters };
+                Left = seg.Left,
+                Right = seg.Right,
+                Surface = seg.Surface,
+                Type = seg.Type,
+                Length = seg.Length
+            };
         }
 
         public bool NextRoad(float position, float speed, int curveAnnouncementMode, out Road road)
@@ -1390,6 +1333,13 @@ namespace TopSpeed.Tracks
             if (t > 1f)
                 t = 1f;
             return a + ((b - a) * t);
+        }
+
+        private RoadModel GetRoadModel()
+        {
+            if (_roadModel == null)
+                _roadModel = new RoadModel(_definition, _laneWidth);
+            return _roadModel;
         }
 
         private float UpdateCenter(float center, TrackDefinition definition)    

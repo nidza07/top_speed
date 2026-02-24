@@ -4,8 +4,10 @@ using TopSpeed.Protocol;
 
 namespace TopSpeed.Server.Protocol
 {
-    internal static class PacketSerializer
+    internal static partial class PacketSerializer
     {
+        private const int PlayerDataFieldSize = 31;
+
         public static bool TryReadHeader(byte[] data, out PacketHeader header)
         {
             header = new PacketHeader();
@@ -55,161 +57,6 @@ namespace TopSpeed.Server.Protocol
             return true;
         }
 
-        public static bool TryReadPlayerData(byte[] data, out PacketPlayerData packet)
-        {
-            packet = new PacketPlayerData();
-            if (data.Length < 2 + 4 + 1 + 1 + 4 + 4 + 2 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 4)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.PlayerId = reader.ReadUInt32();
-            packet.PlayerNumber = reader.ReadByte();
-            packet.Car = (CarType)reader.ReadByte();
-            packet.RaceData.PositionX = reader.ReadSingle();
-            packet.RaceData.PositionY = reader.ReadSingle();
-            packet.RaceData.Speed = reader.ReadUInt16();
-            packet.RaceData.Frequency = reader.ReadInt32();
-            packet.State = (PlayerState)reader.ReadByte();
-            packet.EngineRunning = reader.ReadBool();
-            packet.Braking = reader.ReadBool();
-            packet.Horning = reader.ReadBool();
-            packet.Backfiring = reader.ReadBool();
-            packet.MediaLoaded = reader.ReadBool();
-            packet.MediaPlaying = reader.ReadBool();
-            packet.MediaId = reader.ReadUInt32();
-            return true;
-        }
-
-        public static bool TryReadPlayerMediaBegin(byte[] data, out PacketPlayerMediaBegin packet)
-        {
-            packet = new PacketPlayerMediaBegin();
-            if (data.Length < 2 + 4 + 1 + 4 + 4 + ProtocolConstants.MaxMediaFileExtensionLength)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.PlayerId = reader.ReadUInt32();
-            packet.PlayerNumber = reader.ReadByte();
-            packet.MediaId = reader.ReadUInt32();
-            packet.TotalBytes = reader.ReadUInt32();
-            packet.FileExtension = reader.ReadFixedString(ProtocolConstants.MaxMediaFileExtensionLength);
-            return true;
-        }
-
-        public static bool TryReadPlayerMediaChunk(byte[] data, out PacketPlayerMediaChunk packet)
-        {
-            packet = new PacketPlayerMediaChunk();
-            if (data.Length < 2 + 4 + 1 + 4 + 2 + 2)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.PlayerId = reader.ReadUInt32();
-            packet.PlayerNumber = reader.ReadByte();
-            packet.MediaId = reader.ReadUInt32();
-            packet.ChunkIndex = reader.ReadUInt16();
-            var length = reader.ReadUInt16();
-            if (length > ProtocolConstants.MaxMediaChunkBytes)
-                return false;
-            if (data.Length != 2 + 4 + 1 + 4 + 2 + 2 + length)
-                return false;
-            var bytes = new byte[length];
-            for (var i = 0; i < length; i++)
-                bytes[i] = reader.ReadByte();
-            packet.Data = bytes;
-            return true;
-        }
-
-        public static bool TryReadPlayerMediaEnd(byte[] data, out PacketPlayerMediaEnd packet)
-        {
-            packet = new PacketPlayerMediaEnd();
-            if (data.Length < 2 + 4 + 1 + 4)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.PlayerId = reader.ReadUInt32();
-            packet.PlayerNumber = reader.ReadByte();
-            packet.MediaId = reader.ReadUInt32();
-            return true;
-        }
-
-        public static bool TryReadRoomCreate(byte[] data, out PacketRoomCreate packet)
-        {
-            packet = new PacketRoomCreate();
-            if (data.Length < 2 + ProtocolConstants.MaxRoomNameLength + 1 + 1)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.RoomName = reader.ReadFixedString(ProtocolConstants.MaxRoomNameLength);
-            packet.RoomType = (GameRoomType)reader.ReadByte();
-            packet.PlayersToStart = reader.ReadByte();
-            return true;
-        }
-
-        public static bool TryReadRoomJoin(byte[] data, out PacketRoomJoin packet)
-        {
-            packet = new PacketRoomJoin();
-            if (data.Length < 2 + 4)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.RoomId = reader.ReadUInt32();
-            return true;
-        }
-
-        public static bool TryReadRoomSetTrack(byte[] data, out PacketRoomSetTrack packet)
-        {
-            packet = new PacketRoomSetTrack();
-            if (data.Length < 2 + 12)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.TrackName = reader.ReadFixedString(12);
-            return true;
-        }
-
-        public static bool TryReadRoomSetLaps(byte[] data, out PacketRoomSetLaps packet)
-        {
-            packet = new PacketRoomSetLaps();
-            if (data.Length < 2 + 1)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.Laps = reader.ReadByte();
-            return true;
-        }
-
-        public static bool TryReadRoomSetPlayersToStart(byte[] data, out PacketRoomSetPlayersToStart packet)
-        {
-            packet = new PacketRoomSetPlayersToStart();
-            if (data.Length < 2 + 1)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.PlayersToStart = reader.ReadByte();
-            return true;
-        }
-
-        public static bool TryReadRoomPlayerReady(byte[] data, out PacketRoomPlayerReady packet)
-        {
-            packet = new PacketRoomPlayerReady();
-            if (data.Length < 2 + 1 + 1)
-                return false;
-            var reader = new PacketReader(data);
-            reader.ReadByte();
-            reader.ReadByte();
-            packet.Car = (CarType)reader.ReadByte();
-            packet.AutomaticTransmission = reader.ReadBool();
-            return true;
-        }
-
         public static byte[] WritePacketHeader(Command command, int payloadSize)
         {
             var buffer = new byte[2 + payloadSize];
@@ -246,129 +93,6 @@ namespace TopSpeed.Server.Protocol
             return buffer;
         }
 
-        public static byte[] WritePlayerData(PacketPlayerData data)
-        {
-            var buffer = WritePacketHeader(Command.PlayerData, 4 + 1 + 1 + 4 + 4 + 2 + 4 + 1 + 1 + 1 + 1 + 1 + 1 + 1 + 4);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerData);
-            writer.WriteUInt32(data.PlayerId);
-            writer.WriteByte(data.PlayerNumber);
-            writer.WriteByte((byte)data.Car);
-            writer.WriteSingle(data.RaceData.PositionX);
-            writer.WriteSingle(data.RaceData.PositionY);
-            writer.WriteUInt16(data.RaceData.Speed);
-            writer.WriteInt32(data.RaceData.Frequency);
-            writer.WriteByte((byte)data.State);
-            writer.WriteBool(data.EngineRunning);
-            writer.WriteBool(data.Braking);
-            writer.WriteBool(data.Horning);
-            writer.WriteBool(data.Backfiring);
-            writer.WriteBool(data.MediaLoaded);
-            writer.WriteBool(data.MediaPlaying);
-            writer.WriteUInt32(data.MediaId);
-            return buffer;
-        }
-
-        public static byte[] WritePlayerMediaBegin(PacketPlayerMediaBegin media)
-        {
-            var buffer = WritePacketHeader(Command.PlayerMediaBegin, 4 + 1 + 4 + 4 + ProtocolConstants.MaxMediaFileExtensionLength);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerMediaBegin);
-            writer.WriteUInt32(media.PlayerId);
-            writer.WriteByte(media.PlayerNumber);
-            writer.WriteUInt32(media.MediaId);
-            writer.WriteUInt32(media.TotalBytes);
-            writer.WriteFixedString(media.FileExtension ?? string.Empty, ProtocolConstants.MaxMediaFileExtensionLength);
-            return buffer;
-        }
-
-        public static byte[] WritePlayerMediaChunk(PacketPlayerMediaChunk media)
-        {
-            var bytes = media.Data ?? Array.Empty<byte>();
-            if (bytes.Length > ProtocolConstants.MaxMediaChunkBytes)
-                throw new ArgumentOutOfRangeException(nameof(media), $"Media chunk cannot exceed {ProtocolConstants.MaxMediaChunkBytes} bytes.");
-
-            var buffer = WritePacketHeader(Command.PlayerMediaChunk, 4 + 1 + 4 + 2 + 2 + bytes.Length);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerMediaChunk);
-            writer.WriteUInt32(media.PlayerId);
-            writer.WriteByte(media.PlayerNumber);
-            writer.WriteUInt32(media.MediaId);
-            writer.WriteUInt16(media.ChunkIndex);
-            writer.WriteUInt16((ushort)bytes.Length);
-            for (var i = 0; i < bytes.Length; i++)
-                writer.WriteByte(bytes[i]);
-            return buffer;
-        }
-
-        public static byte[] WritePlayerMediaEnd(PacketPlayerMediaEnd media)
-        {
-            var buffer = WritePacketHeader(Command.PlayerMediaEnd, 4 + 1 + 4);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerMediaEnd);
-            writer.WriteUInt32(media.PlayerId);
-            writer.WriteByte(media.PlayerNumber);
-            writer.WriteUInt32(media.MediaId);
-            return buffer;
-        }
-
-        public static byte[] WritePlayerBumped(PacketPlayerBumped bump)
-        {
-            var buffer = WritePacketHeader(Command.PlayerBumped, 4 + 1 + 4 + 4 + 2);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerBumped);
-            writer.WriteUInt32(bump.PlayerId);
-            writer.WriteByte(bump.PlayerNumber);
-            writer.WriteSingle(bump.BumpX);
-            writer.WriteSingle(bump.BumpY);
-            writer.WriteUInt16(bump.BumpSpeed);
-            return buffer;
-        }
-
-        public static byte[] WriteLoadCustomTrack(PacketLoadCustomTrack track)
-        {
-            var maxLength = Math.Min(track.TrackLength, (ushort)ProtocolConstants.MaxMultiTrackLength);
-            var definitionCount = Math.Min(track.Definitions.Length, maxLength);
-            var payload = 1 + 12 + 1 + 1 + 2 + (definitionCount * (1 + 1 + 1 + 4));
-            var buffer = WritePacketHeader(Command.LoadCustomTrack, payload);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.LoadCustomTrack);
-            writer.WriteByte(track.NrOfLaps);
-            writer.WriteFixedString(track.TrackName, 12);
-            writer.WriteByte((byte)track.TrackWeather);
-            writer.WriteByte((byte)track.TrackAmbience);
-            writer.WriteUInt16(maxLength);
-            for (var i = 0; i < definitionCount; i++)
-            {
-                var def = track.Definitions[i];
-                writer.WriteByte((byte)def.Type);
-                writer.WriteByte((byte)def.Surface);
-                writer.WriteByte((byte)def.Noise);
-                writer.WriteSingle(def.Length);
-            }
-            return buffer;
-        }
-
-        public static byte[] WriteRaceResults(PacketRaceResults results)
-        {
-            var count = Math.Min(results.Results.Length, ProtocolConstants.MaxPlayers);
-            var payload = 1 + count;
-            var buffer = WritePacketHeader(Command.StopRace, payload);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.StopRace);
-            writer.WriteByte((byte)count);
-            for (var i = 0; i < count; i++)
-                writer.WriteByte(results.Results[i]);
-            return buffer;
-        }
-
         public static byte[] WriteServerInfo(PacketServerInfo info)
         {
             var buffer = WritePacketHeader(Command.ServerInfo, ProtocolConstants.MaxMotdLength);
@@ -376,72 +100,6 @@ namespace TopSpeed.Server.Protocol
             writer.WriteByte(ProtocolConstants.Version);
             writer.WriteByte((byte)Command.ServerInfo);
             writer.WriteFixedString(info.Motd ?? string.Empty, ProtocolConstants.MaxMotdLength);
-            return buffer;
-        }
-
-        public static byte[] WritePlayerJoined(PacketPlayerJoined joined)
-        {
-            var buffer = WritePacketHeader(Command.PlayerJoined, 4 + 1 + ProtocolConstants.MaxPlayerNameLength);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.PlayerJoined);
-            writer.WriteUInt32(joined.PlayerId);
-            writer.WriteByte(joined.PlayerNumber);
-            writer.WriteFixedString(joined.Name ?? string.Empty, ProtocolConstants.MaxPlayerNameLength);
-            return buffer;
-        }
-
-        public static byte[] WriteRoomList(PacketRoomList list)
-        {
-            var count = Math.Min(list.Rooms.Length, ProtocolConstants.MaxRoomListEntries);
-            var payload = 1 + (count * (4 + ProtocolConstants.MaxRoomNameLength + 1 + 1 + 1 + 1 + 12));
-            var buffer = WritePacketHeader(Command.RoomList, payload);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.RoomList);
-            writer.WriteByte((byte)count);
-            for (var i = 0; i < count; i++)
-            {
-                var room = list.Rooms[i];
-                writer.WriteUInt32(room.RoomId);
-                writer.WriteFixedString(room.RoomName ?? string.Empty, ProtocolConstants.MaxRoomNameLength);
-                writer.WriteByte((byte)room.RoomType);
-                writer.WriteByte(room.PlayerCount);
-                writer.WriteByte(room.PlayersToStart);
-                writer.WriteBool(room.RaceStarted);
-                writer.WriteFixedString(room.TrackName ?? string.Empty, 12);
-            }
-            return buffer;
-        }
-
-        public static byte[] WriteRoomState(PacketRoomState state)
-        {
-            var count = Math.Min(state.Players.Length, ProtocolConstants.MaxPlayers);
-            var payload = 4 + 4 + ProtocolConstants.MaxRoomNameLength + 1 + 1 + 1 + 1 + 1 + 12 + 1 + 1 +
-                (count * (4 + 1 + 1 + ProtocolConstants.MaxPlayerNameLength));
-            var buffer = WritePacketHeader(Command.RoomState, payload);
-            var writer = new PacketWriter(buffer);
-            writer.WriteByte(ProtocolConstants.Version);
-            writer.WriteByte((byte)Command.RoomState);
-            writer.WriteUInt32(state.RoomId);
-            writer.WriteUInt32(state.HostPlayerId);
-            writer.WriteFixedString(state.RoomName ?? string.Empty, ProtocolConstants.MaxRoomNameLength);
-            writer.WriteByte((byte)state.RoomType);
-            writer.WriteByte(state.PlayersToStart);
-            writer.WriteBool(state.InRoom);
-            writer.WriteBool(state.IsHost);
-            writer.WriteBool(state.RaceStarted);
-            writer.WriteFixedString(state.TrackName ?? string.Empty, 12);
-            writer.WriteByte(state.Laps);
-            writer.WriteByte((byte)count);
-            for (var i = 0; i < count; i++)
-            {
-                var player = state.Players[i];
-                writer.WriteUInt32(player.PlayerId);
-                writer.WriteByte(player.PlayerNumber);
-                writer.WriteByte((byte)player.State);
-                writer.WriteFixedString(player.Name ?? string.Empty, ProtocolConstants.MaxPlayerNameLength);
-            }
             return buffer;
         }
 
@@ -460,6 +118,25 @@ namespace TopSpeed.Server.Protocol
         {
             var buffer = WritePacketHeader(command, 0);
             return buffer;
+        }
+
+        private static void WritePlayerDataFields(ref PacketWriter writer, PacketPlayerData data)
+        {
+            writer.WriteUInt32(data.PlayerId);
+            writer.WriteByte(data.PlayerNumber);
+            writer.WriteByte((byte)data.Car);
+            writer.WriteSingle(data.RaceData.PositionX);
+            writer.WriteSingle(data.RaceData.PositionY);
+            writer.WriteUInt16(data.RaceData.Speed);
+            writer.WriteInt32(data.RaceData.Frequency);
+            writer.WriteByte((byte)data.State);
+            writer.WriteBool(data.EngineRunning);
+            writer.WriteBool(data.Braking);
+            writer.WriteBool(data.Horning);
+            writer.WriteBool(data.Backfiring);
+            writer.WriteBool(data.MediaLoaded);
+            writer.WriteBool(data.MediaPlaying);
+            writer.WriteUInt32(data.MediaId);
         }
     }
 }
