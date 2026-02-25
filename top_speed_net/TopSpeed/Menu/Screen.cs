@@ -373,6 +373,7 @@ namespace TopSpeed.Menu
                     }
                 }
                 PlaySfx(_activateSound);
+                CancelHint();
                 return MenuUpdateResult.Activated(_items[_index]);
             }
 
