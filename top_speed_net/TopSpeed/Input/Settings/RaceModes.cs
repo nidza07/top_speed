@@ -7,6 +7,15 @@ namespace TopSpeed.Input
         Both
     }
 
+    internal enum KeyboardProgressiveRate : byte
+    {
+        Off = 0,
+        Fastest_0_25s = 1,
+        Fast_0_50s = 2,
+        Moderate_0_75s = 3,
+        Slowest_1_00s = 4
+    }
+
     internal enum CopilotMode
     {
         Off = 0,

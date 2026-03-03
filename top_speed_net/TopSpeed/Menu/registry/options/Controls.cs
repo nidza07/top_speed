@@ -15,6 +15,19 @@ namespace TopSpeed.Menu
                     () => _settings.ForceFeedback,
                     value => _settingsActions.UpdateSetting(() => _settings.ForceFeedback = value),
                     hint: "Enables force feedback or vibration if your controller supports it. Press ENTER to toggle."),
+                new RadioButton(
+                    "Progressive keyboard input",
+                    new[]
+                    {
+                        "Off",
+                        "Fastest (0.25 seconds)",
+                        "Fast (0.50 seconds)",
+                        "Moderate (0.75 seconds)",
+                        "Slowest (1.00 second)"
+                    },
+                    () => (int)_settings.KeyboardProgressiveRate,
+                    value => _settingsActions.UpdateSetting(() => _settings.KeyboardProgressiveRate = (KeyboardProgressiveRate)value),
+                    hint: "When enabled, throttle, brake, and steering ramp in over time instead of jumping instantly to full value. Press LEFT or RIGHT to change."),
                 new MenuItem("Map keyboard keys", MenuAction.None, nextMenuId: "options_controls_keyboard"),
                 new MenuItem("Map joystick keys", MenuAction.None, nextMenuId: "options_controls_joystick"),
                 BackItem()

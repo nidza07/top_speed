@@ -52,6 +52,7 @@ namespace TopSpeed.Input
         public Key KeyPause { get; set; }
 
         public bool ForceFeedback { get; set; }
+        public KeyboardProgressiveRate KeyboardProgressiveRate { get; set; }
         public InputDeviceMode DeviceMode { get; set; }
 
         public AutomaticInfoMode AutomaticInfo { get; set; }
@@ -127,6 +128,7 @@ namespace TopSpeed.Input
             KeyPause = Key.P;
 
             ForceFeedback = false;
+            KeyboardProgressiveRate = KeyboardProgressiveRate.Off;
             DeviceMode = InputDeviceMode.Keyboard;
             AutomaticInfo = AutomaticInfoMode.On;
             Copilot = CopilotMode.All;

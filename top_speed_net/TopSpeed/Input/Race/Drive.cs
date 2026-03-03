@@ -1,4 +1,5 @@
 using SharpDX.DirectInput;
+using System;
 
 namespace TopSpeed.Input
 {
@@ -15,19 +16,16 @@ namespace TopSpeed.Input
                 var left = GetAxis(_left);
                 var right = GetAxis(_right);
                 joystickSteer = left != 0 ? -left : right;
-                if (joystickSteer != 0 || !UseKeyboard)
-                    return joystickSteer;
             }
 
-            if (UseKeyboard)
-            {
-                if (_lastState.IsDown(_kbLeft))
-                    return -100;
-                if (_lastState.IsDown(_kbRight))
-                    return 100;
-            }
+            if (!UseKeyboard)
+                return joystickSteer;
 
-            return joystickSteer;
+            var keyboardSteer = _settings.KeyboardProgressiveRate == KeyboardProgressiveRate.Off
+                ? (_lastState.IsDown(_kbLeft) ? -100 : (_lastState.IsDown(_kbRight) ? 100 : 0))
+                : (int)(_simSteer * 100f);
+
+            return Math.Abs(keyboardSteer) > Math.Abs(joystickSteer) ? keyboardSteer : joystickSteer;
         }
 
         public int GetThrottle()
@@ -36,10 +34,14 @@ namespace TopSpeed.Input
                 return 0;
 
             var joystickThrottle = UseJoystick ? GetAxis(_throttle) : 0;
-            if (joystickThrottle != 0 || !UseKeyboard)
+            if (!UseKeyboard)
                 return joystickThrottle;
 
-            return UseKeyboard && _lastState.IsDown(_kbThrottle) ? 100 : 0;
+            var keyboardThrottle = _settings.KeyboardProgressiveRate == KeyboardProgressiveRate.Off
+                ? (_lastState.IsDown(_kbThrottle) ? 100 : 0)
+                : (int)(_simThrottle * 100f);
+
+            return Math.Max(joystickThrottle, keyboardThrottle);
         }
 
         public int GetBrake()
@@ -48,10 +50,14 @@ namespace TopSpeed.Input
                 return 0;
 
             var joystickBrake = UseJoystick ? -GetAxis(_brake) : 0;
-            if (joystickBrake != 0 || !UseKeyboard)
+            if (!UseKeyboard)
                 return joystickBrake;
 
-            return UseKeyboard && _lastState.IsDown(_kbBrake) ? -100 : 0;
+            var keyboardBrake = _settings.KeyboardProgressiveRate == KeyboardProgressiveRate.Off
+                ? (_lastState.IsDown(_kbBrake) ? -100 : 0)
+                : (int)(_simBrake * -100f);
+
+            return Math.Min(joystickBrake, keyboardBrake);
         }
 
         public bool GetReverseRequested() => _allowDrivingInput && UseKeyboard && WasPressed(Key.Z);
