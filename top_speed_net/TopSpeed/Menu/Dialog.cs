@@ -82,6 +82,14 @@ namespace TopSpeed.Menu
 
         public bool HasActiveOverlayDialog => _activeDialog != null && _activeDialog.OpenAsOverlay;
 
+        public void CloseActive()
+        {
+            if (_activeDialog == null)
+                return;
+
+            Complete(_activeDialog, _activeDialog.CloseResultId, null);
+        }
+
         public void Show(Dialog dialog)
         {
             if (dialog == null)

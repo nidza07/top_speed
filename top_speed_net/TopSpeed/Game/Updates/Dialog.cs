@@ -23,7 +23,8 @@ namespace TopSpeed.Game
                 null,
                 QuestionId.Close,
                 items,
-                onResult: _ => _updateProgressOpen = false);
+                onResult: _ => _updateProgressOpen = false,
+                new DialogButton(QuestionId.Close, "Cancel"));
             _dialogs.Show(dialog);
         }
 

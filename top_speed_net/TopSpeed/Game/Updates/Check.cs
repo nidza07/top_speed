@@ -112,6 +112,7 @@ namespace TopSpeed.Game
             var caption =
                 $"A new version of Top Speed was detected. Your current version is {UpdateConfig.CurrentVersion}. The new version is {update.VersionText}. Would you like to download the update?";
             var changeItems = new List<DialogItem>();
+            var hasChanges = false;
             if (update.Changes != null)
             {
                 for (var i = 0; i < update.Changes.Count; i++)
@@ -119,6 +120,11 @@ namespace TopSpeed.Game
                     var line = update.Changes[i];
                     if (string.IsNullOrWhiteSpace(line))
                         continue;
+                    if (!hasChanges)
+                    {
+                        changeItems.Add(new DialogItem("What's new in this version:"));
+                        hasChanges = true;
+                    }
                     changeItems.Add(new DialogItem(line.Trim()));
                 }
             }

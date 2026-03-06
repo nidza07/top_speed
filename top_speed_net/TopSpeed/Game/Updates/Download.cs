@@ -84,6 +84,7 @@ namespace TopSpeed.Game
             _updateDownloadCts?.Dispose();
             _updateDownloadCts = null;
             _updateProgressOpen = false;
+            _dialogs.CloseActive();
 
             if (!result.IsSuccess)
             {
