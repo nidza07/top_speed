@@ -10,7 +10,7 @@ namespace TopSpeed.Protocol
         public const ushort CurrentYear = 2026;
         public const byte CurrentMonth = 3;
         public const byte CurrentDay = 7;
-        public const byte CurrentRevision = 3;
+        public const byte CurrentRevision = 1;
 
         // Client supported protocol range (explicit values by design).
         public const ushort ClientMinYear = 2026;
