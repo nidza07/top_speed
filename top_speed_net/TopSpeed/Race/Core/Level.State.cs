@@ -1,6 +1,7 @@
 using System;
 using System.Numerics;
 using TopSpeed.Audio;
+using TopSpeed.Data;
 
 namespace TopSpeed.Race
 {
@@ -33,6 +34,8 @@ namespace TopSpeed.Race
             _finished = false;
             _engineStarted = false;
             _currentRoad.Surface = _track.InitialSurface;
+            _lastRoadTypeAtPosition = TrackType.Straight;
+            _hasLastRoadTypeAtPosition = false;
             _car.ManualTransmission = _manualTransmission;
             _listenerInitialized = false;
             _lastListenerPosition = Vector3.Zero;

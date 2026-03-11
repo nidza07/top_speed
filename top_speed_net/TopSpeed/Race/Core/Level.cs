@@ -65,6 +65,7 @@ namespace TopSpeed.Race
         private readonly SoundQueue _soundQueue;
         private readonly List<RaceEvent> _dueEvents;
         private readonly VehicleRadioController _localRadio;
+        private readonly RadioVehiclePanel _radioPanel;
         private readonly VehiclePanelManager _panelManager;
         private long _eventSequence;
         private uint _nextMediaId;
@@ -83,6 +84,8 @@ namespace TopSpeed.Race
         protected float _nextRequestInfoAt;
         protected int _unkeyQueue;
         protected Track.Road _currentRoad;
+        private TrackType _lastRoadTypeAtPosition;
+        private bool _hasLastRoadTypeAtPosition;
         protected long _oldStopwatchMs;
         protected long _stopwatchDiffMs;
         private Vector3 _lastListenerPosition;
@@ -162,10 +165,11 @@ namespace TopSpeed.Race
                 : Track.LoadFromData(track, trackData, audio, userDefined);
             _car = CarFactory.CreateDefault(audio, _track, input, settings, vehicle, vehicleFile, () => _elapsedTotal, () => _started, _vibrationDevice);
             _localRadio = new VehicleRadioController(audio);
+            _radioPanel = new RadioVehiclePanel(_input, _audio, _settings, _localRadio, NextLocalMediaId, SpeakText, HandleLocalRadioMediaLoaded, HandleLocalRadioPlaybackChanged);
             _panelManager = new VehiclePanelManager(new IVehicleRacePanel[]
             {
                 new ControlVehiclePanel(),
-                new RadioVehiclePanel(_input, _audio, _settings, _localRadio, NextLocalMediaId, SpeakText, HandleLocalRadioMediaLoaded, HandleLocalRadioPlaybackChanged)
+                _radioPanel
             });
             ApplyActivePanelInputAccess();
             RefreshCategoryVolumes();

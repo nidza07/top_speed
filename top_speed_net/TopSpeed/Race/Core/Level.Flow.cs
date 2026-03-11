@@ -1,7 +1,9 @@
 using System;
 using TopSpeed.Common;
+using TopSpeed.Data;
 using TopSpeed.Input;
 using TopSpeed.Race.Events;
+using TopSpeed.Tracks;
 
 namespace TopSpeed.Race
 {
@@ -126,6 +128,7 @@ namespace TopSpeed.Race
             _track.Run(_car.PositionY);
             afterTrackUpdate?.Invoke();
             var road = _track.RoadAtPosition(_car.PositionY);
+            HandleTurnEndCue(road);
             _car.Evaluate(road);
             UpdateAudioListener(elapsed);
             if (_track.NextRoad(_car.PositionY, _car.Speed, (int)_settings.CurveAnnouncement, out var nextRoad))
@@ -145,6 +148,23 @@ namespace TopSpeed.Race
                 return;
 
             SpeakText(currentGear <= 0 ? "Reverse" : currentGear.ToString());
+        }
+
+        private void HandleTurnEndCue(Track.Road road)
+        {
+            var currentType = road.Type;
+            if (_hasLastRoadTypeAtPosition &&
+                _lastRoadTypeAtPosition != TrackType.Straight &&
+                currentType == TrackType.Straight &&
+                _soundTurnEndDing != null)
+            {
+                _soundTurnEndDing.Stop();
+                _soundTurnEndDing.SeekToStart();
+                _soundTurnEndDing.Play(loop: false);
+            }
+
+            _lastRoadTypeAtPosition = currentType;
+            _hasLastRoadTypeAtPosition = true;
         }
 
         protected bool HandlePlayerLapProgress(Action onPlayerFinished, bool announceLapsToGo = true)

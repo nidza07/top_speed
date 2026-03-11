@@ -6,6 +6,9 @@ namespace TopSpeed.Race
     {
         protected void UpdateVehiclePanels(float elapsed)
         {
+            if (!ReferenceEquals(_panelManager.ActivePanel, _radioPanel))
+                _radioPanel.Tick(elapsed);
+
             var panelChanged = false;
             if (_input.GetPreviousPanelRequest())
             {

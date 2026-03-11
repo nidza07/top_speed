@@ -70,11 +70,16 @@ namespace TopSpeed.Race.Panels
         public bool AllowsDrivingInput => false;
         public bool AllowsAuxiliaryInput => false;
 
-        public void Update(float elapsed)
+        public void Tick(float elapsed)
         {
             ProcessPendingSelection();
             ProcessPendingFolderSelection();
             HandlePlaybackEndAdvance();
+        }
+
+        public void Update(float elapsed)
+        {
+            Tick(elapsed);
 
             if (_input.GetOpenRadioMediaRequest())
                 OpenRadioMedia();
@@ -175,7 +180,7 @@ namespace TopSpeed.Race.Panels
             _playlistFolder = string.Empty;
             ApplyLoopMode();
 
-            LoadPlaylistEntry(_playlistIndex, preservePlaybackState: true, announceLoaded: true, announceNameOnly: true);
+            LoadPlaylistEntry(_playlistIndex, preservePlaybackState: true, announceLoaded: true);
         }
 
         private void ProcessPendingFolderSelection()
@@ -191,10 +196,13 @@ namespace TopSpeed.Race.Panels
                 return;
 
             var folderPath = selectedFolder!;
-            if (!BuildPlaylistFromFolder(folderPath, preserveCurrentMedia: true, announceErrors: true))
+            if (!BuildPlaylistFromFolder(folderPath, preserveCurrentMedia: false, announceErrors: true))
                 return;
 
-            _announce($"Folder loaded. Shuffle mode {(_shuffleMode ? "on" : "off")}.");
+            if (!LoadPlaylistEntry(_playlistIndex, preservePlaybackState: true, announceLoaded: true))
+                return;
+
+            _announce($"Shuffle mode {(_shuffleMode ? "on" : "off")}.");
         }
 
         private void HandlePlaybackEndAdvance()
