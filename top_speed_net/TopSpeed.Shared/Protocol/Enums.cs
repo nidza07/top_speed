@@ -93,7 +93,8 @@ namespace TopSpeed.Protocol
         ProtocolWelcome = 45,
         PlayerLiveStart = 46,
         PlayerLiveFrame = 47,
-        PlayerLiveStop = 48
+        PlayerLiveStop = 48,
+        RoomPlayerWithdraw = 49
     }
 
     public enum ProtocolMessageCode : byte

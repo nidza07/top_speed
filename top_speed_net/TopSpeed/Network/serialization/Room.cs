@@ -269,6 +269,11 @@ namespace TopSpeed.Network
             return buffer;
         }
 
+        public static byte[] WriteRoomPlayerWithdraw()
+        {
+            return WriteGeneral(Command.RoomPlayerWithdraw);
+        }
+
         public static byte[] WriteRoomEvent(PacketRoomEvent evt)
         {
             var payload = 4 + 4 + 1 + 4 + 1 + 1 + 1 + 1 + 1 + 12 + 1 +

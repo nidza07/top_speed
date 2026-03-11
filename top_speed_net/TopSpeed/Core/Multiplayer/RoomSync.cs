@@ -57,6 +57,8 @@ namespace TopSpeed.Core.Multiplayer
             _wasInRoom = _roomState.InRoom;
             _lastRoomId = _roomState.RoomId;
             _wasHost = _roomState.IsHost;
+            if (!_roomState.InRoom || !_roomState.IsHost)
+                CancelRoomOptionsChanges();
 
             if (_roomState.InRoom && (!wasInRoom || previousRoomId != _roomState.RoomId))
             {

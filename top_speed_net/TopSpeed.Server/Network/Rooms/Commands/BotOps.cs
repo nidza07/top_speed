@@ -37,6 +37,7 @@ namespace TopSpeed.Server.Network
 
             var bot = CreateBot(room);
             room.Bots.Add(bot);
+            CompactRoomNumbers(room);
             TouchRoomVersion(room);
             EmitRoomParticipantEvent(room, RoomEventKind.BotAdded, bot.Id, bot.PlayerNumber, bot.State, FormatBotDisplayName(bot));
             EmitRoomLifecycleEvent(room, RoomEventKind.RoomSummaryUpdated);
@@ -76,6 +77,7 @@ namespace TopSpeed.Server.Network
 
             var bot = room.Bots.OrderByDescending(b => b.AddedOrder).First();
             room.Bots.Remove(bot);
+            CompactRoomNumbers(room);
             SendToRoomOnStream(room, PacketSerializer.WritePlayer(Command.PlayerDisconnected, bot.Id, bot.PlayerNumber), PacketStream.Room);
             TouchRoomVersion(room);
             EmitRoomParticipantEvent(room, RoomEventKind.BotRemoved, bot.Id, bot.PlayerNumber, bot.State, FormatBotDisplayName(bot));

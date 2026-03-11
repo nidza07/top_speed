@@ -17,8 +17,11 @@ namespace TopSpeed.Server.Network
             if (room.RaceStarted)
                 return;
 
+            var activePlayerIds = room.PlayerIds
+                .Where(id => room.PendingLoadouts.ContainsKey(id))
+                .ToList();
+
             room.PreparingRace = false;
-            room.PendingLoadouts.Clear();
 
             if (!room.TrackSelected || room.TrackData == null)
                 SetTrack(room, room.TrackName);
@@ -34,15 +37,22 @@ namespace TopSpeed.Server.Network
             {
                 if (_players.TryGetValue(id, out var p))
                 {
-                    p.State = PlayerState.AwaitingStart;
-                    p.PositionX = CalculateStartX(p.PlayerNumber, p.WidthM, laneHalfWidth);
-                    p.PositionY = CalculateStartY(p.PlayerNumber, rowSpacing);
-                    p.Speed = 0;
-                    p.Frequency = ProtocolConstants.DefaultFrequency;
-                    p.EngineRunning = false;
-                    p.Braking = false;
-                    p.Horning = false;
-                    p.Backfiring = false;
+                    if (activePlayerIds.Contains(id))
+                    {
+                        p.State = PlayerState.AwaitingStart;
+                        p.PositionX = CalculateStartX(p.PlayerNumber, p.WidthM, laneHalfWidth);
+                        p.PositionY = CalculateStartY(p.PlayerNumber, rowSpacing);
+                        p.Speed = 0;
+                        p.Frequency = ProtocolConstants.DefaultFrequency;
+                        p.EngineRunning = false;
+                        p.Braking = false;
+                        p.Horning = false;
+                        p.Backfiring = false;
+                    }
+                    else
+                    {
+                        p.State = PlayerState.NotReady;
+                    }
                 }
             }
             foreach (var bot in room.Bots)
@@ -71,12 +81,19 @@ namespace TopSpeed.Server.Network
             }
 
             SendTrackToRoom(room);
-            SendToRoomOnStream(room, PacketSerializer.WriteGeneral(Command.StartRace), PacketStream.RaceEvent);
+            var startPayload = PacketSerializer.WriteGeneral(Command.StartRace);
+            foreach (var id in activePlayerIds)
+            {
+                if (_players.TryGetValue(id, out var player))
+                    SendStream(player, startPayload, PacketStream.RaceEvent);
+            }
             SendRaceSnapshot(room, DeliveryMethod.ReliableOrdered);
             TouchRoomVersion(room);
             EmitRoomLifecycleEvent(room, RoomEventKind.RaceStarted);
             EmitRoomLifecycleEvent(room, RoomEventKind.RoomSummaryUpdated);
-            _logger.Info($"Race started: room={room.Id} \"{room.Name}\", track={room.TrackName}, laps={room.Laps}, humans={room.PlayerIds.Count}, bots={room.Bots.Count}.");
+            _logger.Info($"Race started: room={room.Id} \"{room.Name}\", track={room.TrackName}, laps={room.Laps}, humans={activePlayerIds.Count}, bots={room.Bots.Count}.");
+            room.PendingLoadouts.Clear();
+            room.PrepareSkips.Clear();
         }
 
         private void StopRace(RaceRoom room)
@@ -84,6 +101,7 @@ namespace TopSpeed.Server.Network
             room.RaceStarted = false;
             room.PreparingRace = false;
             room.PendingLoadouts.Clear();
+            room.PrepareSkips.Clear();
             room.ActiveBumpPairs.Clear();
 
             var results = room.RaceResults.ToArray();

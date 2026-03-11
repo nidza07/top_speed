@@ -73,5 +73,10 @@ namespace TopSpeed.Network
         {
             return _sender.TrySend(ClientPacketSerializer.WriteRoomPlayerReady(car, automaticTransmission), PacketStream.Room);
         }
+
+        public bool SendRoomPlayerWithdraw()
+        {
+            return _sender.TrySend(ClientPacketSerializer.WriteRoomPlayerWithdraw(), PacketStream.Room);
+        }
     }
 }

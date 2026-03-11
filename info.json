@@ -1,12 +1,16 @@
 {
-  "version": "2026.3.11.2",
-  "serverVersion": "2026.3.11.2",
+  "version": "2026.3.11.3",
+  "serverVersion": "2026.3.11.3",
   "changes": [
-    "Added a turn-end cue: when a turn transitions back to straight, a ding sound is played.",
-    "Manual shifting now announces the selected gear immediately (including reverse).",
-    "Multiplayer history buffers were improved and room history no longer includes non-audible room created/removed entries."
+    "Room options in multiplayer now use a local draft with explicit confirm or cancel, so rapid option changes no longer send requests one by one.",
+    "Track selection in room options now uses a full track flow (race track, street adventure, random) instead of a radio toggle.",
+    "Closing loadout now asks whether to quit race preparation; choosing yes keeps the player in the room and excludes them from the current preparation round.",
+    "Room slot numbering was fixed to stay compact (no gaps like player 3 and player 5 when fewer players are present).",
+    "Fixed multiplayer room options behavior so the menu has no title and closing after track selection no longer exits the game."
   ],
   "serverChanges": [
-    "Protocol metadata revision updated to 2026.3.11.2 to stay aligned with shared compatibility versioning."
+    "Added server support for race-preparation withdrawal, allowing a player to skip the current prep round without leaving the room.",
+    "Race preparation now starts only with ready participants and cancels clearly when there are not enough active racers after loadout decisions.",
+    "Room numbering now compacts player and bot slots after joins/leaves so assignments remain contiguous and predictable."
   ]
 }

@@ -74,6 +74,9 @@ namespace TopSpeed.Menu
             _menu.Register(BuildMultiplayerRoomControlsMenu());
             _menu.Register(BuildMultiplayerRoomPlayersMenu());
             _menu.Register(BuildMultiplayerRoomOptionsMenu());
+            _menu.Register(BuildMultiplayerRoomTrackTypeMenu());
+            _menu.Register(BuildMultiplayerRoomTrackRaceMenu());
+            _menu.Register(BuildMultiplayerRoomTrackAdventureMenu());
             _menu.Register(BuildMultiplayerLoadoutVehicleMenu());
             _menu.Register(BuildMultiplayerLoadoutTransmissionMenu());
 

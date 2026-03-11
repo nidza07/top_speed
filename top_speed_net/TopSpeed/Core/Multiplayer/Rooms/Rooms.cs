@@ -19,6 +19,9 @@ namespace TopSpeed.Core.Multiplayer
             MultiplayerRoomControlsMenuId,
             MultiplayerRoomPlayersMenuId,
             MultiplayerRoomOptionsMenuId,
+            MultiplayerRoomTrackTypeMenuId,
+            MultiplayerRoomTrackRaceMenuId,
+            MultiplayerRoomTrackAdventureMenuId,
             MultiplayerLoadoutVehicleMenuId,
             MultiplayerLoadoutTransmissionMenuId
         };
@@ -28,6 +31,9 @@ namespace TopSpeed.Core.Multiplayer
             MultiplayerRoomControlsMenuId,
             MultiplayerRoomPlayersMenuId,
             MultiplayerRoomOptionsMenuId,
+            MultiplayerRoomTrackTypeMenuId,
+            MultiplayerRoomTrackRaceMenuId,
+            MultiplayerRoomTrackAdventureMenuId,
             MultiplayerLoadoutVehicleMenuId,
             MultiplayerLoadoutTransmissionMenuId
         };
@@ -76,16 +82,21 @@ namespace TopSpeed.Core.Multiplayer
                 return true;
             });
 
+            _menu.SetCloseHandler(MultiplayerRoomOptionsMenuId, _ =>
+            {
+                CancelRoomOptionsChanges();
+                return false;
+            });
+
             _menu.SetCloseHandler(MultiplayerLoadoutTransmissionMenuId, _ =>
             {
-                _menu.ShowRoot(MultiplayerLoadoutVehicleMenuId);
+                OpenLoadoutExitConfirmation();
                 return true;
             });
 
             _menu.SetCloseHandler(MultiplayerLoadoutVehicleMenuId, _ =>
             {
-                _speech.Speak("Choose your vehicle and transmission mode to get ready for the race.");
-                _menu.ShowRoot(MultiplayerLoadoutVehicleMenuId);
+                OpenLoadoutExitConfirmation();
                 return true;
             });
         }

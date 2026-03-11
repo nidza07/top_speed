@@ -19,6 +19,9 @@ namespace TopSpeed.Core.Multiplayer
         private const string MultiplayerLobbyMenuId = "multiplayer_lobby";
         private const string MultiplayerRoomControlsMenuId = "multiplayer_room_controls";
         private const string MultiplayerRoomOptionsMenuId = "multiplayer_room_options";
+        private const string MultiplayerRoomTrackTypeMenuId = "multiplayer_room_track_type";
+        private const string MultiplayerRoomTrackRaceMenuId = "multiplayer_room_tracks_race";
+        private const string MultiplayerRoomTrackAdventureMenuId = "multiplayer_room_tracks_adventure";
         private const string MultiplayerRoomPlayersMenuId = "multiplayer_room_players";
         private const string MultiplayerRoomBrowserMenuId = "multiplayer_rooms";
         private const string MultiplayerCreateRoomMenuId = "multiplayer_create_room";
@@ -32,7 +35,6 @@ namespace TopSpeed.Core.Multiplayer
         private static readonly string[] RoomCapacityOptions = BuildNumericOptions(2, ProtocolConstants.MaxRoomPlayersToStart, "players");
         private static readonly string[] LapCountOptions = BuildNumericOptions(1, 16, "laps");
         private static readonly TrackInfo[] RoomTrackOptions = BuildRoomTrackOptions();
-        private static readonly string[] RoomTrackLabels = BuildRoomTrackLabels();
         private const int ConnectingPulseIntervalMs = 500;
 
         private readonly MenuManager _menu;
@@ -69,6 +71,11 @@ namespace TopSpeed.Core.Multiplayer
         private byte _createRoomPlayersToStart = 2;
         private string _createRoomName = string.Empty;
         private int _pendingLoadoutVehicleIndex;
+        private bool _roomOptionsDraftActive;
+        private string _roomOptionsTrackName = string.Empty;
+        private bool _roomOptionsTrackRandom;
+        private byte _roomOptionsLaps = 1;
+        private byte _roomOptionsPlayersToStart = 2;
         private CancellationTokenSource? _connectingSoundCts;
         private AudioSourceHandle? _connectingSound;
         private AudioSourceHandle? _connectedSound;
@@ -175,6 +182,11 @@ namespace TopSpeed.Core.Multiplayer
             _roomBrowserOpenPending = false;
             ResetCreateRoomDraft();
             _pendingLoadoutVehicleIndex = 0;
+            _roomOptionsDraftActive = false;
+            _roomOptionsTrackName = string.Empty;
+            _roomOptionsTrackRandom = false;
+            _roomOptionsLaps = 1;
+            _roomOptionsPlayersToStart = 2;
             _savedServerDraft = new SavedServerEntry();
             _savedServerOriginal = null;
             _savedServerEditIndex = -1;

@@ -44,21 +44,6 @@ namespace TopSpeed.Core.Multiplayer
             return tracks.ToArray();
         }
 
-        private static string[] BuildRoomTrackLabels()
-        {
-            if (RoomTrackOptions.Length == 0)
-                return new[] { "America" };
-
-            var labels = new string[RoomTrackOptions.Length];
-            for (var i = 0; i < RoomTrackOptions.Length; i++)
-            {
-                var track = RoomTrackOptions[i];
-                labels[i] = track.Display;
-            }
-
-            return labels;
-        }
-
         private bool TrySend(bool sent, string action)
         {
             if (sent)

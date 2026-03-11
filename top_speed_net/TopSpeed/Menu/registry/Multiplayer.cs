@@ -116,7 +116,37 @@ namespace TopSpeed.Menu
                 new MenuItem("Join a game room first", MenuAction.None),
                 BackItem()
             };
-            return _menu.CreateMenu("multiplayer_room_options", items, "Change game options");
+            return _menu.CreateMenu("multiplayer_room_options", items, string.Empty);
+        }
+
+        private MenuScreen BuildMultiplayerRoomTrackTypeMenu()
+        {
+            var items = new List<MenuItem>
+            {
+                new MenuItem("Race track", MenuAction.None),
+                BackItem()
+            };
+            return _menu.CreateMenu("multiplayer_room_track_type", items, "Choose track type");
+        }
+
+        private MenuScreen BuildMultiplayerRoomTrackRaceMenu()
+        {
+            var items = new List<MenuItem>
+            {
+                new MenuItem("Race tracks are loading", MenuAction.None),
+                BackItem()
+            };
+            return _menu.CreateMenu("multiplayer_room_tracks_race", items, "Select a track");
+        }
+
+        private MenuScreen BuildMultiplayerRoomTrackAdventureMenu()
+        {
+            var items = new List<MenuItem>
+            {
+                new MenuItem("Adventure tracks are loading", MenuAction.None),
+                BackItem()
+            };
+            return _menu.CreateMenu("multiplayer_room_tracks_adventure", items, "Select a track");
         }
 
         private MenuScreen BuildMultiplayerLoadoutVehicleMenu()

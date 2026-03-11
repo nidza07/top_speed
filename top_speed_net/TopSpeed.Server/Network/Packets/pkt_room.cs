@@ -63,6 +63,7 @@ namespace TopSpeed.Server.Network
                 else
                     PacketFail(endPoint, Command.RoomPlayerReady);
             });
+            _pktReg.Add("room", Command.RoomPlayerWithdraw, (player, _, _) => HandlePlayerWithdraw(player));
         }
     }
 }

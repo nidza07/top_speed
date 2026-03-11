@@ -88,6 +88,7 @@ namespace TopSpeed.Server.Network
 
             room.PreparingRace = true;
             room.PendingLoadouts.Clear();
+            room.PrepareSkips.Clear();
             AssignRandomBotLoadouts(room);
             AnnounceBotsReady(room);
             TouchRoomVersion(room);

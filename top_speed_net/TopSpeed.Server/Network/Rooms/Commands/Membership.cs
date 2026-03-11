@@ -87,6 +87,7 @@ namespace TopSpeed.Server.Network
             player.PlayerNumber = 0;
             player.State = PlayerState.NotReady;
             room.PendingLoadouts.Remove(player.Id);
+            room.PrepareSkips.Remove(player.Id);
             room.MediaMap.Remove(player.Id);
             StopLive(player, room, notifyRoom: notify);
             player.IncomingMedia = null;
@@ -117,6 +118,7 @@ namespace TopSpeed.Server.Network
                     StopRace(room);
                 if (room.PreparingRace)
                     TryStartRaceAfterLoadout(room);
+                CompactRoomNumbers(room);
                 TouchRoomVersion(room);
                 EmitRoomParticipantEvent(room, RoomEventKind.ParticipantLeft, player.Id, oldNumber, PlayerState.NotReady, leftName);
                 if (previousHostId != room.HostId)
@@ -136,8 +138,10 @@ namespace TopSpeed.Server.Network
                 room.HostId = player.Id;
 
             player.RoomId = room.Id;
-            player.PlayerNumber = (byte)FindFreeRoomNumber(room);
+            player.PlayerNumber = byte.MaxValue;
             player.State = PlayerState.NotReady;
+            room.PrepareSkips.Remove(player.Id);
+            CompactRoomNumbers(room);
 
             SendStream(player, PacketSerializer.WritePlayerNumber(player.Id, player.PlayerNumber), PacketStream.Control);
             SendTrack(room, player);

@@ -36,7 +36,7 @@ namespace TopSpeed.Core.Multiplayer
             if (_roomState.IsHost)
                 items.Add(new MenuItem("Start this game now", MenuAction.None, onActivate: StartGame));
             if (_roomState.IsHost)
-                items.Add(new MenuItem("Change game options", MenuAction.None, nextMenuId: "multiplayer_room_options"));
+                items.Add(new MenuItem("Change game options", MenuAction.None, onActivate: OpenRoomOptionsMenu));
             if (_roomState.IsHost && _roomState.RoomType == GameRoomType.BotsRace)
                 items.Add(new MenuItem("Add a bot to this game room", MenuAction.None, onActivate: AddBotToRoom));
             if (_roomState.IsHost && _roomState.RoomType == GameRoomType.BotsRace)
@@ -65,36 +65,32 @@ namespace TopSpeed.Core.Multiplayer
                 return;
             }
 
-            items.Add(new RadioButton(
-                "Track",
-                RoomTrackLabels,
-                GetCurrentRoomTrackIndex,
-                SetRoomTrackByIndex,
-                hint: "Choose which track this room will use. Use LEFT or RIGHT to change."));
+            items.Add(new MenuItem(
+                () => GetRoomOptionsTrackText(),
+                MenuAction.None,
+                onActivate: OpenRoomTrackTypeMenu,
+                hint: "Press ENTER to choose race tracks, street adventure tracks, or a random track."));
 
             items.Add(new RadioButton(
                 "Number of laps",
                 LapCountOptions,
-                () => Math.Max(0, Math.Min(LapCountOptions.Length - 1, (_roomState.Laps > 0 ? _roomState.Laps : (byte)1) - 1)),
-                value => SetLaps((byte)(value + 1)),
+                GetRoomOptionsLapsIndex,
+                value => SetRoomOptionsLaps((byte)(value + 1)),
                 hint: "Choose the number of laps for this room. Use LEFT or RIGHT to change."));
 
             var maxPlayersItem = new RadioButton(
                 "Maximum players allowed in this room",
                 RoomCapacityOptions,
-                () =>
-                {
-                    var currentCapacity = _roomState.PlayersToStart > 0 ? (int)_roomState.PlayersToStart : 2;
-                    return Math.Max(0, Math.Min(RoomCapacityOptions.Length - 1, Math.Max(2, currentCapacity) - 2));
-                },
-                value => SetPlayersToStart((byte)(value + 2)),
+                GetRoomOptionsPlayersToStartIndex,
+                value => SetRoomOptionsPlayersToStart((byte)(value + 2)),
                 hint: "Select the player capacity for this room. The host can start with fewer players. Use LEFT or RIGHT to change.")
             {
                 Hidden = _roomState.RoomType == GameRoomType.OneOnOne
             };
             items.Add(maxPlayersItem);
 
-            items.Add(new MenuItem("Return to room controls", MenuAction.Back));
+            items.Add(new MenuItem("Confirm game options", MenuAction.None, onActivate: ConfirmRoomOptionsChanges));
+            items.Add(new MenuItem("Cancel and discard changes", MenuAction.Back, onActivate: CancelRoomOptionsChanges));
             var preserveSelection = string.Equals(_menu.CurrentId, MultiplayerRoomOptionsMenuId, StringComparison.Ordinal);
             _menu.UpdateItems(MultiplayerRoomOptionsMenuId, items, preserveSelection);
         }

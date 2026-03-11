@@ -8,6 +8,9 @@ namespace TopSpeed.Core.Multiplayer
 {
     internal sealed partial class MultiplayerCoordinator
     {
+        private const int QuitLoadoutQuestionYesId = 2001;
+        private const int QuitLoadoutQuestionNoId = 2002;
+
         private void OpenLeaveRoomConfirmation()
         {
             if (!_roomState.InRoom)
@@ -67,53 +70,6 @@ namespace TopSpeed.Core.Multiplayer
             TrySend(session.SendRoomStartRace(), "race start request");
         }
 
-        private int GetCurrentRoomTrackIndex()
-        {
-            var currentTrack = string.IsNullOrWhiteSpace(_roomState.TrackName) ? TrackList.RaceTracks[0].Key : _roomState.TrackName;
-            for (var i = 0; i < RoomTrackOptions.Length; i++)
-            {
-                if (string.Equals(RoomTrackOptions[i].Key, currentTrack, StringComparison.OrdinalIgnoreCase))
-                    return i;
-            }
-
-            return 0;
-        }
-
-        private void SetRoomTrackByIndex(int index)
-        {
-            var session = SessionOrNull();
-            if (session == null)
-                return;
-            if (!_roomState.InRoom || !_roomState.IsHost)
-                return;
-            if (index < 0 || index >= RoomTrackOptions.Length)
-                return;
-
-            TrySend(session.SendRoomSetTrack(RoomTrackOptions[index].Key), "track change request");
-        }
-
-        private void SetLaps(byte laps)
-        {
-            var session = SessionOrNull();
-            if (session == null || !_roomState.IsHost || !_roomState.InRoom)
-                return;
-            if (laps < 1 || laps > 16)
-                return;
-
-            TrySend(session.SendRoomSetLaps(laps), "lap count change request");
-        }
-
-        private void SetPlayersToStart(byte playersToStart)
-        {
-            var session = SessionOrNull();
-            if (session == null || !_roomState.IsHost || !_roomState.InRoom)
-                return;
-
-            if (playersToStart < 2)
-                playersToStart = 2;
-            TrySend(session.SendRoomSetPlayersToStart(playersToStart), "player count change request");
-        }
-
         private void AddBotToRoom()
         {
             var session = SessionOrNull();
@@ -171,6 +127,57 @@ namespace TopSpeed.Core.Multiplayer
             if (!TrySend(session.SendRoomPlayerReady(selectedCar, automaticTransmission), "ready state"))
                 return;
             _speech.Speak("Ready. Waiting for other players.");
+            _menu.ShowRoot(MultiplayerRoomControlsMenuId);
+        }
+
+        private void OpenLoadoutExitConfirmation()
+        {
+            if (_questions.IsQuestionMenu(_menu.CurrentId))
+                return;
+
+            _questions.Show(new Question(
+                "Quit race preparation?",
+                "Do you want to quit race preparation and stay in this game room?",
+                QuitLoadoutQuestionNoId,
+                HandleQuitLoadoutQuestionResult,
+                new QuestionButton(QuitLoadoutQuestionYesId, "Yes, quit race preparation"),
+                new QuestionButton(QuitLoadoutQuestionNoId, "No, continue preparing", flags: QuestionButtonFlags.Default)));
+        }
+
+        private void HandleQuitLoadoutQuestionResult(int resultId)
+        {
+            if (resultId == QuitLoadoutQuestionYesId)
+                ConfirmQuitLoadout();
+            else
+                _menu.ShowRoot(MultiplayerLoadoutVehicleMenuId);
+        }
+
+        private void ConfirmQuitLoadout()
+        {
+            var session = SessionOrNull();
+            if (session == null)
+            {
+                _speech.Speak("Not connected to a server.");
+                return;
+            }
+
+            if (!_roomState.InRoom)
+            {
+                _speech.Speak("You are not in a game room.");
+                return;
+            }
+
+            if (_roomState.PreparingRace)
+            {
+                if (!TrySend(session.SendRoomPlayerWithdraw(), "race preparation withdrawal"))
+                    return;
+                _speech.Speak("You left race preparation and returned to room controls.");
+            }
+            else
+            {
+                _speech.Speak("Returned to room controls.");
+            }
+
             _menu.ShowRoot(MultiplayerRoomControlsMenuId);
         }
     }
