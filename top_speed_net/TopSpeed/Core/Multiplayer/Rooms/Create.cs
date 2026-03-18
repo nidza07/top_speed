@@ -108,7 +108,7 @@ namespace TopSpeed.Core.Multiplayer
 
             if (!TrySend(
                     session.SendRoomCreate(_state.Rooms.CreateRoomName, _state.Rooms.CreateRoomType, playersToStart),
-                    LocalizationService.Mark("room create request")))
+                    "room create request"))
                 return;
             _menu.ShowRoot(MultiplayerMenuKeys.Lobby);
         }

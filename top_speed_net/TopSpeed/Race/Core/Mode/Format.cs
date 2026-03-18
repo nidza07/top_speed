@@ -51,7 +51,9 @@ namespace TopSpeed.Race
         protected static string FormatPlayerPercentageText(int percent)
         {
             var clamped = Math.Max(0, Math.Min(100, percent));
-            return LocalizationService.Format(LocalizationService.Mark("Player progress {0} percent"), clamped);
+            return clamped.ToString(CultureInfo.InvariantCulture)
+                + " "
+                + LocalizationService.Translate(LocalizationService.Mark("percent"));
         }
 
         protected static string FormatVehicleName(string? name)

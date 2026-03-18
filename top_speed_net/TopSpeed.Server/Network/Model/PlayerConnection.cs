@@ -19,6 +19,7 @@ namespace TopSpeed.Server.Network
             LastSeenUtc = DateTime.UtcNow;
             WidthM = 1.8f;
             LengthM = 4.5f;
+            MassKg = 1500f;
             Handshake = HandshakeState.Pending;
             NegotiatedProtocol = ProtocolProfile.ServerSupported.MaxSupported;
         }
@@ -47,6 +48,7 @@ namespace TopSpeed.Server.Network
         public DateTime LastSeenUtc { get; set; }
         public float WidthM { get; set; }
         public float LengthM { get; set; }
+        public float MassKg { get; set; }
         public HandshakeState Handshake { get; set; }
         public ProtocolVer NegotiatedProtocol { get; set; }
         public ProtocolRange? ClientSupportedRange { get; set; }

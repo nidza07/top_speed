@@ -89,7 +89,7 @@ namespace TopSpeed.Protocol
         public byte PlayerNumber;
         public float BumpX;
         public float BumpY;
-        public ushort BumpSpeed;
+        public float SpeedDeltaKph;
     }
 
     public sealed class PacketLoadCustomTrack

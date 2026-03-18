@@ -26,10 +26,7 @@ namespace TopSpeed.Game
                     ? LocalizationService.Translate(LocalizationService.Mark("unknown"))
                     : issue.Field;
                 var line = message.StartsWith("The key ", StringComparison.OrdinalIgnoreCase)
-                    ? LocalizationService.Format(
-                        LocalizationService.Mark("{0} {1}"),
-                        IssueSeverityLabel(issue.Severity),
-                        message)
+                    ? IssueSeverityLabel(issue.Severity) + " " + message
                     : LocalizationService.Format(
                         LocalizationService.Mark("{0} key '{1}': {2}"),
                         IssueSeverityLabel(issue.Severity),

@@ -66,14 +66,14 @@ namespace TopSpeed.Core.Multiplayer
             var currentTrack = string.IsNullOrWhiteSpace(_state.Rooms.CurrentRoom.TrackName) ? TrackList.RaceTracks[0].Key : _state.Rooms.CurrentRoom.TrackName;
             if (!string.Equals(currentTrack, _state.Rooms.RoomOptionsTrackName, StringComparison.OrdinalIgnoreCase))
             {
-                if (!TrySend(session.SendRoomSetTrack(_state.Rooms.RoomOptionsTrackName), LocalizationService.Mark("track change request")))
+                if (!TrySend(session.SendRoomSetTrack(_state.Rooms.RoomOptionsTrackName), "track change request"))
                     return;
                 appliedAny = true;
             }
 
             if (_state.Rooms.CurrentRoom.Laps != _state.Rooms.RoomOptionsLaps)
             {
-                if (!TrySend(session.SendRoomSetLaps(_state.Rooms.RoomOptionsLaps), LocalizationService.Mark("lap count change request")))
+                if (!TrySend(session.SendRoomSetLaps(_state.Rooms.RoomOptionsLaps), "lap count change request"))
                     return;
                 appliedAny = true;
             }
@@ -83,7 +83,7 @@ namespace TopSpeed.Core.Multiplayer
                 var playersToStart = _state.Rooms.RoomOptionsPlayersToStart < 2 ? (byte)2 : _state.Rooms.RoomOptionsPlayersToStart;
                 if (_state.Rooms.CurrentRoom.PlayersToStart != playersToStart)
                 {
-                    if (!TrySend(session.SendRoomSetPlayersToStart(playersToStart), LocalizationService.Mark("player count change request")))
+                    if (!TrySend(session.SendRoomSetPlayersToStart(playersToStart), "player count change request"))
                         return;
                     appliedAny = true;
                 }

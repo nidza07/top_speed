@@ -51,7 +51,7 @@ namespace TopSpeed.Game
 
             _multiplayerRaceQuitConfirmActive = false;
             if (_session != null)
-                TrySendSession(_session.SendRoomLeave(), LocalizationService.Mark("room leave request"));
+                TrySendSession(_session.SendRoomLeave(), "room leave request");
 
             _multiplayerRace?.FinalizeMultiplayerMode();
             _multiplayerRace?.Dispose();

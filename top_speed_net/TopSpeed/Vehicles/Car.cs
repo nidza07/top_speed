@@ -35,6 +35,7 @@ namespace TopSpeed.Vehicles
         public string VehicleName { get; private set; } = LocalizationService.Mark("Vehicle");
         public float WidthM => _widthM;
         public float LengthM => _lengthM;
+        public float MassKg => _massKg;
 
         public float SpeedKmh => _engine.SpeedKmh;
         public float EngineRpm => _engine.Rpm;

@@ -3,14 +3,25 @@ using System.Collections.Generic;
 using System.Linq;
 using LiteNetLib;
 using TopSpeed.Bots;
+using TopSpeed.Collision;
 using TopSpeed.Data;
 using TopSpeed.Protocol;
 using TopSpeed.Server.Protocol;
+using TopSpeed.Server.Bots;
 
 namespace TopSpeed.Server.Network
 {
     internal sealed partial class RaceServer
     {
+        private sealed class CollisionActor
+        {
+            public uint Id;
+            public bool IsBot;
+            public byte PlayerNumber;
+            public PlayerConnection Player = null!;
+            public RoomBot Bot = null!;
+        }
+
         private static ulong MakePairKey(uint first, uint second)
         {
             if (first > second)
@@ -30,85 +41,57 @@ namespace TopSpeed.Server.Network
                 var racers = room.PlayerIds.Where(id => _players.TryGetValue(id, out var p) && p.State == PlayerState.Racing)
                     .Select(id => _players[id]).ToList();
                 var botRacers = room.Bots.Where(bot => bot.State == PlayerState.Racing).ToList();
+                var actors = new List<CollisionActor>(racers.Count + botRacers.Count);
                 var activePairs = new HashSet<ulong>();
 
                 for (var i = 0; i < racers.Count; i++)
                 {
-                    for (var j = i + 1; j < racers.Count; j++)
+                    var player = racers[i];
+                    actors.Add(new CollisionActor
                     {
-                        var player = racers[i];
-                        var other = racers[j];
-                        var xThreshold = (player.WidthM + other.WidthM) * 0.5f;
-                        var yThreshold = (player.LengthM + other.LengthM) * 0.5f;
-                        var dx = player.PositionX - other.PositionX;
-                        var dy = player.PositionY - other.PositionY;
-                        if (Math.Abs(dx) >= xThreshold || Math.Abs(dy) >= yThreshold)
-                            continue;
-
-                        var pairKey = MakePairKey(player.Id, other.Id);
-                        activePairs.Add(pairKey);
-                        if (room.ActiveBumpPairs.Contains(pairKey))
-                            continue;
-
-                        SendStream(player, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
-                        {
-                            PlayerId = player.Id,
-                            PlayerNumber = player.PlayerNumber,
-                            BumpX = dx,
-                            BumpY = dy,
-                            BumpSpeed = (ushort)Math.Max(0, player.Speed - other.Speed)
-                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
-
-                        SendStream(other, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
-                        {
-                            PlayerId = other.Id,
-                            PlayerNumber = other.PlayerNumber,
-                            BumpX = -dx,
-                            BumpY = -dy,
-                            BumpSpeed = (ushort)Math.Max(0, other.Speed - player.Speed)
-                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
-                        _bumpEventsHumanHuman++;
-                    }
+                        Id = player.Id,
+                        IsBot = false,
+                        PlayerNumber = player.PlayerNumber,
+                        Player = player
+                    });
                 }
 
-                foreach (var player in racers)
+                for (var i = 0; i < botRacers.Count; i++)
                 {
-                    foreach (var bot in botRacers)
+                    var bot = botRacers[i];
+                    actors.Add(new CollisionActor
                     {
-                        var xThreshold = (player.WidthM + bot.WidthM) * 0.5f;
-                        var yThreshold = (player.LengthM + bot.LengthM) * 0.5f;
-                        var dx = player.PositionX - bot.PositionX;
-                        var dy = player.PositionY - bot.PositionY;
-                        if (Math.Abs(dx) >= xThreshold || Math.Abs(dy) >= yThreshold)
+                        Id = bot.Id,
+                        IsBot = true,
+                        PlayerNumber = bot.PlayerNumber,
+                        Bot = bot
+                    });
+                }
+
+                for (var i = 0; i < actors.Count; i++)
+                {
+                    for (var j = i + 1; j < actors.Count; j++)
+                    {
+                        var first = actors[i];
+                        var second = actors[j];
+                        if (!VehicleCollisionResolver.TryResolve(
+                                BuildCollisionBody(first),
+                                BuildCollisionBody(second),
+                                out var response))
                             continue;
 
-                        var pairKey = MakePairKey(player.Id, bot.Id);
+                        var pairKey = MakePairKey(first.Id, second.Id);
                         activePairs.Add(pairKey);
                         if (room.ActiveBumpPairs.Contains(pairKey))
                             continue;
 
-                        var botSpeed = (ushort)Math.Max(0, Math.Min(ushort.MaxValue, (int)Math.Round(bot.SpeedKph)));
-                        SendStream(player, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
-                        {
-                            PlayerId = player.Id,
-                            PlayerNumber = player.PlayerNumber,
-                            BumpX = dx,
-                            BumpY = dy,
-                            BumpSpeed = (ushort)Math.Max(0, player.Speed - botSpeed)
-                        }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
+                        ApplyCollisionImpulse(first, response.First);
+                        ApplyCollisionImpulse(second, response.Second);
 
-                        bot.PositionX -= 2f * dx;
-                        bot.PositionY -= dy;
-                        if (bot.PositionY < 0f)
-                            bot.PositionY = 0f;
-                        bot.SpeedKph = Math.Max(0f, bot.SpeedKph * 0.8f);
-                        var state = bot.PhysicsState;
-                        state.PositionX = bot.PositionX;
-                        state.PositionY = bot.PositionY;
-                        state.SpeedKph = bot.SpeedKph;
-                        bot.PhysicsState = state;
-                        TriggerBotHorn(bot, "bump", 0.2f);
-                        _bumpEventsHumanBot++;
+                        if (!first.IsBot && !second.IsBot)
+                            _bumpEventsHumanHuman++;
+                        else
+                            _bumpEventsHumanBot++;
                     }
                 }
 
@@ -116,6 +99,65 @@ namespace TopSpeed.Server.Network
                 foreach (var pairKey in activePairs)
                     room.ActiveBumpPairs.Add(pairKey);
             }
+        }
+
+        private static VehicleCollisionBody BuildCollisionBody(CollisionActor actor)
+        {
+            if (actor.IsBot)
+            {
+                return new VehicleCollisionBody(
+                    actor.Bot.PositionX,
+                    actor.Bot.PositionY,
+                    actor.Bot.SpeedKph,
+                    actor.Bot.WidthM,
+                    actor.Bot.LengthM,
+                    actor.Bot.PhysicsConfig.MassKg);
+            }
+
+            return new VehicleCollisionBody(
+                actor.Player.PositionX,
+                actor.Player.PositionY,
+                actor.Player.Speed,
+                actor.Player.WidthM,
+                actor.Player.LengthM,
+                actor.Player.MassKg);
+        }
+
+        private void ApplyCollisionImpulse(CollisionActor actor, in VehicleCollisionImpulse impulse)
+        {
+            if (actor.IsBot)
+            {
+                ApplyBotCollision(actor.Bot, impulse);
+                TriggerBotHorn(actor.Bot, "bump", 0.2f);
+                return;
+            }
+
+            SendStream(actor.Player, PacketSerializer.WritePlayerBumped(new PacketPlayerBumped
+            {
+                PlayerId = actor.Player.Id,
+                PlayerNumber = actor.Player.PlayerNumber,
+                BumpX = impulse.BumpX,
+                BumpY = impulse.BumpY,
+                SpeedDeltaKph = impulse.SpeedDeltaKph
+            }), PacketStream.RaceEvent, PacketDeliveryKind.Sequenced);
+        }
+
+        private static void ApplyBotCollision(RoomBot bot, in VehicleCollisionImpulse impulse)
+        {
+            bot.PositionX += 2f * impulse.BumpX;
+            bot.PositionY += impulse.BumpY;
+            if (bot.PositionY < 0f)
+                bot.PositionY = 0f;
+
+            bot.SpeedKph += impulse.SpeedDeltaKph;
+            if (bot.SpeedKph < 0f)
+                bot.SpeedKph = 0f;
+
+            var state = bot.PhysicsState;
+            state.PositionX = bot.PositionX;
+            state.PositionY = bot.PositionY;
+            state.SpeedKph = bot.SpeedKph;
+            bot.PhysicsState = state;
         }
 
     }

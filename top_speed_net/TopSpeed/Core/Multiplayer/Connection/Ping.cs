@@ -23,7 +23,7 @@ namespace TopSpeed.Core.Multiplayer
             _state.Connection.IsPingPending = true;
             _state.Connection.PingStartedAtTicks = DateTime.UtcNow.Ticks;
             PlayNetworkSound("ping_start.ogg");
-            if (!TrySend(session.SendPing(), LocalizationService.Mark("ping request")))
+            if (!TrySend(session.SendPing(), "ping request"))
             {
                 _state.Connection.IsPingPending = false;
                 return;

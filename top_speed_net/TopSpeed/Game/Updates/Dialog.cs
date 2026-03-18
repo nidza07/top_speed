@@ -73,10 +73,7 @@ namespace TopSpeed.Game
                 index++;
             }
 
-            return LocalizationService.Format(
-                LocalizationService.Mark("{0} {1}"),
-                value.ToString("0.##", CultureInfo.InvariantCulture),
-                LocalizationService.Translate(units[index]));
+            return value.ToString("0.##", CultureInfo.InvariantCulture) + " " + LocalizationService.Translate(units[index]);
         }
     }
 }

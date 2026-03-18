@@ -7,6 +7,7 @@ using TopSpeed.Protocol;
 using TopSpeed.Server.Protocol;
 using TopSpeed.Server.Tracks;
 using TopSpeed.Server.Bots;
+using TopSpeed.Vehicles;
 
 namespace TopSpeed.Server.Network
 {
@@ -24,6 +25,7 @@ namespace TopSpeed.Server.Network
             var dimensions = GetVehicleDimensions(car);
             player.WidthM = dimensions.WidthM;
             player.LengthM = dimensions.LengthM;
+            player.MassKg = dimensions.MassKg;
         }
 
         private static void ApplyVehicleDimensions(RoomBot bot, CarType car)
@@ -42,22 +44,9 @@ namespace TopSpeed.Server.Network
 
         private static VehicleDimensions GetVehicleDimensions(CarType car)
         {
-            return car switch
-            {
-                CarType.Vehicle1 => new VehicleDimensions(1.895f, 4.689f),
-                CarType.Vehicle2 => new VehicleDimensions(1.852f, 4.572f),
-                CarType.Vehicle3 => new VehicleDimensions(1.627f, 3.546f),
-                CarType.Vehicle4 => new VehicleDimensions(1.744f, 3.876f),
-                CarType.Vehicle5 => new VehicleDimensions(1.811f, 4.760f),
-                CarType.Vehicle6 => new VehicleDimensions(1.839f, 4.879f),
-                CarType.Vehicle7 => new VehicleDimensions(2.030f, 4.780f),
-                CarType.Vehicle8 => new VehicleDimensions(1.811f, 4.624f),
-                CarType.Vehicle9 => new VehicleDimensions(2.019f, 5.931f),
-                CarType.Vehicle10 => new VehicleDimensions(0.749f, 2.085f),
-                CarType.Vehicle11 => new VehicleDimensions(0.806f, 2.110f),
-                CarType.Vehicle12 => new VehicleDimensions(0.690f, 2.055f),
-                _ => new VehicleDimensions(1.8f, 4.5f)
-            };
+            var normalized = NormalizeNetworkCar(car);
+            var spec = OfficialVehicleCatalog.Get((int)normalized);
+            return new VehicleDimensions(spec.WidthM, spec.LengthM, spec.MassKg);
         }
 
         private static BotAudioProfile GetVehicleAudioProfile(CarType car)

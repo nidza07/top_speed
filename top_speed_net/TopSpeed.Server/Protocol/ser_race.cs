@@ -49,7 +49,7 @@ namespace TopSpeed.Server.Protocol
 
         public static byte[] WritePlayerBumped(PacketPlayerBumped bump)
         {
-            var buffer = WritePacketHeader(Command.PlayerBumped, 4 + 1 + 4 + 4 + 2);
+            var buffer = WritePacketHeader(Command.PlayerBumped, 4 + 1 + 4 + 4 + 4);
             var writer = new PacketWriter(buffer);
             writer.WriteByte(ProtocolConstants.Version);
             writer.WriteByte((byte)Command.PlayerBumped);
@@ -57,7 +57,7 @@ namespace TopSpeed.Server.Protocol
             writer.WriteByte(bump.PlayerNumber);
             writer.WriteSingle(bump.BumpX);
             writer.WriteSingle(bump.BumpY);
-            writer.WriteUInt16(bump.BumpSpeed);
+            writer.WriteSingle(bump.SpeedDeltaKph);
             return buffer;
         }
 

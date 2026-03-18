@@ -110,17 +110,26 @@ namespace TopSpeed.Core.Multiplayer
                 return;
 
             var effects = new List<PacketEffect>();
+            var session = SessionOrNull();
+            var isCreator = session != null && eventInfo.HostPlayerId == session.PlayerId;
+            var suppressRemoteRoomCreatedNotice =
+                eventInfo.Kind == RoomEventKind.RoomCreated &&
+                _state.Rooms.CurrentRoom.InRoom &&
+                !isCreator &&
+                _state.Rooms.CurrentRoom.RoomId != eventInfo.RoomId;
+
             if (eventInfo.Kind == RoomEventKind.RoomCreated)
             {
-                var session = SessionOrNull();
-                var isCreator = session != null && eventInfo.HostPlayerId == session.PlayerId;
-                if (!isCreator)
+                if (!isCreator && !suppressRemoteRoomCreatedNotice)
                     effects.Add(PacketEffect.PlaySound("room_created.ogg"));
             }
 
-            var roomEventText = HistoryText.FromRoomEvent(eventInfo);
-            if (!string.IsNullOrWhiteSpace(roomEventText))
-                effects.Add(PacketEffect.AddRoomEventHistory(roomEventText));
+            if (!suppressRemoteRoomCreatedNotice)
+            {
+                var roomEventText = HistoryText.FromRoomEvent(eventInfo);
+                if (!string.IsNullOrWhiteSpace(roomEventText))
+                    effects.Add(PacketEffect.AddRoomEventHistory(roomEventText));
+            }
 
             ApplyRoomListEvent(eventInfo);
 

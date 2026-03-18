@@ -1,14 +1,14 @@
 {
-  "version": "2026.3.18.2",
-  "serverVersion": "2026.3.18.2",
+  "version": "2026.3.19.1",
+  "serverVersion": "2026.3.19.1",
   "changes": [
-    "Fixed some string formatting changes.",
-    "Add a full localization system to the game.",
-    "Add the ability to choose the language in the settings.",
-    "Add a startup wizard when you run the game for the first time."
+    "Reworked vehicle collision handling with shared physics for single race and multiplayer.",
+    "Improved bump behavior with mass-weighted speed transfer and better lateral response.",
+    "Fixed multiplayer room and request feedback behavior for cleaner announcements."
   ],
   "serverChanges": [
-    "Fixed some formatting changes.",
-    "Add the ability to choose the language for the server. Important note: all server messages will follow that language even when sent to clients, messages such as room creation, chat messages and others will also follow if they are translated."
+    "Applied shared collision resolution for humans and bots in all race pairings.",
+    "Updated race bump packets and protocol compatibility for the collision update.",
+    "Adjusted room-created notifications so players already in a room are not interrupted."
   ]
 }

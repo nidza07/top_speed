@@ -28,6 +28,7 @@ namespace TopSpeed.Vehicles
         string VehicleName { get; }
         float WidthM { get; }
         float LengthM { get; }
+        float MassKg { get; }
         float SpeedKmh { get; }
         float EngineRpm { get; }
         float EngineHorsepower { get; }
@@ -42,7 +43,7 @@ namespace TopSpeed.Vehicles
         void RestartAfterCrash();
         void Crash();
         void MiniCrash(float newPosition);
-        void Bump(float bumpX, float bumpY, float bumpSpeed);
+        void Bump(float bumpX, float bumpY, float speedDeltaKph);
         void Stop();
         void Quiet();
         void Run(float elapsed);

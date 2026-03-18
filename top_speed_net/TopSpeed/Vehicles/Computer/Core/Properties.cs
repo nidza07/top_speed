@@ -12,5 +12,6 @@ namespace TopSpeed.Vehicles
         public void SetFinished(bool value) => _finished = value;
         public float WidthM => _widthM;
         public float LengthM => _lengthM;
+        public float MassKg => _massKg;
     }
 }

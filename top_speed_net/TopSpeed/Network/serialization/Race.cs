@@ -36,7 +36,7 @@ namespace TopSpeed.Network
         public static bool TryReadPlayerBumped(byte[] data, out PacketPlayerBumped packet)
         {
             packet = new PacketPlayerBumped();
-            if (data.Length < 2 + 4 + 1 + 4 + 4 + 2)
+            if (data.Length < 2 + 4 + 1 + 4 + 4 + 4)
                 return false;
             var reader = new PacketReader(data);
             reader.ReadByte();
@@ -45,7 +45,7 @@ namespace TopSpeed.Network
             packet.PlayerNumber = reader.ReadByte();
             packet.BumpX = reader.ReadSingle();
             packet.BumpY = reader.ReadSingle();
-            packet.BumpSpeed = reader.ReadUInt16();
+            packet.SpeedDeltaKph = reader.ReadSingle();
             return true;
         }
 

@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TopSpeed.Audio;
 using TopSpeed.Data;
 using TopSpeed.Input;
@@ -32,6 +33,7 @@ namespace TopSpeed.Race
         private bool _pauseKeyReleased = true;
         private float _raceStartDelay;
         private bool _botsScheduled;
+        private readonly HashSet<ulong> _activeBumpPairs = new HashSet<ulong>();
 
         public SingleRaceMode(
             AudioManager audio,
@@ -66,6 +68,7 @@ namespace TopSpeed.Race
             _positionComment = playerNumber + 1;
             _raceStartDelay = DefaultRaceStartDelaySeconds;
             _botsScheduled = false;
+            _activeBumpPairs.Clear();
 
             for (var i = 0; i < _nComputerPlayers; i++)
             {

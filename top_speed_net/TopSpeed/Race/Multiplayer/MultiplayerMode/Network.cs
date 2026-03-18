@@ -30,7 +30,7 @@ namespace TopSpeed.Race
         {
             if (bump.PlayerNumber != _playerNumber)
                 return;
-            _car.Bump(bump.BumpX, bump.BumpY, bump.BumpSpeed);
+            _car.Bump(bump.BumpX, bump.BumpY, bump.SpeedDeltaKph);
         }
 
         public void ApplyRemoteCrash(PacketPlayer crashed)

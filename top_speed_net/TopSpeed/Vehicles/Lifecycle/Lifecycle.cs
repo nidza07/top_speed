@@ -185,11 +185,10 @@ namespace TopSpeed.Vehicles
             _soundMiniCrash.Play(loop: false);
         }
 
-        public virtual void Bump(float bumpX, float bumpY, float bumpSpeed)
+        public virtual void Bump(float bumpX, float bumpY, float speedDeltaKph)
         {
-            if (bumpY != 0)
+            if (bumpY != 0f)
             {
-                _speed -= bumpSpeed;
                 var currentLapStart = GetLapStartPosition(_positionY);
                 _positionY += bumpY;
                 if (_positionY < currentLapStart)
@@ -198,19 +197,18 @@ namespace TopSpeed.Vehicles
                     _positionY = 0f;
             }
 
-            if (bumpX > 0)
+            if (bumpX > 0f)
             {
                 _positionX += 2 * bumpX;
-                _speed -= _speed / 5;
                 _vibration?.PlayEffect(VibrationEffectType.BumpLeft);
             }
-            else if (bumpX < 0)
+            else if (bumpX < 0f)
             {
                 _positionX += 2 * bumpX;
-                _speed -= _speed / 5;
                 _vibration?.PlayEffect(VibrationEffectType.BumpRight);
             }
 
+            _speed += speedDeltaKph;
             if (_speed < 0)
                 _speed = 0;
             _lateralVelocityMps = 0f;

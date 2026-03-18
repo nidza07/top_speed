@@ -102,27 +102,25 @@ namespace TopSpeed.Vehicles
             _soundMiniCrash.Play(loop: false);
         }
 
-        public void Bump(float bumpX, float bumpY, float bumpSpeed)
+        public void Bump(float bumpX, float bumpY, float speedDeltaKph)
         {
-            if (bumpY != 0)
+            if (bumpY != 0f)
             {
-                _speed -= bumpSpeed;
                 _positionY += bumpY;
                 if (_positionY < 0f)
                     _positionY = 0f;
             }
 
-            if (bumpX > 0)
+            if (bumpX > 0f)
             {
                 _positionX += 2 * bumpX;
-                _speed -= _speed / 5;
             }
-            else if (bumpX < 0)
+            else if (bumpX < 0f)
             {
                 _positionX += 2 * bumpX;
-                _speed -= _speed / 5;
             }
 
+            _speed += speedDeltaKph;
             if (_speed < 0)
                 _speed = 0;
             _lateralVelocityMps = 0f;
