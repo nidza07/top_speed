@@ -227,6 +227,22 @@ namespace TopSpeed.Vehicles
                 if (type == TransmissionType.Cvt)
                     return EngineCouplingMode.Blended;
 
+                if (type == TransmissionType.Dct)
+                {
+                    if (_switchingGear != 0)
+                        return EngineCouplingMode.Blended;
+
+                    // Avoid a second RPM cliff after a DCT shift by only hard-locking once
+                    // engine/driveline slip is already small.
+                    var coupledRpm = ResolveCoupledDriveRpm();
+                    var slipRpm = Math.Abs(coupledRpm - _engine.Rpm);
+                    var lockSlipWindowRpm = Math.Max(120f, (_revLimiter - _idleRpm) * 0.025f);
+                    if (_drivelineCouplingFactor >= 0.995f && slipRpm <= lockSlipWindowRpm)
+                        return EngineCouplingMode.Locked;
+
+                    return EngineCouplingMode.Blended;
+                }
+
                 if (type == TransmissionType.Atc)
                 {
                     var throttle = Math.Max(0f, Math.Min(100f, _currentThrottle)) / 100f;
