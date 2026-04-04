@@ -64,9 +64,7 @@ namespace TopSpeed.Vehicles
             if (!IsFinite(rpmDropPerSecond) || rpmDropPerSecond < 0f)
                 rpmDropPerSecond = 0f;
 
-            // Ensure engine-off rundown reaches zero in a short, audible shutdown window.
-            var shutdownBiasRpmPerSecond = (_idleRpm * 1.2f) + (0.20f * clampedRpm);
-            var rpmDrop = (rpmDropPerSecond + shutdownBiasRpmPerSecond) * dt;
+            var rpmDrop = rpmDropPerSecond * dt;
             _rpm = Math.Max(0f, _rpm - rpmDrop);
             if (_rpm < 1f)
                 _rpm = 0f;

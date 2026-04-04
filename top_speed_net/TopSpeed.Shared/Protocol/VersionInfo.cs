@@ -6,7 +6,7 @@ namespace TopSpeed.Protocol
         // Client release version used by updater checks and release packaging.
         public const ushort ClientYear = 2026;
         public const byte ClientMonth = 4;
-        public const byte ClientDay = 3;
+        public const byte ClientDay = 4;
         public const byte ClientRevision = 3;
 
         // Server release version used by updater checks and packaging.

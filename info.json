@@ -1,10 +1,10 @@
 {
-  "version": "2026.4.4.1",
+  "version": "2026.4.4.3",
   "serverVersion": "2026.4.3.1",
   "changes": [
     "Update Mini Audio Ex to not require Visual C++ redistributable on the target machines to run.",
     "Update engine shutdown and added a fadeout instead of a hard cut to the engine sound.",
-    "Fixed some issues with surface loop sounds.",
+    "Fixed some issues with surface loop sounds."
   ],
   "serverChanges": [
     "Updated server room model and explicit race finish events for players.",

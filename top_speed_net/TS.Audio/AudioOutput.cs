@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Numerics;
+using System.Runtime.CompilerServices;
 using System.Runtime.InteropServices;
 using System.Threading;
 using MiniAudioEx.Core.AdvancedAPI;
@@ -17,6 +18,7 @@ namespace TS.Audio
         private readonly MaContext _context;
         private readonly MaDevice _device;
         private readonly MaResourceManager _resourceManager;
+        private ma_resource_manager_config _resourceConfig;
         private readonly MaEngine _engine;
         private readonly MaEngineListener _listener;
         private readonly ma_device_data_proc _deviceDataProc;
@@ -42,6 +44,8 @@ namespace TS.Audio
         private Vector3 _listenerPosition;
         private Vector3 _listenerVelocity;
 
+        // net472 Release can miscompile the native config setup in this constructor.
+        [MethodImpl(MethodImplOptions.NoInlining | MethodImplOptions.NoOptimization)]
         public AudioOutput(AudioOutputConfig config, AudioSystemConfig systemConfig)
         {
             _config = config;
@@ -68,22 +72,22 @@ namespace TS.Audio
             }
 
             _resourceManager = new MaResourceManager();
-            var resourceConfig = _resourceManager.GetConfig();
+            _resourceConfig = _resourceManager.GetConfig();
             try
             {
                 var vorbis = MiniAudioNative.ma_libvorbis_get_decoding_backend_ptr();
                 if (vorbis.pointer != IntPtr.Zero)
-                    resourceConfig.SetCustomDecodingBackendVTables(new[] { vorbis });
+                    _resourceConfig.SetCustomDecodingBackendVTables(new[] { vorbis });
             }
             catch (EntryPointNotFoundException)
             {
                 // Ignore if the native build does not expose the Vorbis backend.
             }
 
-            var resourceInit = _resourceManager.Initialize(resourceConfig);
-            resourceConfig.FreeCustomDecodingBackendVTables();
+            var resourceInit = _resourceManager.Initialize(_resourceConfig);
             if (resourceInit != ma_result.success)
             {
+                _resourceConfig.FreeCustomDecodingBackendVTables();
                 throw new InvalidOperationException("Failed to initialize audio resource manager: " + resourceInit);
             }
 
@@ -317,6 +321,7 @@ namespace TS.Audio
             _engine.Dispose();
             _device.Dispose();
             _resourceManager.Dispose();
+            _resourceConfig.FreeCustomDecodingBackendVTables();
             _context.Dispose();
             if (_callbackHandle.IsAllocated)
                 _callbackHandle.Free();
