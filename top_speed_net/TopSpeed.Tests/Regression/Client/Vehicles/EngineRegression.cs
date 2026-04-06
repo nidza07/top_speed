@@ -16,6 +16,14 @@ namespace TopSpeed.Tests
                 EngineHarness.AutomaticVehicles
                     .Select(carType => EngineHarness.SimulateAutomaticLaunch(TopSpeed.Vehicles.OfficialVehicleCatalog.Get((int)carType)))
                     .ToArray(),
+                new[]
+                {
+                    TopSpeed.Protocol.CarType.Vehicle10,
+                    TopSpeed.Protocol.CarType.Vehicle11,
+                    TopSpeed.Protocol.CarType.Vehicle12
+                }
+                    .Select(carType => EngineHarness.SimulateOfficialDisengagedFreeRev(TopSpeed.Vehicles.OfficialVehicleCatalog.Get((int)carType)))
+                    .ToArray(),
                 EngineHarness.SimulateDisengagedRevBlip(),
                 EngineHarness.SimulateFreeRevShutdown(),
                 EngineHarness.SimulateBackDrivenCombustionOff()

@@ -53,7 +53,12 @@ namespace TopSpeed.Game
                     var name = string.IsNullOrWhiteSpace(track.TrackName) ? "custom" : track.TrackName;
                     var userDefined = string.Equals(name, "custom", StringComparison.OrdinalIgnoreCase);
                     _owner._multiplayerRaceRuntime.SetTrack(
-                        new TrackData(userDefined, track.TrackWeather, track.TrackAmbience, track.Definitions),
+                        new TrackData(
+                            userDefined,
+                            track.DefaultWeatherProfileId,
+                            track.WeatherProfiles,
+                            track.TrackAmbience,
+                            track.Definitions),
                         name,
                         track.NrOfLaps);
                     if (_owner._multiplayerRaceRuntime.PendingStart)

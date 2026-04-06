@@ -74,11 +74,13 @@ namespace TopSpeed.Data
             var segments = new List<TrackDefinition>();
             var rooms = new Dictionary<string, TrackRoomDefinition>(StringComparer.OrdinalIgnoreCase);
             var sounds = new Dictionary<string, TrackSoundSourceDefinition>(StringComparer.OrdinalIgnoreCase);
+            var weatherProfiles = new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase);
 
             var sectionKind = string.Empty;
             SegmentBuilder? pendingSegment = null;
             RoomBuilder? pendingRoom = null;
             SoundBuilder? pendingSound = null;
+            WeatherBuilder? pendingWeather = null;
 
             foreach (var raw in File.ReadLines(fullPath))
             {
@@ -91,12 +93,15 @@ namespace TopSpeed.Data
                     FlushPending(ref pendingSegment, segments, minPart);
                     FlushPending(ref pendingRoom, rooms);
                     FlushPending(ref pendingSound, sounds);
+                    FlushPending(ref pendingWeather, weatherProfiles);
                     sectionKind = nextKind;
 
                     if (sectionKind == "segment")
                         pendingSegment = SegmentBuilder.Create(nextId);
                     else if (sectionKind == "room")
                         pendingRoom = RoomBuilder.Create(nextId);
+                    else if (sectionKind == "weather")
+                        pendingWeather = WeatherBuilder.Create(nextId);
                     else if (sectionKind == "sound")
                     {
                         pendingSound = SoundBuilder.Create(nextId);
@@ -138,6 +143,14 @@ namespace TopSpeed.Data
                             pendingRoom = builder;
                         }
                         break;
+                    case "weather":
+                        if (pendingWeather.HasValue)
+                        {
+                            var builder = pendingWeather.Value;
+                            ParseWeatherKey(ref builder, key, value);
+                            pendingWeather = builder;
+                        }
+                        break;
                     case "sound":
                         if (pendingSound.HasValue)
                         {
@@ -152,18 +165,20 @@ namespace TopSpeed.Data
             FlushPending(ref pendingSegment, segments, minPart);
             FlushPending(ref pendingRoom, rooms);
             FlushPending(ref pendingSound, sounds);
+            FlushPending(ref pendingWeather, weatherProfiles);
 
             if (segments.Count == 0)
                 return false;
 
-            var weather = ParseWeather(meta);
+            meta.TryGetValue("weather", out var defaultWeatherProfileId);
             var ambience = ParseAmbience(meta);
             meta.TryGetValue("name", out var name);
             meta.TryGetValue("version", out var version);
 
             data = new TrackData(
                 userDefined: true,
-                weather: weather,
+                defaultWeatherProfileId: NormalizeNullable(defaultWeatherProfileId) ?? TrackWeatherProfile.DefaultProfileId,
+                weatherProfiles: weatherProfiles,
                 ambience: ambience,
                 definitions: segments.ToArray(),
                 name: name,

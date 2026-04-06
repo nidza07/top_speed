@@ -37,10 +37,12 @@ namespace TopSpeed.Vehicles.Loader
             def.RedlineTorqueNm = spec.RedlineTorqueNm;
             def.DragCoefficient = spec.DragCoefficient;
             def.FrontalAreaM2 = spec.FrontalAreaM2;
+            def.SideAreaM2 = spec.SideAreaM2;
             def.RollingResistanceCoefficient = spec.RollingResistanceCoefficient;
+            def.RollingResistanceSpeedFactor = spec.RollingResistanceSpeedFactor;
             def.LaunchRpm = spec.LaunchRpm;
-            def.CoastDragBaseMps2 = spec.CoastDragBaseMps2;
-            def.CoastDragLinearPerMps = spec.CoastDragLinearPerMps;
+            def.CoupledDrivelineDragNm = spec.CoupledDrivelineDragNm;
+            def.CoupledDrivelineViscousDragNmPerKrpm = spec.CoupledDrivelineViscousDragNmPerKrpm;
             def.EngineInertiaKgm2 = spec.EngineInertiaKgm2;
             def.EngineFrictionTorqueNm = spec.EngineFrictionTorqueNm;
             def.EngineFrictionLinearNmPerKrpm = spec.EngineFrictionLinearNmPerKrpm;

@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-06 08:05+0200\n"
+"POT-Creation-Date: 2026-04-06 18:51+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -146,19 +146,19 @@ msgstr ""
 msgid "Are you sure you would like to discard all changes?"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:55
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:75
 msgid ""
 "Are you sure you would like to restore all controller bindings to their "
 "default values?"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:54
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:74
 msgid ""
 "Are you sure you would like to restore all keyboard bindings to their "
 "default values?"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:31
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:51
 msgid ""
 "Are you sure you would like to restore all settings to their default values?"
 msgstr ""
@@ -580,13 +580,17 @@ msgstr ""
 msgid "Controller"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:32
+msgid "Controller backend unavailable"
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\Apply\Input.cs:32
 msgid ""
 "Controller bindings section is missing. Defaults were used for controller "
 "bindings."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:97
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:117
 msgid "Controller mappings restored to defaults."
 msgstr ""
 
@@ -869,7 +873,7 @@ msgstr ""
 msgid "Duplicate key '{0}' in section [{1}] is not allowed."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:62
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:71
 #, csharp-format
 msgid "Duplicate room id '{0}'."
 msgstr ""
@@ -879,14 +883,19 @@ msgstr ""
 msgid "Duplicate section [{0}] is not allowed."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:55
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:59
 #, csharp-format
 msgid "Duplicate segment id '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:67
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:76
 #, csharp-format
 msgid "Duplicate sound id '{0}'."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:66
+#, csharp-format
+msgid "Duplicate weather id '{0}'."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\SavedServers\Menu.cs:29
@@ -1200,6 +1209,10 @@ msgid ""
 "and multiPlayer modes."
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:149
+msgid "Humidity must be between 0 and 1."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Core\State.cs:109
 msgid ""
 "I really have nothing interesting to put here not even the secret to life "
@@ -1228,12 +1241,12 @@ msgstr ""
 msgid "Interrupt screen reader speech"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:99
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:108
 #, csharp-format
 msgid "Invalid ambience value '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:173
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:251
 #, csharp-format
 msgid "Invalid boolean '{0}' for key '{1}'."
 msgstr ""
@@ -1252,7 +1265,7 @@ msgstr ""
 msgid "Invalid line. Expected [section] or key=value."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:207
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:285
 #, csharp-format
 msgid "Invalid numeric value '{0}' for key '{1}'."
 msgstr ""
@@ -1262,52 +1275,52 @@ msgstr ""
 msgid "Invalid port. Enter a number between 1 and 65535."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:222
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:300
 #, csharp-format
 msgid "Invalid room override value '{0}' for key '{1}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:108
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:186
 #, csharp-format
 msgid "Invalid room value '{0}' for key '{1}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:59
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:60
 #, csharp-format
 msgid "Invalid segment height '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:43
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:44
 #, csharp-format
 msgid "Invalid segment length '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:36
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:37
 #, csharp-format
 msgid "Invalid segment noise '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:29
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:30
 #, csharp-format
 msgid "Invalid segment surface '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:22
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:23
 #, csharp-format
 msgid "Invalid segment type '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:52
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:53
 #, csharp-format
 msgid "Invalid segment width '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:166
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:244
 #, csharp-format
 msgid "Invalid sound random mode '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:128
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:206
 #, csharp-format
 msgid "Invalid sound type '{0}'."
 msgstr ""
@@ -1322,14 +1335,25 @@ msgstr ""
 msgid "Invalid torque value '{0}' for '{1}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:200
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:278
 #, csharp-format
 msgid "Invalid vector '{0}' for key '{1}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:97
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:118
 #, csharp-format
-msgid "Invalid weather value '{0}'."
+msgid "Invalid weather kind '{0}'."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:77
+#, csharp-format
+msgid "Invalid weather transition seconds '{0}'."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:127
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:133
+#, csharp-format
+msgid "Invalid weather value '{0}' for key '{1}'."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\registry\options\Controls.cs:78
@@ -1389,7 +1413,7 @@ msgstr ""
 msgid "Key '{0}' in section [{1}] must not be empty."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:89
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:98
 #, csharp-format
 msgid "Key '{0}' is missing a value."
 msgstr ""
@@ -1444,7 +1468,7 @@ msgid ""
 "bindings."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:96
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:116
 msgid "Keyboard mappings restored to defaults."
 msgstr ""
 
@@ -1592,7 +1616,7 @@ msgstr ""
 msgid "Main menu"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:75
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:84
 msgid "Malformed line. Expected '[section]' or 'key = value'."
 msgstr ""
 
@@ -1761,8 +1785,8 @@ msgstr ""
 msgid "Next chat category"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:40
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:68
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:60
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:88
 msgid "No"
 msgstr ""
 
@@ -1955,6 +1979,7 @@ msgstr ""
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Connection\Connect.cs:191
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Dialogs.cs:30
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:19
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:39
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Issues.cs:55
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Dialog.cs:53
 msgid "OK"
@@ -2183,7 +2208,7 @@ msgstr ""
 msgid "Progressive keyboard input"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:81
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:90
 #, csharp-format
 msgid "Property '{0}' is outside any section."
 msgstr ""
@@ -2373,11 +2398,11 @@ msgstr ""
 msgid "Reset all keyboard mappings"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:52
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:72
 msgid "Reset controller mappings"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:51
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:71
 msgid "Reset keyboard mappings"
 msgstr ""
 
@@ -2389,7 +2414,7 @@ msgstr ""
 msgid "Restore all keyboard bindings to their default values."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:30
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:50
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\registry\options\Main.cs:43
 msgid "Restore default settings"
 msgstr ""
@@ -2545,7 +2570,7 @@ msgstr ""
 msgid "Scroll Lock"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:47
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:51
 #, csharp-format
 msgid "Section '{0}' requires an id."
 msgstr ""
@@ -2574,31 +2599,42 @@ msgid ""
 "include 'dct'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:141
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:169
 #, csharp-format
 msgid ""
 "Segment '{0}' references room '{1}', but no matching [room:{1}] section or "
 "preset exists."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:154
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:182
 #, csharp-format
 msgid ""
 "Segment '{0}' references sound source '{1}', but no matching [sound:{1}] "
 "section exists."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:45
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:194
+#, csharp-format
+msgid ""
+"Segment '{0}' references weather profile '{1}', but no matching [weather:"
+"{1}] section exists."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:46
 #, csharp-format
 msgid "Segment length '{0}' is below minimum {1} and will be clamped."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:67
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:87
 msgid "Segment room id cannot be empty."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:80
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:100
 msgid "Segment sound source list cannot be empty."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:68
+msgid "Segment weather profile id cannot be empty."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\registry\Race.cs:64
@@ -2854,33 +2890,33 @@ msgstr ""
 msgid "Some settings were missing or invalid. Review these details."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:177
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:216
 #, csharp-format
 msgid ""
 "Sound '{0}' references end_area '{1}', but no matching segment id exists."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:166
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:205
 #, csharp-format
 msgid ""
 "Sound '{0}' references start_area '{1}', but no matching segment id exists."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:149
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:227
 #, csharp-format
 msgid ""
 "Sound key '{0}' contains invalid path '{1}'. Paths must be track-relative."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:135
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:213
 #, csharp-format
 msgid ""
 "Sound key '{0}' must be a track-relative path and cannot escape the track "
 "folder."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:143
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:159
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:221
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:237
 #, csharp-format
 msgid "Sound list for '{0}' cannot be empty."
 msgstr ""
@@ -3023,6 +3059,15 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Input\Mapping\Handler\Keyboard.cs:17
 msgid "That key is reserved."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:34
+#, csharp-format
+msgid ""
+"The SDL controller backend could not be initialized. The game has reverted "
+"to keyboard input.\n"
+"\n"
+"Reason: {0}"
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\Apply\Core.cs:16
@@ -3235,6 +3280,18 @@ msgstr ""
 msgid "Track"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:149
+msgid ""
+"Track [meta] must define a weather profile reference, for example 'weather = "
+"default'."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:156
+#, csharp-format
+msgid ""
+"Track default weather profile '{0}' does not match any [weather:{0}] section."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Parser.cs:31
 #: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Parser.cs:55
 #, csharp-format
@@ -3245,7 +3302,7 @@ msgstr ""
 msgid "Track load error"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:129
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:142
 msgid "Track must include at least one [segment:<id>] section."
 msgstr ""
 
@@ -3327,17 +3384,17 @@ msgstr ""
 msgid "Unknown parse error."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:113
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:191
 #, csharp-format
 msgid "Unknown room key '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:101
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:179
 #, csharp-format
 msgid "Unknown room preset '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:39
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Validate.cs:43
 #, csharp-format
 msgid "Unknown section '{0}'."
 msgstr ""
@@ -3347,12 +3404,12 @@ msgstr ""
 msgid "Unknown section [{0}]."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:90
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:110
 #, csharp-format
 msgid "Unknown segment key '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:212
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:290
 #, csharp-format
 msgid "Unknown sound key '{0}'."
 msgstr ""
@@ -3364,6 +3421,11 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Updates\Service.cs:227
 msgid "Unknown update error."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:168
+#, csharp-format
+msgid "Unknown weather key '{0}'."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Input\Display\Text.cs:56
@@ -3498,6 +3560,23 @@ msgstr ""
 msgid "Warning:"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:141
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:145
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:153
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:157
+#, csharp-format
+msgid "Weather key '{0}' must be greater than zero."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:163
+#, csharp-format
+msgid "Weather key '{0}' must be non-negative."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:79
+msgid "Weather transition seconds must be finite and non-negative."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Wizard.cs:12
 msgid ""
 "Welcome to Top Speed setup. On the next screens, you will choose your "
@@ -3614,8 +3693,8 @@ msgstr ""
 msgid "Yen"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:39
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:67
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:59
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:87
 msgid "Yes"
 msgstr ""
 
@@ -3792,7 +3871,7 @@ msgstr ""
 msgid "easy"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:191
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:269
 msgid "end_area cannot be empty."
 msgstr ""
 
@@ -4013,7 +4092,7 @@ msgstr ""
 msgid "speed dependent"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:181
+#: D:\top_speed\top_speed_net\TopSpeed.Shared\Data\Tracks\Parser\Rules.cs:259
 msgid "start_area cannot be empty."
 msgstr ""
 

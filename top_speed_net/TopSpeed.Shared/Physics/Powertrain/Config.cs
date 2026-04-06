@@ -25,7 +25,9 @@ namespace TopSpeed.Physics.Powertrain
             float redlineTorqueNm,
             float dragCoefficient,
             float frontalAreaM2,
+            float sideAreaM2,
             float rollingResistanceCoefficient,
+            float rollingResistanceSpeedFactor,
             float launchRpm,
             float reversePowerFactor,
             float reverseGearRatio,
@@ -35,8 +37,8 @@ namespace TopSpeed.Physics.Powertrain
             int gears,
             float[] gearRatios,
             CurveProfile torqueCurve,
-            float coastDragBaseMps2 = 0f,
-            float coastDragLinearPerMps = 0f,
+            float coupledDrivelineDragNm = 0f,
+            float coupledDrivelineViscousDragNmPerKrpm = 0f,
             float engineFrictionLinearNmPerKrpm = 0f,
             float engineFrictionQuadraticNmPerKrpm2 = 0f,
             float idleControlWindowRpm = 150f,
@@ -64,15 +66,17 @@ namespace TopSpeed.Physics.Powertrain
             RedlineTorqueNm = Math.Max(0f, redlineTorqueNm);
             DragCoefficient = Math.Max(0.01f, dragCoefficient);
             FrontalAreaM2 = Math.Max(0.1f, frontalAreaM2);
+            SideAreaM2 = Math.Max(0.1f, sideAreaM2);
             RollingResistanceCoefficient = Math.Max(0.001f, rollingResistanceCoefficient);
+            RollingResistanceSpeedFactor = Math.Max(0f, rollingResistanceSpeedFactor);
             LaunchRpm = Clamp(launchRpm, IdleRpm, RevLimiter);
             ReversePowerFactor = Math.Max(0.05f, reversePowerFactor);
             ReverseGearRatio = Math.Max(0.1f, reverseGearRatio);
             EngineInertiaKgm2 = Math.Max(0.01f, engineInertiaKgm2);
             EngineFrictionTorqueNm = Math.Max(0f, engineFrictionTorqueNm);
             DrivelineCouplingRate = Math.Max(0.1f, drivelineCouplingRate);
-            CoastDragBaseMps2 = Math.Max(0f, coastDragBaseMps2);
-            CoastDragLinearPerMps = Math.Max(0f, coastDragLinearPerMps);
+            CoupledDrivelineDragNm = Math.Max(0f, coupledDrivelineDragNm);
+            CoupledDrivelineViscousDragNmPerKrpm = Math.Max(0f, coupledDrivelineViscousDragNmPerKrpm);
             EngineFrictionLinearNmPerKrpm = Math.Max(0f, engineFrictionLinearNmPerKrpm);
             EngineFrictionQuadraticNmPerKrpm2 = Math.Max(0f, engineFrictionQuadraticNmPerKrpm2);
             IdleControlWindowRpm = Math.Max(0f, idleControlWindowRpm);
@@ -106,7 +110,9 @@ namespace TopSpeed.Physics.Powertrain
         public float RedlineTorqueNm { get; }
         public float DragCoefficient { get; }
         public float FrontalAreaM2 { get; }
+        public float SideAreaM2 { get; }
         public float RollingResistanceCoefficient { get; }
+        public float RollingResistanceSpeedFactor { get; }
         public float LaunchRpm { get; }
         public float ReversePowerFactor { get; }
         public float ReverseGearRatio { get; }
@@ -115,8 +121,8 @@ namespace TopSpeed.Physics.Powertrain
         public float EngineFrictionLinearNmPerKrpm { get; }
         public float EngineFrictionQuadraticNmPerKrpm2 { get; }
         public float DrivelineCouplingRate { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float IdleControlWindowRpm { get; }
         public float IdleControlGainNmPerRpm { get; }
         public float MinCoupledRiseIdleRpmPerSecond { get; }

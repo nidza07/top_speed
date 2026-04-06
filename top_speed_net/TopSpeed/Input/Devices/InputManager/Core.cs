@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using TopSpeed.Input.Devices.Controller;
 using TopSpeed.Input.Devices.Keyboard;
 using TopSpeed.Input.Devices.Vibration;
@@ -16,6 +17,7 @@ namespace TopSpeed.Input
         private readonly InputState _current;
         private readonly InputState _previous;
         private readonly bool[] _keyLatch;
+        private readonly string? _controllerBackendUnavailableMessage;
         private bool _suspended;
         private bool _menuBackLatched;
         private bool _disposed;
@@ -26,6 +28,7 @@ namespace TopSpeed.Input
         public IVibrationDevice? VibrationDevice => _controllerBackend.VibrationDevice;
 
         public event Action? NoControllerDetected;
+        public event Action<string>? ControllerBackendUnavailable;
 
         internal InputService(IntPtr windowHandle, IBackendRegistry backendRegistry, IKeyboardEventSource? keyboardEventSource = null)
         {
@@ -37,7 +40,16 @@ namespace TopSpeed.Input
             try
             {
                 keyboardBackend = backendRegistry.CreateKeyboard(windowHandle, keyboardEventSource);
-                controllerBackend = backendRegistry.CreateController(windowHandle);
+                try
+                {
+                    controllerBackend = backendRegistry.CreateController(windowHandle);
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"Controller backend unavailable: {ex}");
+                    _controllerBackendUnavailableMessage = ex.Message;
+                    controllerBackend = new Backends.Disabled.Controller(ex.Message);
+                }
                 _keyboardBackend = keyboardBackend;
                 _controllerBackend = controllerBackend;
             }
@@ -70,6 +82,9 @@ namespace TopSpeed.Input
         {
             var enableController = mode != InputDeviceMode.Keyboard;
             _controllerBackend.SetEnabled(enableController);
+            var message = _controllerBackendUnavailableMessage;
+            if (enableController && message != null && message.Length > 0)
+                ControllerBackendUnavailable?.Invoke(message);
         }
 
         public bool TryGetPendingControllerChoices(out IReadOnlyList<Choice> choices)

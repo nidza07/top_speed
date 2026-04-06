@@ -36,9 +36,11 @@ namespace TopSpeed.Vehicles.Parsing
                 ["resistance"] = Set(
                     "drag_coefficient",
                     "frontal_area",
+                    "side_area",
                     "rolling_resistance",
-                    "coast_base_mps2",
-                    "coast_linear_per_mps"),
+                    "rolling_speed_factor",
+                    "driveline_drag_nm",
+                    "driveline_viscous_drag_nm_per_krpm"),
                 ["torque_curve"] = Set("preset"),
                 ["transmission"] = Set(
                     "primary_type",

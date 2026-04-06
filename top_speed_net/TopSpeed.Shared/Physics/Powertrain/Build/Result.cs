@@ -8,8 +8,8 @@ namespace TopSpeed.Physics.Powertrain
             Config powertrain,
             float reverseMaxSpeedKph,
             float[] gearRatios,
-            float coastDragBaseMps2,
-            float coastDragLinearPerMps,
+            float coupledDrivelineDragNm,
+            float coupledDrivelineViscousDragNmPerKrpm,
             float frictionLinearNmPerKrpm,
             float frictionQuadraticNmPerKrpm2,
             float idleControlWindowRpm,
@@ -23,8 +23,8 @@ namespace TopSpeed.Physics.Powertrain
             Powertrain = powertrain ?? throw new ArgumentNullException(nameof(powertrain));
             ReverseMaxSpeedKph = reverseMaxSpeedKph;
             GearRatios = gearRatios ?? throw new ArgumentNullException(nameof(gearRatios));
-            CoastDragBaseMps2 = coastDragBaseMps2;
-            CoastDragLinearPerMps = coastDragLinearPerMps;
+            CoupledDrivelineDragNm = coupledDrivelineDragNm;
+            CoupledDrivelineViscousDragNmPerKrpm = coupledDrivelineViscousDragNmPerKrpm;
             FrictionLinearNmPerKrpm = frictionLinearNmPerKrpm;
             FrictionQuadraticNmPerKrpm2 = frictionQuadraticNmPerKrpm2;
             IdleControlWindowRpm = idleControlWindowRpm;
@@ -39,8 +39,8 @@ namespace TopSpeed.Physics.Powertrain
         public Config Powertrain { get; }
         public float ReverseMaxSpeedKph { get; }
         public float[] GearRatios { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float FrictionLinearNmPerKrpm { get; }
         public float FrictionQuadraticNmPerKrpm2 { get; }
         public float IdleControlWindowRpm { get; }

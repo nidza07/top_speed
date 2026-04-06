@@ -73,8 +73,10 @@ namespace TopSpeed.Vehicles
             bool shiftOnDemand = false,
             AutomaticDrivelineTuning? automaticTuning = null,
             TransmissionPolicy? transmissionPolicy = null,
-            float coastDragBaseMps2 = -1f,
-            float coastDragLinearPerMps = -1f,
+            float sideAreaM2 = -1f,
+            float rollingResistanceSpeedFactor = -1f,
+            float coupledDrivelineDragNm = -1f,
+            float coupledDrivelineViscousDragNmPerKrpm = -1f,
             float engineOverrunIdleLossFraction = -1f,
             float engineBrakeTransferEfficiency = -1f,
             float frictionLinearNmPerKrpm = -1f,
@@ -111,7 +113,9 @@ namespace TopSpeed.Vehicles
             RedlineTorqueNm = redlineTorqueNm;
             DragCoefficient = dragCoefficient;
             FrontalAreaM2 = frontalAreaM2;
+            SideAreaM2 = sideAreaM2;
             RollingResistanceCoefficient = rollingResistanceCoefficient;
+            RollingResistanceSpeedFactor = rollingResistanceSpeedFactor;
             LaunchRpm = launchRpm;
             EngineInertiaKgm2 = engineInertiaKgm2;
             EngineFrictionTorqueNm = engineFrictionTorqueNm;
@@ -155,8 +159,8 @@ namespace TopSpeed.Vehicles
             ShiftOnDemand = shiftOnDemand;
             AutomaticTuning = automaticTuning ?? AutomaticDrivelineTuning.Default;
             TransmissionPolicy = transmissionPolicy ?? TransmissionPolicy.Default;
-            CoastDragBaseMps2 = coastDragBaseMps2;
-            CoastDragLinearPerMps = coastDragLinearPerMps;
+            CoupledDrivelineDragNm = coupledDrivelineDragNm;
+            CoupledDrivelineViscousDragNmPerKrpm = coupledDrivelineViscousDragNmPerKrpm;
             EngineOverrunIdleLossFraction = engineOverrunIdleLossFraction;
             EngineBrakeTransferEfficiency = engineBrakeTransferEfficiency;
             FrictionLinearNmPerKrpm = frictionLinearNmPerKrpm;
@@ -194,10 +198,12 @@ namespace TopSpeed.Vehicles
         public float RedlineTorqueNm { get; }
         public float DragCoefficient { get; }
         public float FrontalAreaM2 { get; }
+        public float SideAreaM2 { get; }
         public float RollingResistanceCoefficient { get; }
+        public float RollingResistanceSpeedFactor { get; }
         public float LaunchRpm { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float EngineInertiaKgm2 { get; }
         public float EngineFrictionTorqueNm { get; }
         public float DrivelineCouplingRate { get; }

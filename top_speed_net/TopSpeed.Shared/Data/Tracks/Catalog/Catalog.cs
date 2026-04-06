@@ -10,30 +10,43 @@ namespace TopSpeed.Data
         private static readonly Lazy<IReadOnlyDictionary<string, TrackData>> BuiltInMap =
             new Lazy<IReadOnlyDictionary<string, TrackData>>(() => new Dictionary<string, TrackData>(StringComparer.Ordinal)
             {
-                ["america"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAmerica!),
-                ["austria"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAustria!),
-                ["belgium"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrBelgium!),
-                ["brazil"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrBrazil!),
-                ["china"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrChina!),
-                ["england"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrEngland!),
-                ["finland"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrFinland!),
-                ["france"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrFrance!),
-                ["germany"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrGermany!),
-                ["ireland"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrIreland!),
-                ["italy"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrItaly!),
-                ["netherlands"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrNetherlands!),
-                ["portugal"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrPortugal!),
-                ["russia"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrRussia!),
-                ["spain"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSpain!),
-                ["sweden"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSweden!),
-                ["switserland"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSwitserland!),
-                ["advHills"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvHills!),
-                ["advCoast"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvCoast!),
-                ["advCountry"] = new TrackData(false, TrackWeather.Rain, TrackAmbience.NoAmbience, TrAdvCountry!),
-                ["advAirport"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.Airport, TrAirport!),
-                ["advDesert"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.Desert, TrDesert!),
-                ["advRush"] = new TrackData(false, TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvRush!),
-                ["advEscape"] = new TrackData(false, TrackWeather.Wind, TrackAmbience.NoAmbience, TrAdvEscape!)
+                ["america"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAmerica!),
+                ["austria"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAustria!),
+                ["belgium"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrBelgium!),
+                ["brazil"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrBrazil!),
+                ["china"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrChina!),
+                ["england"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrEngland!),
+                ["finland"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrFinland!),
+                ["france"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrFrance!),
+                ["germany"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrGermany!),
+                ["ireland"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrIreland!),
+                ["italy"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrItaly!),
+                ["netherlands"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrNetherlands!),
+                ["portugal"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrPortugal!),
+                ["russia"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrRussia!),
+                ["spain"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSpain!),
+                ["sweden"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSweden!),
+                ["switserland"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrSwitserland!),
+                ["advHills"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvHills!),
+                ["advCoast"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvCoast!),
+                ["advCountry"] = BuiltInTrack(TrackWeather.Rain, TrackAmbience.NoAmbience, TrAdvCountry!),
+                ["advAirport"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.Airport, TrAirport!),
+                ["advDesert"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.Desert, TrDesert!),
+                ["advRush"] = BuiltInTrack(TrackWeather.Sunny, TrackAmbience.NoAmbience, TrAdvRush!),
+                ["advEscape"] = BuiltInTrack(TrackWeather.Wind, TrackAmbience.NoAmbience, TrAdvEscape!)
             });
+
+        private static TrackData BuiltInTrack(TrackWeather weather, TrackAmbience ambience, TrackDefinition[] definitions)
+        {
+            return new TrackData(
+                userDefined: false,
+                defaultWeatherProfileId: TrackWeatherProfile.DefaultProfileId,
+                weatherProfiles: new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [TrackWeatherProfile.DefaultProfileId] = TrackWeatherProfile.CreatePreset(TrackWeatherProfile.DefaultProfileId, weather)
+                },
+                ambience: ambience,
+                definitions: definitions);
+        }
     }
 }

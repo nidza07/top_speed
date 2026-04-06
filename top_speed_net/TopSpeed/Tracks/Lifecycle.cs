@@ -18,12 +18,7 @@ namespace TopSpeed.Tracks
             _lapDistance = _roadModel.LapDistance;
             _lapCenter = _roadModel.LapCenter;
 
-            if (_weather == TrackWeather.Rain)
-                _soundRain?.Play(loop: true);
-            else if (_weather == TrackWeather.Wind)
-                _soundWind?.Play(loop: true);
-            else if (_weather == TrackWeather.Storm)
-                _soundStorm?.Play(loop: true);
+            InitializeWeatherRuntime();
 
             if (_ambience == TrackAmbience.Desert)
                 _soundDesert?.Play(loop: true);
@@ -37,12 +32,9 @@ namespace TopSpeed.Tracks
 
         public void FinalizeTrack()
         {
-            if (_weather == TrackWeather.Rain)
-                _soundRain?.Stop();
-            else if (_weather == TrackWeather.Wind)
-                _soundWind?.Stop();
-            else if (_weather == TrackWeather.Storm)
-                _soundStorm?.Stop();
+            _soundRain?.Stop();
+            _soundWind?.Stop();
+            _soundStorm?.Stop();
 
             if (_ambience == TrackAmbience.Desert)
                 _soundDesert?.Stop();
@@ -72,6 +64,7 @@ namespace TopSpeed.Tracks
             var segmentIndex = RoadIndexAt(position);
             if (segmentIndex >= 0)
             {
+                UpdateWeather(segmentIndex);
                 if (segmentIndex != _activeAudioSegmentIndex)
                     ApplySegmentAcoustics(segmentIndex);
                 ActivateTrackSoundsForPosition(position, segmentIndex);

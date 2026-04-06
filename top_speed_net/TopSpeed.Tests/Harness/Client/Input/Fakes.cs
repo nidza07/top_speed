@@ -224,25 +224,29 @@ internal static class InputHarness
         }
     }
 
-    public sealed class FakeControllerFactory : IControllerBackendFactory
+    public sealed class FakeControllerFactory : IControllerBackendFactory, IBackendSupportDiagnostics
     {
         private readonly bool _supported;
         private readonly IControllerBackend? _created;
         private readonly Exception? _exception;
+        private readonly string? _unsupportedReason;
 
-        public FakeControllerFactory(string id, int priority, bool supported, IControllerBackend? created, Exception? exception = null)
+        public FakeControllerFactory(string id, int priority, bool supported, IControllerBackend? created, Exception? exception = null, string? unsupportedReason = null)
         {
             Id = id;
             Priority = priority;
             _supported = supported;
             _created = created;
             _exception = exception;
+            _unsupportedReason = unsupportedReason;
         }
 
         public string Id { get; }
         public int Priority { get; }
 
         public bool IsSupported() => _supported;
+
+        public string? GetUnsupportedReason() => _unsupportedReason;
 
         public IControllerBackend Create(IntPtr windowHandle)
         {

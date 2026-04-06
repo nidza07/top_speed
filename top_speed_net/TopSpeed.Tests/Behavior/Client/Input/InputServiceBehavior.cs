@@ -108,6 +108,30 @@ public sealed class InputServiceBehaviorTests
     }
 
     [Fact]
+    public void Constructor_FallsBackToDisabledControllerBackend_WhenControllerCreationFails()
+    {
+        var keyboard = new InputHarness.FakeKeyboardDevice();
+        var registry = new BackendRegistry(
+            new IKeyboardBackendFactory[]
+            {
+                new InputHarness.FakeKeyboardFactory("keyboard", 1, true, keyboard)
+            },
+            new IControllerBackendFactory[]
+            {
+                new InputHarness.FakeControllerFactory("sdl", 1, supported: true, created: null, exception: new InvalidOperationException("sdl: unsupported"))
+            });
+
+        using var service = new InputService(IntPtr.Zero, registry, keyboardEventSource: null);
+        string? reason = null;
+        service.ControllerBackendUnavailable += value => reason = value;
+
+        service.SetDeviceMode(InputDeviceMode.Controller);
+
+        reason.Should().Contain("sdl");
+        service.TryGetControllerState(out _).Should().BeFalse();
+    }
+
+    [Fact]
     public void ControllerState_AndVibration_AreExposedThroughService()
     {
         var (service, _, controller) = InputHarness.CreateService();

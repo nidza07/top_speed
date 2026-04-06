@@ -1,13 +1,11 @@
 {
-  "version": "2026.4.5.1",
+  "version": "2026.4.6.1",
   "serverVersion": "2026.4.3.1",
   "changes": [
-    "Fixed some issues with engine shutdown in the game.",
-    "Replaced Tolk and CrossSpeak with Prism for better cross-compatibility.",
-    "Added the ability to choose different speech backends, for example SAPI or One Core on Windows. Credits to @kalahami for the feature.",
-    "Added the ability to disable startup logo of the game.",
-    "Added the ability to choose different voices for the speech backend, if the backend supports it. For example, on One Core or SAPI, you can choose a different voice and set the speech rate.",
-    "Added the option to interrupt screen-reader speech. This makes new spoken messages interrupt previous ones. Credits to @kalahami for the feature."
+    "Improved and retuned all official vehicles significantly and fixed the problem of unusable top gears.",
+    "Rewrote the drag model to be more physical-based instead of using synthetic numbers. Now it also handles wind, and track weather is affected by that. This is still a partial work and tracks need to be updated.",
+    "Fixed a few errors with speech backend switching.",
+    "Menu movement speech is now interruptable. This fixes the problem of SAPI speaking old text while moving in menus."
   ],
   "serverChanges": [
     "Updated server room model and explicit race finish events for players.",

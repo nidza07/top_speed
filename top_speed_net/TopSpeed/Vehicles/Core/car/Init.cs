@@ -83,7 +83,8 @@ namespace TopSpeed.Vehicles
             _currentThrottle = 0;
             _currentBrake = 0;
             _currentSurfaceTractionFactor = 0;
-            _currentDeceleration = 0;
+            _currentSurfaceBrakeFactor = 0;
+            _currentSurfaceRollingResistanceFactor = 1f;
             _currentSurfaceLateralMultiplier = 1f;
             _speedDiff = 0;
             _drivelineCouplingFactor = 1f;
@@ -145,8 +146,12 @@ namespace TopSpeed.Vehicles
             _redlineTorqueNm = Math.Max(0f, SanitizeFinite(definition.RedlineTorqueNm, 0f));
             _dragCoefficient = Math.Max(0.01f, SanitizeFinite(definition.DragCoefficient, 0.01f));
             _frontalAreaM2 = Math.Max(0.1f, SanitizeFinite(definition.FrontalAreaM2, 0.1f));
+            _sideAreaM2 = Math.Max(0.1f, SanitizeFinite(definition.SideAreaM2 > 0f ? definition.SideAreaM2 : definition.FrontalAreaM2 * 1.8f, 0.1f));
             _rollingResistanceCoefficient = Math.Max(0.001f, SanitizeFinite(definition.RollingResistanceCoefficient, 0.001f));
+            _rollingResistanceSpeedFactor = Math.Max(0f, SanitizeFinite(definition.RollingResistanceSpeedFactor >= 0f ? definition.RollingResistanceSpeedFactor : 0.01f, 0f));
             _launchRpm = Math.Max(_idleRpm, Math.Min(_revLimiter, SanitizeFinite(definition.LaunchRpm, _idleRpm)));
+            _coupledDrivelineDragNm = Math.Max(0f, SanitizeFinite(definition.CoupledDrivelineDragNm >= 0f ? definition.CoupledDrivelineDragNm : 18f, 0f));
+            _coupledDrivelineViscousDragNmPerKrpm = Math.Max(0f, SanitizeFinite(definition.CoupledDrivelineViscousDragNmPerKrpm >= 0f ? definition.CoupledDrivelineViscousDragNmPerKrpm : 6f, 0f));
             _engineInertiaKgm2 = Math.Max(0.01f, SanitizeFinite(definition.EngineInertiaKgm2, 0.24f));
             _engineFrictionTorqueNm = Math.Max(0f, SanitizeFinite(definition.EngineFrictionTorqueNm, 20f));
             _drivelineCouplingRate = Math.Max(0.1f, SanitizeFinite(definition.DrivelineCouplingRate, 12f));
@@ -198,46 +203,47 @@ namespace TopSpeed.Vehicles
             var torqueCurve = PowertrainProfileBuilder.Build(definition);
             var build = PowertrainBuild.Create(
                 new BuildInput(
-                    _deceleration,
-                    definition.MassKg,
-                    definition.DrivetrainEfficiency,
-                    definition.EngineBrakingTorqueNm,
-                    definition.TireGripCoefficient,
-                    definition.BrakeStrength,
-                    definition.TireCircumferenceM / (2.0f * (float)Math.PI),
-                    definition.EngineBraking,
-                    definition.IdleRpm,
-                    definition.RevLimiter,
-                    definition.FinalDriveRatio,
-                    definition.PowerFactor,
-                    definition.PeakTorqueNm,
-                    definition.PeakTorqueRpm,
-                    definition.IdleTorqueNm,
-                    definition.RedlineTorqueNm,
-                    definition.DragCoefficient,
-                    definition.FrontalAreaM2,
-                    definition.RollingResistanceCoefficient,
-                    definition.LaunchRpm,
-                    definition.ReversePowerFactor,
-                    definition.ReverseGearRatio,
-                    definition.ReverseMaxSpeedKph,
-                    definition.EngineInertiaKgm2,
-                    definition.EngineFrictionTorqueNm,
-                    definition.DrivelineCouplingRate,
-                    definition.Gears,
-                    torqueCurve,
-                    definition.GearRatios,
-                    definition.CoastDragBaseMps2,
-                    definition.CoastDragLinearPerMps,
-                    definition.EngineFrictionLinearNmPerKrpm,
-                    definition.EngineFrictionQuadraticNmPerKrpm2,
-                    definition.IdleControlWindowRpm,
-                    definition.IdleControlGainNmPerRpm,
-                    definition.MinCoupledRiseIdleRpmPerSecond,
-                    definition.MinCoupledRiseFullRpmPerSecond,
-                    definition.EngineOverrunIdleLossFraction,
-                    definition.OverrunCurveExponent,
-                    definition.EngineBrakeTransferEfficiency));
+                    massKg: definition.MassKg,
+                    drivetrainEfficiency: definition.DrivetrainEfficiency,
+                    engineBrakingTorqueNm: definition.EngineBrakingTorqueNm,
+                    tireGripCoefficient: definition.TireGripCoefficient,
+                    brakeStrength: definition.BrakeStrength,
+                    wheelRadiusM: definition.TireCircumferenceM / (2.0f * (float)Math.PI),
+                    engineBraking: definition.EngineBraking,
+                    idleRpm: definition.IdleRpm,
+                    revLimiter: definition.RevLimiter,
+                    finalDriveRatio: definition.FinalDriveRatio,
+                    powerFactor: definition.PowerFactor,
+                    peakTorqueNm: definition.PeakTorqueNm,
+                    peakTorqueRpm: definition.PeakTorqueRpm,
+                    idleTorqueNm: definition.IdleTorqueNm,
+                    redlineTorqueNm: definition.RedlineTorqueNm,
+                    dragCoefficient: definition.DragCoefficient,
+                    frontalAreaM2: definition.FrontalAreaM2,
+                    sideAreaM2: definition.SideAreaM2,
+                    rollingResistanceCoefficient: definition.RollingResistanceCoefficient,
+                    rollingResistanceSpeedFactor: definition.RollingResistanceSpeedFactor,
+                    launchRpm: definition.LaunchRpm,
+                    reversePowerFactor: definition.ReversePowerFactor,
+                    reverseGearRatio: definition.ReverseGearRatio,
+                    reverseMaxSpeedKph: definition.ReverseMaxSpeedKph,
+                    engineInertiaKgm2: definition.EngineInertiaKgm2,
+                    engineFrictionTorqueNm: definition.EngineFrictionTorqueNm,
+                    drivelineCouplingRate: definition.DrivelineCouplingRate,
+                    gears: definition.Gears,
+                    torqueCurve: torqueCurve,
+                    gearRatios: definition.GearRatios,
+                    coupledDrivelineDragNm: definition.CoupledDrivelineDragNm,
+                    coupledDrivelineViscousDragNmPerKrpm: definition.CoupledDrivelineViscousDragNmPerKrpm,
+                    frictionLinearNmPerKrpm: definition.EngineFrictionLinearNmPerKrpm,
+                    frictionQuadraticNmPerKrpm2: definition.EngineFrictionQuadraticNmPerKrpm2,
+                    idleControlWindowRpm: definition.IdleControlWindowRpm,
+                    idleControlGainNmPerRpm: definition.IdleControlGainNmPerRpm,
+                    minCoupledRiseIdleRpmPerSecond: definition.MinCoupledRiseIdleRpmPerSecond,
+                    minCoupledRiseFullRpmPerSecond: definition.MinCoupledRiseFullRpmPerSecond,
+                    engineOverrunIdleLossFraction: definition.EngineOverrunIdleLossFraction,
+                    overrunCurveExponent: definition.OverrunCurveExponent,
+                    engineBrakeTransferEfficiency: definition.EngineBrakeTransferEfficiency));
 
             _massKg = build.Powertrain.MassKg;
             _drivetrainEfficiency = build.Powertrain.DrivetrainEfficiency;
@@ -256,8 +262,12 @@ namespace TopSpeed.Vehicles
             _redlineTorqueNm = build.Powertrain.RedlineTorqueNm;
             _dragCoefficient = build.Powertrain.DragCoefficient;
             _frontalAreaM2 = build.Powertrain.FrontalAreaM2;
+            _sideAreaM2 = build.Powertrain.SideAreaM2;
             _rollingResistanceCoefficient = build.Powertrain.RollingResistanceCoefficient;
+            _rollingResistanceSpeedFactor = build.Powertrain.RollingResistanceSpeedFactor;
             _launchRpm = build.Powertrain.LaunchRpm;
+            _coupledDrivelineDragNm = build.Powertrain.CoupledDrivelineDragNm;
+            _coupledDrivelineViscousDragNmPerKrpm = build.Powertrain.CoupledDrivelineViscousDragNmPerKrpm;
             _reversePowerFactor = build.Powertrain.ReversePowerFactor;
             _reverseGearRatio = build.Powertrain.ReverseGearRatio;
             _reverseMaxSpeedKph = build.ReverseMaxSpeedKph;

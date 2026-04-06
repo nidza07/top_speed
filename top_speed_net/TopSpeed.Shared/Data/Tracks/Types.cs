@@ -68,13 +68,15 @@ namespace TopSpeed.Data
         public string? SegmentId { get; }
         public float Width { get; }
         public float Height { get; }
+        public string? WeatherProfileId { get; }
+        public float WeatherTransitionSeconds { get; }
         public string? RoomId { get; }
         public TrackRoomOverrides? RoomOverrides { get; }
         public IReadOnlyList<string> SoundSourceIds { get; }
         public IReadOnlyDictionary<string, string> Metadata { get; }
 
         public TrackDefinition(TrackType type, TrackSurface surface, TrackNoise noise, float length)
-            : this(type, surface, noise, length, null, 0f, 0f, null, null, null, null)
+            : this(type, surface, noise, length, null, 0f, 0f, null, 0f, null, null, null, null)
         {
         }
 
@@ -90,6 +92,24 @@ namespace TopSpeed.Data
             TrackRoomOverrides? roomOverrides,
             IReadOnlyList<string>? soundSourceIds,
             IReadOnlyDictionary<string, string>? metadata)
+            : this(type, surface, noise, length, segmentId, width, height, null, 0f, roomId, roomOverrides, soundSourceIds, metadata)
+        {
+        }
+
+        public TrackDefinition(
+            TrackType type,
+            TrackSurface surface,
+            TrackNoise noise,
+            float length,
+            string? segmentId,
+            float width,
+            float height,
+            string? weatherProfileId,
+            float weatherTransitionSeconds,
+            string? roomId,
+            TrackRoomOverrides? roomOverrides,
+            IReadOnlyList<string>? soundSourceIds,
+            IReadOnlyDictionary<string, string>? metadata)
         {
             Type = type;
             Surface = surface;
@@ -98,6 +118,8 @@ namespace TopSpeed.Data
             SegmentId = segmentId;
             Width = width;
             Height = height;
+            WeatherProfileId = string.IsNullOrWhiteSpace(weatherProfileId) ? null : weatherProfileId?.Trim();
+            WeatherTransitionSeconds = weatherTransitionSeconds < 0f ? 0f : weatherTransitionSeconds;
             RoomId = roomId;
             RoomOverrides = roomOverrides;
             SoundSourceIds = soundSourceIds ?? EmptySoundSources;
@@ -110,11 +132,15 @@ namespace TopSpeed.Data
         private static readonly IReadOnlyDictionary<string, string> EmptyMetadata = new Dictionary<string, string>();
         private static readonly IReadOnlyDictionary<string, TrackRoomDefinition> EmptyRooms = new Dictionary<string, TrackRoomDefinition>();
         private static readonly IReadOnlyDictionary<string, TrackSoundSourceDefinition> EmptySounds = new Dictionary<string, TrackSoundSourceDefinition>();
+        private static readonly IReadOnlyDictionary<string, TrackWeatherProfile> EmptyWeatherProfiles = new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase);
 
         public bool UserDefined { get; }
         public string? Name { get; }
         public string? Version { get; }
-        public TrackWeather Weather { get; }
+        public string DefaultWeatherProfileId { get; }
+        public IReadOnlyDictionary<string, TrackWeatherProfile> WeatherProfiles { get; }
+        public TrackWeather Weather => DefaultWeatherProfile.Kind;
+        public TrackWeatherProfile DefaultWeatherProfile => ResolveWeatherProfile(DefaultWeatherProfileId);
         public TrackAmbience Ambience { get; }
         public TrackDefinition[] Definitions { get; }
         public IReadOnlyDictionary<string, string> Metadata { get; }
@@ -136,9 +162,45 @@ namespace TopSpeed.Data
             IReadOnlyDictionary<string, TrackRoomDefinition>? roomProfiles = null,
             IReadOnlyDictionary<string, TrackSoundSourceDefinition>? soundSources = null,
             string? sourcePath = null)
+            : this(
+                userDefined,
+                TrackWeatherProfile.DefaultProfileId,
+                new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase)
+                {
+                    [TrackWeatherProfile.DefaultProfileId] = TrackWeatherProfile.CreatePreset(TrackWeatherProfile.DefaultProfileId, weather)
+                },
+                ambience,
+                definitions,
+                laps,
+                name,
+                version,
+                metadata,
+                roomProfiles,
+                soundSources,
+                sourcePath)
+        {
+        }
+
+        public TrackData(
+            bool userDefined,
+            string defaultWeatherProfileId,
+            IReadOnlyDictionary<string, TrackWeatherProfile>? weatherProfiles,
+            TrackAmbience ambience,
+            TrackDefinition[] definitions,
+            byte laps = 0,
+            string? name = null,
+            string? version = null,
+            IReadOnlyDictionary<string, string>? metadata = null,
+            IReadOnlyDictionary<string, TrackRoomDefinition>? roomProfiles = null,
+            IReadOnlyDictionary<string, TrackSoundSourceDefinition>? soundSources = null,
+            string? sourcePath = null)
         {
             UserDefined = userDefined;
-            Weather = weather;
+            WeatherProfiles = weatherProfiles ?? EmptyWeatherProfiles;
+            var trimmedWeatherId = defaultWeatherProfileId?.Trim();
+            DefaultWeatherProfileId = string.IsNullOrWhiteSpace(trimmedWeatherId)
+                ? TrackWeatherProfile.DefaultProfileId
+                : trimmedWeatherId!;
             Ambience = ambience;
             Definitions = definitions;
             Laps = laps;
@@ -151,6 +213,43 @@ namespace TopSpeed.Data
             SoundSources = soundSources ?? EmptySounds;
             var trimmedSourcePath = sourcePath?.Trim();
             SourcePath = string.IsNullOrWhiteSpace(trimmedSourcePath) ? null : trimmedSourcePath;
+        }
+
+        public bool TryGetWeatherProfile(string? profileId, out TrackWeatherProfile profile)
+        {
+            var id = string.IsNullOrWhiteSpace(profileId) ? DefaultWeatherProfileId : profileId!.Trim();
+            if (WeatherProfiles.TryGetValue(id, out profile))
+                return true;
+
+            if (WeatherProfiles.TryGetValue(DefaultWeatherProfileId, out profile))
+                return true;
+
+            profile = TrackWeatherProfile.CreatePreset(TrackWeatherProfile.DefaultProfileId, TrackWeather.Sunny);
+            return false;
+        }
+
+        public TrackWeatherProfile ResolveWeatherProfile(string? profileId)
+        {
+            return TryGetWeatherProfile(profileId, out var profile)
+                ? profile
+                : TrackWeatherProfile.CreatePreset(TrackWeatherProfile.DefaultProfileId, TrackWeather.Sunny);
+        }
+
+        public TrackData WithLaps(byte laps)
+        {
+            return new TrackData(
+                UserDefined,
+                DefaultWeatherProfileId,
+                WeatherProfiles,
+                Ambience,
+                Definitions,
+                laps,
+                Name,
+                Version,
+                Metadata,
+                RoomProfiles,
+                SoundSources,
+                SourcePath);
         }
     }
 }

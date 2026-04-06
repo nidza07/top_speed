@@ -166,11 +166,20 @@ namespace TopSpeed.Vehicles
 
         private void ApplyStalledDecel(float elapsed)
         {
-            var surfaceDecelMod = _deceleration > 0f ? _currentDeceleration / _deceleration : 1.0f;
             var brakeInput = Math.Max(0f, Math.Min(100f, -_currentBrake)) / 100f;
-            var brakeDecel = CalculateBrakeDecel(brakeInput, surfaceDecelMod);
-            var rollingDecel = Math.Max(0.1f, _currentDeceleration * 0.35f);
-            _speedDiff = -(brakeDecel + rollingDecel) * elapsed;
+            var brakeDecel = CalculateBrakeDecel(brakeInput, ResolveSurfaceBrakeModifier());
+            var resistance = ResistanceModel.Compute(
+                _powertrainConfiguration,
+                Math.Max(0f, _speed / 3.6f),
+                ResolveSurfaceRollingResistanceModifier(),
+                applyDrivelineDrag: false,
+                drivelineCouplingFactor: 0f,
+                gear: GetDriveGear(),
+                inReverse: _gear == ReverseGear,
+                isNeutral: true,
+                _track.GetResistanceEnvironment());
+            var passiveDecel = ((resistance.AerodynamicForceN + resistance.RollingResistanceForceN) / Math.Max(1f, _massKg)) * 3.6f;
+            _speedDiff = -(brakeDecel + passiveDecel) * elapsed;
             _lastDriveRpm = 0f;
         }
     }

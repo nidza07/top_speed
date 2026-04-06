@@ -54,9 +54,11 @@ namespace TopSpeed.Vehicles.Parsing
         {
             values.DragCoefficient = RequireFloatRange(section, "drag_coefficient", 0.01f, 1.5f, issues);
             values.FrontalArea = RequireFloatRange(section, "frontal_area", 0.05f, 10f, issues);
+            values.SideArea = RequireFloatRange(section, "side_area", 0.05f, 20f, issues);
             values.RollingResistance = RequireFloatRange(section, "rolling_resistance", 0.001f, 0.1f, issues);
-            values.CoastDragBaseMps2 = RequireFloatRange(section, "coast_base_mps2", 0f, 30f, issues);
-            values.CoastDragLinearPerMps = RequireFloatRange(section, "coast_linear_per_mps", 0f, 3f, issues);
+            values.RollingResistanceSpeedFactor = RequireFloatRange(section, "rolling_speed_factor", 0f, 1f, issues);
+            values.CoupledDrivelineDragNm = RequireFloatRange(section, "driveline_drag_nm", 0f, 2000f, issues);
+            values.CoupledDrivelineViscousDragNmPerKrpm = RequireFloatRange(section, "driveline_viscous_drag_nm_per_krpm", 0f, 500f, issues);
         }
 
         private static void ParseDrivetrainValues(Section section, ParsedValues values, List<VehicleTsvIssue> issues)

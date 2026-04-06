@@ -28,8 +28,10 @@ namespace TopSpeed.Tracks
         private readonly bool _userDefined;
         private readonly TrackDefinition[] _definition;
         private readonly int _segmentCount;
-        private readonly TrackWeather _weather;
+        private readonly TrackWeather _defaultWeatherKind;
         private readonly TrackAmbience _ambience;
+        private readonly string _defaultWeatherProfileId;
+        private readonly IReadOnlyDictionary<string, TrackWeatherProfile> _weatherProfiles;
         private readonly IReadOnlyDictionary<string, TrackRoomDefinition> _roomProfiles;
         private readonly IReadOnlyDictionary<string, TrackSoundSourceDefinition> _soundDefinitions;
         private readonly Dictionary<string, int> _segmentIndexById;
@@ -59,6 +61,12 @@ namespace TopSpeed.Tracks
         private float _ambientVolumeScale;
         private int _activeAudioSegmentIndex;
         private RoomAcoustics _activeRoomAcoustics;
+        private TrackWeatherProfile _activeWeatherProfile;
+        private TrackWeatherProfile _weatherTransitionFrom;
+        private TrackWeatherProfile _weatherTransitionTo;
+        private float _weatherTransitionSeconds;
+        private float _weatherTransitionElapsedSeconds;
+        private DateTime _lastWeatherUpdateUtc;
 
         private AudioSourceHandle? _soundCrowd;
         private AudioSourceHandle? _soundOcean;
@@ -85,8 +93,10 @@ namespace TopSpeed.Tracks
             _laneWidth = LaneWidthMeters;
             UpdateCurveScale();
             _callLength = CallLengthMeters;
-            _weather = data.Weather;
+            _defaultWeatherKind = data.Weather;
             _ambience = data.Ambience;
+            _defaultWeatherProfileId = data.DefaultWeatherProfileId;
+            _weatherProfiles = data.WeatherProfiles;
             _definition = data.Definitions;
             _segmentCount = _definition.Length;
             _roomProfiles = data.RoomProfiles;
@@ -102,6 +112,10 @@ namespace TopSpeed.Tracks
             _ambientVolumeScale = 1f;
             _activeAudioSegmentIndex = -1;
             _activeRoomAcoustics = RoomAcoustics.Default;
+            _activeWeatherProfile = ResolveWeatherProfile(0);
+            _weatherTransitionFrom = _activeWeatherProfile;
+            _weatherTransitionTo = _activeWeatherProfile;
+            _lastWeatherUpdateUtc = DateTime.UtcNow;
 
             InitializeSounds();
             InitializeTrackSoundSources();
@@ -111,7 +125,7 @@ namespace TopSpeed.Tracks
         public float Length => _lapDistance;
         public int SegmentCount => _segmentCount;
         public float LapDistance => _lapDistance;
-        public TrackWeather Weather => _weather;
+        public TrackWeather Weather => _defaultWeatherKind;
         public TrackAmbience Ambience => _ambience;
         public bool UserDefined => _userDefined;
         public float LaneWidth => _laneWidth;

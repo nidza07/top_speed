@@ -15,6 +15,8 @@ namespace TopSpeed.Data
             public float Length;
             public float Width;
             public float Height;
+            public string? WeatherProfileId;
+            public float WeatherTransitionSeconds;
             public string? RoomId;
             public TrackRoomOverrides RoomOverrides;
             public IReadOnlyList<string> SoundSourceIds;
@@ -31,11 +33,69 @@ namespace TopSpeed.Data
                     Length = 50.0f,
                     Width = 10.0f,
                     Height = 0f,
+                    WeatherProfileId = null,
+                    WeatherTransitionSeconds = 0f,
                     RoomId = null,
                     RoomOverrides = new TrackRoomOverrides(),
                     SoundSourceIds = Array.Empty<string>(),
                     Metadata = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase)
                 };
+            }
+        }
+
+        private struct WeatherBuilder
+        {
+            public string Id;
+            public TrackWeather Kind;
+            public float LongitudinalWindMps;
+            public float LateralWindMps;
+            public float AirDensityKgPerM3;
+            public float DraftingFactor;
+            public float TemperatureC;
+            public float Humidity;
+            public float PressureKpa;
+            public float VisibilityM;
+            public float RainGain;
+            public float WindGain;
+            public float StormGain;
+
+            public static WeatherBuilder Create(string id)
+            {
+                var profile = TrackWeatherProfile.CreatePreset(id, TrackWeather.Sunny);
+                return new WeatherBuilder
+                {
+                    Id = profile.Id,
+                    Kind = profile.Kind,
+                    LongitudinalWindMps = profile.LongitudinalWindMps,
+                    LateralWindMps = profile.LateralWindMps,
+                    AirDensityKgPerM3 = profile.AirDensityKgPerM3,
+                    DraftingFactor = profile.DraftingFactor,
+                    TemperatureC = profile.TemperatureC,
+                    Humidity = profile.Humidity,
+                    PressureKpa = profile.PressureKpa,
+                    VisibilityM = profile.VisibilityM,
+                    RainGain = profile.RainGain,
+                    WindGain = profile.WindGain,
+                    StormGain = profile.StormGain
+                };
+            }
+
+            public TrackWeatherProfile Build()
+            {
+                return new TrackWeatherProfile(
+                    Id,
+                    Kind,
+                    LongitudinalWindMps,
+                    LateralWindMps,
+                    AirDensityKgPerM3,
+                    DraftingFactor,
+                    TemperatureC,
+                    Humidity,
+                    PressureKpa,
+                    VisibilityM,
+                    RainGain,
+                    WindGain,
+                    StormGain);
             }
         }
 

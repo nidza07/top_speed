@@ -42,10 +42,12 @@ namespace TopSpeed.Data
         public float RedlineTorqueNm { get; }
         public float DragCoefficient { get; }
         public float FrontalAreaM2 { get; }
+        public float SideAreaM2 { get; }
         public float RollingResistanceCoefficient { get; }
+        public float RollingResistanceSpeedFactor { get; }
         public float LaunchRpm { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float EngineInertiaKgm2 { get; }
         public float EngineFrictionTorqueNm { get; }
         public float EngineFrictionLinearNmPerKrpm { get; }
@@ -129,10 +131,12 @@ namespace TopSpeed.Data
             float redlineTorqueNm = 140f,
             float dragCoefficient = 0.30f,
             float frontalAreaM2 = 2.2f,
+            float sideAreaM2 = -1f,
             float rollingResistanceCoefficient = 0.015f,
+            float rollingResistanceSpeedFactor = -1f,
             float launchRpm = 1800f,
-            float coastDragBaseMps2 = -1f,
-            float coastDragLinearPerMps = -1f,
+            float coupledDrivelineDragNm = -1f,
+            float coupledDrivelineViscousDragNmPerKrpm = -1f,
             float engineInertiaKgm2 = 0.24f,
             float engineFrictionTorqueNm = 20f,
             float engineFrictionLinearNmPerKrpm = -1f,
@@ -221,10 +225,12 @@ namespace TopSpeed.Data
             RedlineTorqueNm = redlineTorqueNm;
             DragCoefficient = dragCoefficient;
             FrontalAreaM2 = frontalAreaM2;
-            RollingResistanceCoefficient = rollingResistanceCoefficient;        
+            SideAreaM2 = sideAreaM2;
+            RollingResistanceCoefficient = rollingResistanceCoefficient;
+            RollingResistanceSpeedFactor = rollingResistanceSpeedFactor;
             LaunchRpm = launchRpm;
-            CoastDragBaseMps2 = coastDragBaseMps2;
-            CoastDragLinearPerMps = coastDragLinearPerMps;
+            CoupledDrivelineDragNm = coupledDrivelineDragNm;
+            CoupledDrivelineViscousDragNmPerKrpm = coupledDrivelineViscousDragNmPerKrpm;
             EngineInertiaKgm2 = engineInertiaKgm2;
             EngineFrictionTorqueNm = engineFrictionTorqueNm;
             EngineFrictionLinearNmPerKrpm = engineFrictionLinearNmPerKrpm;
@@ -319,10 +325,12 @@ namespace TopSpeed.Data
                 spec.RedlineTorqueNm,
                 spec.DragCoefficient,
                 spec.FrontalAreaM2,
+                spec.SideAreaM2,
                 spec.RollingResistanceCoefficient,
+                spec.RollingResistanceSpeedFactor,
                 spec.LaunchRpm,
-                spec.CoastDragBaseMps2,
-                spec.CoastDragLinearPerMps,
+                spec.CoupledDrivelineDragNm,
+                spec.CoupledDrivelineViscousDragNmPerKrpm,
                 spec.EngineInertiaKgm2,
                 spec.EngineFrictionTorqueNm,
                 spec.FrictionLinearNmPerKrpm,

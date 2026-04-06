@@ -43,16 +43,19 @@ namespace TopSpeed.Vehicles
                     throttle,
                     brake: 0f,
                     surfaceTractionModifier: surfaceTractionMod,
-                    surfaceDecelerationModifier: 1f,
+                    surfaceBrakeModifier: ResolveSurfaceBrakeModifier(),
+                    surfaceRollingResistanceModifier: ResolveSurfaceRollingResistanceModifier(),
                     longitudinalGripFactor,
                     GetDriveGear(),
                     inReverse,
+                    isNeutral: false,
                     drivelineCouplingFactor,
                     creepAccelerationMps2: 0f,
                     currentEngineRpm: _engine.Rpm,
                     requestDrive: true,
                     requestBrake: false,
                     applyEngineBraking: false,
+                    resistanceEnvironment: _track.GetResistanceEnvironment(),
                     driveRatioOverride: _effectiveDriveRatioOverride > 0f ? _effectiveDriveRatioOverride : (float?)null,
                     driveAccelerationScale: _factor1 / 100f));
             _speedDiff = result.SpeedDeltaKph;
@@ -87,16 +90,19 @@ namespace TopSpeed.Vehicles
                     throttle: 0f,
                     brake: 0f,
                     surfaceTractionModifier: 1f,
-                    surfaceDecelerationModifier: ResolveSurfaceDecelModifier(),
+                    surfaceBrakeModifier: ResolveSurfaceBrakeModifier(),
+                    surfaceRollingResistanceModifier: ResolveSurfaceRollingResistanceModifier(),
                     longitudinalGripFactor: 1f,
                     GetDriveGear(),
                     inReverse,
+                    isNeutral: false,
                     drivelineCouplingFactor,
                     creepAccelerationMps2: 0f,
                     currentEngineRpm: _engine.Rpm,
                     requestDrive: false,
                     requestBrake: false,
                     applyEngineBraking: true,
+                    resistanceEnvironment: _track.GetResistanceEnvironment(),
                     driveRatioOverride: _effectiveDriveRatioOverride > 0f ? _effectiveDriveRatioOverride : (float?)null));
             _speedDiff = result.SpeedDeltaKph;
             _lastDriveRpm = 0f;
@@ -104,7 +110,6 @@ namespace TopSpeed.Vehicles
 
         private void ApplyCoastDecel(float elapsed)
         {
-            var surfaceDecelMod = ResolveSurfaceDecelModifier();
             var brakeInput = Math.Max(0f, Math.Min(100f, -_currentBrake)) / 100f;
             var result = LongitudinalStep.Compute(
                 new LongitudinalStepInput(
@@ -114,24 +119,32 @@ namespace TopSpeed.Vehicles
                     throttle: 0f,
                     brake: brakeInput,
                     surfaceTractionModifier: 1f,
-                    surfaceDecelerationModifier: surfaceDecelMod,
+                    surfaceBrakeModifier: ResolveSurfaceBrakeModifier(),
+                    surfaceRollingResistanceModifier: ResolveSurfaceRollingResistanceModifier(),
                     longitudinalGripFactor: 1f,
                     GetDriveGear(),
                     _gear == ReverseGear,
+                    IsNeutralGear(),
                     _drivelineCouplingFactor,
                     _automaticCreepAccelMps2,
                     _engine.Rpm,
                     requestDrive: false,
                     requestBrake: _thrust < -10,
                     applyEngineBraking: !IsNeutralGear() && _drivelineCouplingFactor > 0.05f,
+                    resistanceEnvironment: _track.GetResistanceEnvironment(),
                     driveRatioOverride: _effectiveDriveRatioOverride > 0f ? _effectiveDriveRatioOverride : (float?)null));
             _speedDiff = result.SpeedDeltaKph;
             _lastDriveRpm = 0f;
         }
 
-        private float ResolveSurfaceDecelModifier()
+        private float ResolveSurfaceBrakeModifier()
         {
-            return _deceleration > 0f ? _currentDeceleration / _deceleration : 1.0f;
+            return _deceleration > 0f ? _currentSurfaceBrakeFactor / _deceleration : 1.0f;
+        }
+
+        private float ResolveSurfaceRollingResistanceModifier()
+        {
+            return _currentSurfaceRollingResistanceFactor > 0f ? _currentSurfaceRollingResistanceFactor : 1.0f;
         }
 
         private void ClampSpeedAndTransmission(

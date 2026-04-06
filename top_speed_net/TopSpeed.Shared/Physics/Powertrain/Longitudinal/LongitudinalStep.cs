@@ -18,7 +18,7 @@ namespace TopSpeed.Physics.Powertrain
         public static LongitudinalStepResult Compute(in LongitudinalStepInput input)
         {
             if (input.ElapsedSeconds <= 0f)
-                return new LongitudinalStepResult(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
+                return new LongitudinalStepResult(0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f, 0f);
 
             if (input.RequestDrive)
                 return ComputeDrive(in input);
@@ -37,7 +37,9 @@ namespace TopSpeed.Physics.Powertrain
                     input.SpeedMps,
                     throttle,
                     input.SurfaceTractionModifier,
-                    input.LongitudinalGripFactor)
+                    input.LongitudinalGripFactor,
+                    input.SurfaceRollingResistanceModifier,
+                    input.ResistanceEnvironment)
                 : Calculator.DriveAccel(
                     input.Config,
                     input.Gear,
@@ -45,10 +47,25 @@ namespace TopSpeed.Physics.Powertrain
                     throttle,
                     input.SurfaceTractionModifier,
                     input.LongitudinalGripFactor,
+                    input.SurfaceRollingResistanceModifier,
+                    input.ResistanceEnvironment,
                     input.DriveRatioOverride);
 
-            accelMps2 *= coupling;
-            accelMps2 *= driveScale;
+            var resistance = ResistanceModel.Compute(
+                input.Config,
+                input.SpeedMps,
+                input.SurfaceRollingResistanceModifier,
+                applyDrivelineDrag: true,
+                coupling,
+                input.Gear,
+                input.InReverse,
+                input.IsNeutral,
+                input.ResistanceEnvironment,
+                input.DriveRatioOverride);
+            var aerodynamicDecelKph = ForceToKphPerSecond(input.Config, resistance.AerodynamicForceN);
+            var rollingResistanceDecelKph = ForceToKphPerSecond(input.Config, resistance.RollingResistanceForceN);
+            var drivelineDragDecelKph = ForceToKphPerSecond(input.Config, resistance.DrivelineDragForceN);
+            accelMps2 = (accelMps2 * coupling * driveScale) - ForceToMps2(input.Config, resistance.DrivelineDragForceN);
 
             var newSpeedMps = Math.Max(0f, input.SpeedMps + (accelMps2 * input.ElapsedSeconds));
             var speedDeltaKph = (newSpeedMps - input.SpeedMps) * 3.6f;
@@ -57,18 +74,19 @@ namespace TopSpeed.Physics.Powertrain
                 speedDeltaKph,
                 coupledDriveRpm,
                 accelMps2,
-                totalDecelKph: 0f,
+                totalDecelKph: Math.Max(0f, aerodynamicDecelKph + rollingResistanceDecelKph + drivelineDragDecelKph),
                 brakeDecelKph: 0f,
                 engineBrakeDecelKph: 0f,
-                passiveResistanceDecelKph: 0f,
-                chassisCoastDecelKph: 0f);
+                aerodynamicDecelKph,
+                rollingResistanceDecelKph,
+                drivelineDragDecelKph);
         }
 
         private static LongitudinalStepResult ComputeCoast(in LongitudinalStepInput input)
         {
             var brakeInput = Clamp(input.Brake, 0f, 1f);
             var brakeDecel = input.RequestBrake
-                ? Calculator.BrakeDecelKph(input.Config, brakeInput, input.SurfaceDecelerationModifier)
+                ? Calculator.BrakeDecelKph(input.Config, brakeInput, input.SurfaceBrakeModifier)
                 : 0f;
             var engineBrakeDecel = input.ApplyEngineBraking
                 ? Calculator.EngineBrakeDecelKph(
@@ -76,13 +94,25 @@ namespace TopSpeed.Physics.Powertrain
                     input.Gear,
                     input.InReverse,
                     input.SpeedMps,
-                    input.SurfaceDecelerationModifier,
+                    input.SurfaceBrakeModifier,
                     input.CurrentEngineRpm,
                     input.DriveRatioOverride)
                 : 0f;
-            var passiveResistanceDecel = Calculator.PassiveResistanceDecelKph(input.Config, input.SpeedMps, input.SurfaceDecelerationModifier);
-            var chassisCoastDecel = Calculator.ChassisCoastDecelKph(input.Config, input.SpeedMps, input.SurfaceDecelerationModifier);
-            var totalDecelKph = passiveResistanceDecel + chassisCoastDecel + engineBrakeDecel + brakeDecel;
+            var resistance = ResistanceModel.Compute(
+                input.Config,
+                input.SpeedMps,
+                input.SurfaceRollingResistanceModifier,
+                applyDrivelineDrag: true,
+                input.DrivelineCouplingFactor,
+                input.Gear,
+                input.InReverse,
+                input.IsNeutral,
+                input.ResistanceEnvironment,
+                input.DriveRatioOverride);
+            var aerodynamicDecelKph = ForceToKphPerSecond(input.Config, resistance.AerodynamicForceN);
+            var rollingResistanceDecelKph = ForceToKphPerSecond(input.Config, resistance.RollingResistanceForceN);
+            var drivelineDragDecelKph = ForceToKphPerSecond(input.Config, resistance.DrivelineDragForceN);
+            var totalDecelKph = aerodynamicDecelKph + rollingResistanceDecelKph + drivelineDragDecelKph + engineBrakeDecel + brakeDecel;
             var creepDeltaKph = Math.Max(0f, input.CreepAccelerationMps2) * input.ElapsedSeconds * 3.6f;
             var speedDeltaKph = (-totalDecelKph * input.ElapsedSeconds) + creepDeltaKph;
             return new LongitudinalStepResult(
@@ -92,8 +122,9 @@ namespace TopSpeed.Physics.Powertrain
                 totalDecelKph,
                 brakeDecelKph: brakeDecel,
                 engineBrakeDecelKph: engineBrakeDecel,
-                passiveResistanceDecelKph: passiveResistanceDecel,
-                chassisCoastDecelKph: chassisCoastDecel);
+                aerodynamicDecelKph,
+                rollingResistanceDecelKph,
+                drivelineDragDecelKph);
         }
 
         private static float CoupledRpm(
@@ -123,6 +154,16 @@ namespace TopSpeed.Physics.Powertrain
             if (value > max)
                 return max;
             return value;
+        }
+
+        private static float ForceToMps2(Config config, float forceN)
+        {
+            return config.MassKg > 0f ? forceN / config.MassKg : 0f;
+        }
+
+        private static float ForceToKphPerSecond(Config config, float forceN)
+        {
+            return ForceToMps2(config, forceN) * 3.6f;
         }
     }
 }

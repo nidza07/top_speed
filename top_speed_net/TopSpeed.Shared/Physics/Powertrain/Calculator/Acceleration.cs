@@ -11,6 +11,8 @@ namespace TopSpeed.Physics.Powertrain
             float throttle,
             float surfaceTractionModifier,
             float longitudinalGripFactor,
+            float rollingResistanceModifier,
+            ResistanceEnvironment resistanceEnvironment,
             float? driveRatioOverride = null)
         {
             return DriveAccelCore(
@@ -21,6 +23,8 @@ namespace TopSpeed.Physics.Powertrain
                 throttle,
                 surfaceTractionModifier,
                 longitudinalGripFactor,
+                rollingResistanceModifier,
+                resistanceEnvironment,
                 driveRatioOverride);
         }
 
@@ -29,7 +33,9 @@ namespace TopSpeed.Physics.Powertrain
             float speedMps,
             float throttle,
             float surfaceTractionModifier,
-            float longitudinalGripFactor)
+            float longitudinalGripFactor,
+            float rollingResistanceModifier,
+            ResistanceEnvironment resistanceEnvironment)
         {
             return DriveAccelCore(
                 config,
@@ -38,7 +44,9 @@ namespace TopSpeed.Physics.Powertrain
                 speedMps,
                 throttle,
                 surfaceTractionModifier,
-                longitudinalGripFactor);
+                longitudinalGripFactor,
+                rollingResistanceModifier,
+                resistanceEnvironment);
         }
 
         private static float DriveAccelCore(
@@ -49,6 +57,8 @@ namespace TopSpeed.Physics.Powertrain
             float throttle,
             float surfaceTractionModifier,
             float longitudinalGripFactor,
+            float rollingResistanceModifier,
+            ResistanceEnvironment resistanceEnvironment,
             float? driveRatioOverride = null)
         {
             if (config == null)
@@ -74,7 +84,18 @@ namespace TopSpeed.Physics.Powertrain
             if (inReverse)
                 wheelForce *= config.ReversePowerFactor;
 
-            var netForce = wheelForce - ResistiveForce(config, speedMps);
+            var passiveResistance = ResistanceModel.Compute(
+                config,
+                speedMps,
+                rollingResistanceModifier,
+                applyDrivelineDrag: false,
+                drivelineCouplingFactor: 0f,
+                gear,
+                inReverse,
+                isNeutral: false,
+                resistanceEnvironment,
+                driveRatioOverride);
+            var netForce = wheelForce - passiveResistance.AerodynamicForceN - passiveResistance.RollingResistanceForceN;
             return netForce / config.MassKg;
         }
     }

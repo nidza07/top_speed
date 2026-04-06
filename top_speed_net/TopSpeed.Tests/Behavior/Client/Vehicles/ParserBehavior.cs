@@ -41,8 +41,10 @@ namespace TopSpeed.Tests
 
             ok.Should().BeTrue(DescribeIssues(issues));
             issues.Select(x => x.Severity).Should().NotContain(VehicleTsvIssueSeverity.Error);
-            data.CoastDragBaseMps2.Should().BeApproximately(1.9f, 0.001f);
-            data.CoastDragLinearPerMps.Should().BeApproximately(0.22f, 0.001f);
+            data.SideAreaM2.Should().BeApproximately(3.9f, 0.001f);
+            data.RollingResistanceSpeedFactor.Should().BeApproximately(0.014f, 0.001f);
+            data.CoupledDrivelineDragNm.Should().BeApproximately(22f, 0.001f);
+            data.CoupledDrivelineViscousDragNmPerKrpm.Should().BeApproximately(7.5f, 0.001f);
             data.EngineOverrunIdleLossFraction.Should().BeApproximately(0.25f, 0.001f);
             data.OverrunCurveExponent.Should().BeApproximately(1.35f, 0.001f);
             data.EngineBrakeTransferEfficiency.Should().BeApproximately(0.64f, 0.001f);
@@ -175,9 +177,11 @@ brake_transfer_efficiency=0.64
 [resistance]
 drag_coefficient=0.3
 frontal_area=2.2
+side_area=3.9
 rolling_resistance=0.015
-coast_base_mps2=1.9
-coast_linear_per_mps=0.22
+rolling_speed_factor=0.014
+driveline_drag_nm=22
+driveline_viscous_drag_nm_per_krpm=7.5
 
 [torque_curve]
 700rpm=120

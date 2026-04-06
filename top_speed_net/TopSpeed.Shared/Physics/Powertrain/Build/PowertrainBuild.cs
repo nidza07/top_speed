@@ -6,13 +6,18 @@ namespace TopSpeed.Physics.Powertrain
     {
         public static BuildResult Create(in BuildInput input)
         {
-            var deceleration = Math.Max(0.01f, input.Deceleration);
-            var coastDragBaseMps2 = input.CoastDragBaseMps2 >= 0f
-                ? input.CoastDragBaseMps2
-                : Math.Min(0.18f, Math.Max(0.08f, deceleration * 0.50f));
-            var coastDragLinearPerMps = input.CoastDragLinearPerMps >= 0f
-                ? input.CoastDragLinearPerMps
-                : Math.Min(0.010f, Math.Max(0.003f, deceleration * 0.015f));
+            var sideAreaM2 = input.SideAreaM2 > 0f
+                ? input.SideAreaM2
+                : Math.Max(0.1f, input.FrontalAreaM2 * 1.8f);
+            var rollingResistanceSpeedFactor = input.RollingResistanceSpeedFactor >= 0f
+                ? input.RollingResistanceSpeedFactor
+                : 0.01f;
+            var coupledDrivelineDragNm = input.CoupledDrivelineDragNm >= 0f
+                ? input.CoupledDrivelineDragNm
+                : 18f;
+            var coupledDrivelineViscousDragNmPerKrpm = input.CoupledDrivelineViscousDragNmPerKrpm >= 0f
+                ? input.CoupledDrivelineViscousDragNmPerKrpm
+                : 6f;
             var frictionLinearNmPerKrpm = input.FrictionLinearNmPerKrpm >= 0f ? input.FrictionLinearNmPerKrpm : 0f;
             var frictionQuadraticNmPerKrpm2 = input.FrictionQuadraticNmPerKrpm2 >= 0f ? input.FrictionQuadraticNmPerKrpm2 : 0f;
             var idleControlWindowRpm = input.IdleControlWindowRpm >= 0f ? input.IdleControlWindowRpm : 150f;
@@ -46,7 +51,9 @@ namespace TopSpeed.Physics.Powertrain
                 input.RedlineTorqueNm,
                 input.DragCoefficient,
                 input.FrontalAreaM2,
+                sideAreaM2,
                 input.RollingResistanceCoefficient,
+                rollingResistanceSpeedFactor,
                 input.LaunchRpm,
                 input.ReversePowerFactor,
                 input.ReverseGearRatio,
@@ -56,8 +63,8 @@ namespace TopSpeed.Physics.Powertrain
                 gears,
                 gearRatios,
                 input.TorqueCurve,
-                coastDragBaseMps2: coastDragBaseMps2,
-                coastDragLinearPerMps: coastDragLinearPerMps,
+                coupledDrivelineDragNm: coupledDrivelineDragNm,
+                coupledDrivelineViscousDragNmPerKrpm: coupledDrivelineViscousDragNmPerKrpm,
                 engineFrictionLinearNmPerKrpm: frictionLinearNmPerKrpm,
                 engineFrictionQuadraticNmPerKrpm2: frictionQuadraticNmPerKrpm2,
                 idleControlWindowRpm: idleControlWindowRpm,
@@ -72,8 +79,8 @@ namespace TopSpeed.Physics.Powertrain
                 powertrain,
                 reverseMaxSpeedKph,
                 powertrain.GetGearRatios(),
-                powertrain.CoastDragBaseMps2,
-                powertrain.CoastDragLinearPerMps,
+                powertrain.CoupledDrivelineDragNm,
+                powertrain.CoupledDrivelineViscousDragNmPerKrpm,
                 powertrain.EngineFrictionLinearNmPerKrpm,
                 powertrain.EngineFrictionQuadraticNmPerKrpm2,
                 powertrain.IdleControlWindowRpm,

@@ -5,7 +5,7 @@ namespace TopSpeed.Vehicles
     public static partial class OfficialVehicleCatalog
     {
         private static readonly float[] GtrRatios = { 3.60f, 2.32f, 1.68f, 1.31f, 1.04f, 0.89f };
-        private static readonly float[] Gt3RsRatios = { 3.90f, 2.45f, 1.78f, 1.42f, 1.16f, 0.98f, 0.90f };
+        private static readonly float[] Gt3RsRatios = { 3.90f, 2.45f, 1.78f, 1.42f, 1.16f, 1.00f, 0.92f };
         private static readonly float[] Fiat500Ratios = { 3.91f, 2.24f, 1.52f, 1.15f, 1.00f };
         private static readonly float[] MiniCooperSRatios = { 3.58f, 2.10f, 1.48f, 1.17f, 0.96f, 0.84f };
         private static readonly float[] Mustang69Ratios = { 2.75f, 1.90f, 1.34f, 1.08f };
@@ -13,9 +13,9 @@ namespace TopSpeed.Vehicles
         private static readonly float[] AventadorRatios = { 2.95f, 1.95f, 1.46f, 1.19f, 1.00f, 0.90f, 0.84f };
         private static readonly float[] Bmw3SeriesRatios = { 5.00f, 3.20f, 2.14f, 1.72f, 1.31f, 1.00f, 0.86f, 0.74f };
         private static readonly float[] SprinterRatios = { 5.10f, 3.25f, 2.10f, 1.49f, 1.0000f, 0.8200f, 0.7000f };
-        private static readonly float[] Zx10rRatios = { 2.60f, 1.95f, 1.60f, 1.39f, 1.27f, 1.18f };
-        private static readonly float[] PanigaleV4Ratios = { 2.47f, 1.86f, 1.53f, 1.36f, 1.24f, 1.15f };
-        private static readonly float[] R1Ratios = { 2.57f, 1.95f, 1.61f, 1.39f, 1.28f, 1.19f };
+        private static readonly float[] Zx10rRatios = { 2.60f, 2.00f, 1.67f, 1.45f, 1.32f, 1.24f };
+        private static readonly float[] PanigaleV4Ratios = { 2.47f, 1.92f, 1.61f, 1.42f, 1.29f, 1.20f };
+        private static readonly float[] R1Ratios = { 2.57f, 2.00f, 1.67f, 1.45f, 1.32f, 1.23f };
         private static readonly float[] Auto8Upshifts = { 0f, 0f, 0f, 0f, 0.18f, 0.24f, 0.30f, 0.34f };
         private static readonly float[] Auto7Upshifts = { 0f, 0f, 0f, 0f, 0.18f, 0.24f, 0.28f };
         private static readonly float[] Auto6Upshifts = { 0f, 0f, 0f, 0f, 0.20f, 0.26f };
@@ -70,8 +70,12 @@ namespace TopSpeed.Vehicles
                 automaticTuning: DctTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(5, true, Auto6Upshifts, upshiftRpmFraction: 0.88f),
-                coastDragBaseMps2: 0.21f,
-                coastDragLinearPerMps: 0.011f),
+                sideAreaM2: 4.02f,
+                rollingResistanceSpeedFactor: 0.011f,
+                coupledDrivelineDragNm: 16.8f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.9f,
+                engineOverrunIdleLossFraction: 0.33f,
+                engineBrakeTransferEfficiency: 0.68f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle2, "Porsche 911 GT3 RS",
@@ -80,12 +84,12 @@ namespace TopSpeed.Vehicles
                 idleRpm: 950f, maxRpm: 9000f, revLimiter: 8500f, autoShiftRpm: 8500f * 0.92f, engineBraking: 0.20f,
                 massKg: 1450f, drivetrainEfficiency: 0.85f, engineBrakingTorqueNm: 465f, tireGripCoefficient: 1.05f,
                 peakTorqueNm: 465f, peakTorqueRpm: 6250f, idleTorqueNm: 465f * 0.3f, redlineTorqueNm: 465f * 0.6f,
-                dragCoefficient: 0.29f, frontalAreaM2: 1.98f, rollingResistanceCoefficient: 0.013f, launchRpm: 3000f,
+                dragCoefficient: 0.29f, frontalAreaM2: 2.02f, rollingResistanceCoefficient: 0.0130f, launchRpm: 3000f,
                 engineInertiaKgm2: 0.24f, engineFrictionTorqueNm: 20f, drivelineCouplingRate: 12f,
                 finalDriveRatio: 4.45f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(325, 30, 21), lateralGripCoefficient: 1.0f, highSpeedStability: 0.24f,
                 wheelbaseM: 2.456f, maxSteerDeg: 35f, widthM: 1.852f, lengthM: 4.572f,
-                powerFactor: 0.70f, gearRatios: Gt3RsRatios!, brakeStrength: 1.0f,
+                powerFactor: 0.74f, gearRatios: Gt3RsRatios!, brakeStrength: 1.0f,
                 highSpeedSteerGain: 0.93f, highSpeedSteerStartKph: 150f, highSpeedSteerFullKph: 250f,
                 combinedGripPenalty: 0.71f, slipAnglePeakDeg: 8.0f, slipAngleFalloff: 1.18f,
                 turnResponse: 0.98f, massSensitivity: 0.66f, downforceGripGain: 0.11f,
@@ -94,8 +98,12 @@ namespace TopSpeed.Vehicles
                 automaticTuning: DctTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(5, true, Auto7Upshifts, upshiftRpmFraction: 0.85f),
-                coastDragBaseMps2: 0.19f,
-                coastDragLinearPerMps: 0.011f),
+                sideAreaM2: 3.62f,
+                rollingResistanceSpeedFactor: 0.0108f,
+                coupledDrivelineDragNm: 15.5f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.4f,
+                engineOverrunIdleLossFraction: 0.27f,
+                engineBrakeTransferEfficiency: 0.64f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle3, "Fiat 500",
@@ -116,8 +124,12 @@ namespace TopSpeed.Vehicles
                 cornerStiffnessFront: 0.92f, cornerStiffnessRear: 0.90f, yawInertiaScale: 1.36f, steeringCurve: 1.24f, transientDamping: 2.20f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(4, true, upshiftRpmFraction: 0.84f),
-                coastDragBaseMps2: 0.10f,
-                coastDragLinearPerMps: 0.006f),
+                sideAreaM2: 3.78f,
+                rollingResistanceSpeedFactor: 0.011f,
+                coupledDrivelineDragNm: 14.2f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.1f,
+                engineOverrunIdleLossFraction: 0.40f,
+                engineBrakeTransferEfficiency: 0.72f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle4, "Mini Cooper S",
@@ -138,8 +150,12 @@ namespace TopSpeed.Vehicles
                 cornerStiffnessFront: 0.98f, cornerStiffnessRear: 0.95f, yawInertiaScale: 1.32f, steeringCurve: 1.20f, transientDamping: 2.05f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(5, true, Auto6Upshifts, upshiftRpmFraction: 0.86f),
-                coastDragBaseMps2: 0.11f,
-                coastDragLinearPerMps: 0.007f),
+                sideAreaM2: 3.88f,
+                rollingResistanceSpeedFactor: 0.0115f,
+                coupledDrivelineDragNm: 15.1f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.4f,
+                engineOverrunIdleLossFraction: 0.37f,
+                engineBrakeTransferEfficiency: 0.71f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle5, "Ford Mustang 1969",
@@ -160,8 +176,12 @@ namespace TopSpeed.Vehicles
                 cornerStiffnessFront: 0.95f, cornerStiffnessRear: 0.90f, yawInertiaScale: 1.42f, steeringCurve: 1.24f, transientDamping: 2.25f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(4, false, upshiftRpmFraction: 0.84f),
-                coastDragBaseMps2: 0.12f,
-                coastDragLinearPerMps: 0.007f),
+                sideAreaM2: 4.55f,
+                rollingResistanceSpeedFactor: 0.0125f,
+                coupledDrivelineDragNm: 16.5f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.8f,
+                engineOverrunIdleLossFraction: 0.41f,
+                engineBrakeTransferEfficiency: 0.73f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle6, "Toyota Camry",
@@ -170,7 +190,7 @@ namespace TopSpeed.Vehicles
                 idleRpm: 700f, maxRpm: 5600f, revLimiter: 5000f, autoShiftRpm: 4600f, engineBraking: 0.28f,
                 massKg: 1470f, drivetrainEfficiency: 0.88f, engineBrakingTorqueNm: 250f, tireGripCoefficient: 0.90f,
                 peakTorqueNm: 250f, peakTorqueRpm: 3800f, idleTorqueNm: 250f * 0.4f, redlineTorqueNm: 250f * 0.90f,
-                dragCoefficient: 0.26f, frontalAreaM2: 2.2f, rollingResistanceCoefficient: 0.0125f, launchRpm: 2000f,
+                dragCoefficient: 0.27f, frontalAreaM2: 2.24f, rollingResistanceCoefficient: 0.0130f, launchRpm: 2000f,
                 engineInertiaKgm2: 0.24f, engineFrictionTorqueNm: 20f, drivelineCouplingRate: 12f,
                 finalDriveRatio: 4.60f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(215, 55, 17), lateralGripCoefficient: 1.0f, highSpeedStability: 0.32f,
@@ -184,8 +204,12 @@ namespace TopSpeed.Vehicles
                 automaticTuning: AtcTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(6, true, Auto8Upshifts, upshiftRpmFraction: 0.84f, minUpshiftNetAccelerationMps2: -0.12f),
-                coastDragBaseMps2: 0.20f,
-                coastDragLinearPerMps: 0.012f),
+                sideAreaM2: 4.12f,
+                rollingResistanceSpeedFactor: 0.012f,
+                coupledDrivelineDragNm: 15.5f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.6f,
+                engineOverrunIdleLossFraction: 0.36f,
+                engineBrakeTransferEfficiency: 0.70f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle7, "Lamborghini Aventador",
@@ -194,7 +218,7 @@ namespace TopSpeed.Vehicles
                 idleRpm: 1000f, maxRpm: 8500f, revLimiter: 8000f, autoShiftRpm: 8000f * 0.92f, engineBraking: 0.18f,
                 massKg: 1640f, drivetrainEfficiency: 0.80f, engineBrakingTorqueNm: 720f, tireGripCoefficient: 1.05f,
                 peakTorqueNm: 720f, peakTorqueRpm: 6200f, idleTorqueNm: 720f * 0.22f, redlineTorqueNm: 720f * 0.58f,
-                dragCoefficient: 0.30f, frontalAreaM2: 2.00f, rollingResistanceCoefficient: 0.0135f, launchRpm: 2400f,
+                dragCoefficient: 0.31f, frontalAreaM2: 2.06f, rollingResistanceCoefficient: 0.0137f, launchRpm: 2400f,
                 engineInertiaKgm2: 0.24f, engineFrictionTorqueNm: 20f, drivelineCouplingRate: 12f,
                 finalDriveRatio: 4.35f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(355, 25, 21), lateralGripCoefficient: 1.05f, highSpeedStability: 0.27f,
@@ -208,8 +232,12 @@ namespace TopSpeed.Vehicles
                 automaticTuning: DctTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(5, true, Auto7Upshifts, upshiftRpmFraction: 0.90f),
-                coastDragBaseMps2: 0.21f,
-                coastDragLinearPerMps: 0.012f),
+                sideAreaM2: 3.92f,
+                rollingResistanceSpeedFactor: 0.0115f,
+                coupledDrivelineDragNm: 17.0f,
+                coupledDrivelineViscousDragNmPerKrpm: 6.0f,
+                engineOverrunIdleLossFraction: 0.30f,
+                engineBrakeTransferEfficiency: 0.67f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle8, "BMW 3 Series",
@@ -218,7 +246,7 @@ namespace TopSpeed.Vehicles
                 idleRpm: 750f, maxRpm: 6500f, revLimiter: 6000f, autoShiftRpm: 6000f * 0.92f, engineBraking: 0.24f,
                 massKg: 1524f, drivetrainEfficiency: 0.85f, engineBrakingTorqueNm: 346f, tireGripCoefficient: 0.93f,
                 peakTorqueNm: 350f, peakTorqueRpm: 1250f, idleTorqueNm: 350f * 0.3f, redlineTorqueNm: 350f * 0.6f,
-                dragCoefficient: 0.25f, frontalAreaM2: 2.15f, rollingResistanceCoefficient: 0.0125f, launchRpm: 2000f,
+                dragCoefficient: 0.26f, frontalAreaM2: 2.18f, rollingResistanceCoefficient: 0.0130f, launchRpm: 2000f,
                 engineInertiaKgm2: 0.24f, engineFrictionTorqueNm: 20f, drivelineCouplingRate: 12f,
                 finalDriveRatio: 4.10f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(225, 50, 17), lateralGripCoefficient: 0.96f, highSpeedStability: 0.28f,
@@ -232,8 +260,12 @@ namespace TopSpeed.Vehicles
                 automaticTuning: AtcTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(6, true, Auto8Upshifts, upshiftRpmFraction: 0.80f, minUpshiftNetAccelerationMps2: -0.20f),
-                coastDragBaseMps2: 0.20f,
-                coastDragLinearPerMps: 0.011f),
+                sideAreaM2: 3.98f,
+                rollingResistanceSpeedFactor: 0.012f,
+                coupledDrivelineDragNm: 15.0f,
+                coupledDrivelineViscousDragNmPerKrpm: 5.4f,
+                engineOverrunIdleLossFraction: 0.34f,
+                engineBrakeTransferEfficiency: 0.69f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle9, "Mercedes Sprinter",
@@ -242,7 +274,7 @@ namespace TopSpeed.Vehicles
                 idleRpm: 600f, maxRpm: 4500f, revLimiter: 4000f, autoShiftRpm: 4000f * 0.92f, engineBraking: 0.34f,
                 massKg: 1970f, drivetrainEfficiency: 0.85f, engineBrakingTorqueNm: 380f, tireGripCoefficient: 0.82f,
                 peakTorqueNm: 440f, peakTorqueRpm: 1400f, idleTorqueNm: 440f * 0.3f, redlineTorqueNm: 440f * 0.6f,
-                dragCoefficient: 0.32f, frontalAreaM2: 2.8f, rollingResistanceCoefficient: 0.015f, launchRpm: 1800f,
+                dragCoefficient: 0.39f, frontalAreaM2: 3.08f, rollingResistanceCoefficient: 0.0185f, launchRpm: 1800f,
                 engineInertiaKgm2: 0.24f, engineFrictionTorqueNm: 20f, drivelineCouplingRate: 12f,
                 finalDriveRatio: 5.50f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(245, 75, 16), lateralGripCoefficient: 0.90f, highSpeedStability: 0.42f,
@@ -256,77 +288,94 @@ namespace TopSpeed.Vehicles
                 automaticTuning: AtcHeavyTune,
                 shiftOnDemand: true,
                 transmissionPolicy: Policy(5, true, Auto7Upshifts, upshiftRpmFraction: 0.72f, minUpshiftNetAccelerationMps2: -0.30f),
-                coastDragBaseMps2: 0.24f,
-                coastDragLinearPerMps: 0.014f),
+                sideAreaM2: 6.10f,
+                rollingResistanceSpeedFactor: 0.019f,
+                coupledDrivelineDragNm: 21.5f,
+                coupledDrivelineViscousDragNmPerKrpm: 7.8f,
+                engineOverrunIdleLossFraction: 0.42f,
+                engineBrakeTransferEfficiency: 0.74f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle10, "Kawasaki Ninja ZX-10R",
                 hasWipers: 0, surfaceTractionFactor: 0.09f, deceleration: 0.18f, topSpeed: 216.0f,
                 idleFreq: 22050, topFreq: 60000, shiftFreq: 35000, gears: 6, steering: 1.08f,
-                idleRpm: 1100f, maxRpm: 14000f, revLimiter: 13500f, autoShiftRpm: 13500f * 0.92f, engineBraking: 0.22f,
-                massKg: 207f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 114.9f, tireGripCoefficient: 1.10f,
-                peakTorqueNm: 114.9f, peakTorqueRpm: 11500f, idleTorqueNm: 114.9f * 0.3f, redlineTorqueNm: 114.9f * 0.25f,
-                dragCoefficient: 0.42f, frontalAreaM2: 0.58f, rollingResistanceCoefficient: 0.014f, launchRpm: 3900f,
-                engineInertiaKgm2: 0.09f, engineFrictionTorqueNm: 7f, drivelineCouplingRate: 12f,
-                finalDriveRatio: 6.40f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
+                idleRpm: 1100f, maxRpm: 14000f, revLimiter: 13500f, autoShiftRpm: 13500f * 0.92f, engineBraking: 0.07f,
+                massKg: 207f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 300f, tireGripCoefficient: 1.10f,
+                peakTorqueNm: 114.9f, peakTorqueRpm: 11500f, idleTorqueNm: 114.9f * 0.36f, redlineTorqueNm: 114.9f * 0.25f,
+                dragCoefficient: 0.41f, frontalAreaM2: 0.60f, rollingResistanceCoefficient: 0.0145f, launchRpm: 3900f,
+                engineInertiaKgm2: 0.045f, engineFrictionTorqueNm: 5.0f, drivelineCouplingRate: 12f,
+                finalDriveRatio: 6.20f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(190, 55, 17), lateralGripCoefficient: 0.76f, highSpeedStability: 0.46f,
                 wheelbaseM: 1.450f, maxSteerDeg: 35f, widthM: 0.749f, lengthM: 2.085f,
-                powerFactor: 0.78f, gearRatios: Zx10rRatios!, brakeStrength: 1.0f,
+                powerFactor: 1.05f, gearRatios: Zx10rRatios!, brakeStrength: 1.0f,
                 highSpeedSteerGain: 0.82f, highSpeedSteerStartKph: 115f, highSpeedSteerFullKph: 190f,
                 combinedGripPenalty: 0.90f, slipAnglePeakDeg: 6.6f, slipAngleFalloff: 1.00f,
                 turnResponse: 0.96f, massSensitivity: 0.96f, downforceGripGain: 0.03f,
                 cornerStiffnessFront: 1.46f, cornerStiffnessRear: 0.96f, yawInertiaScale: 1.08f, steeringCurve: 1.05f, transientDamping: 1.40f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(6, false, upshiftRpmFraction: 0.90f),
-                coastDragBaseMps2: 0.18f,
-                coastDragLinearPerMps: 0.010f),
+                sideAreaM2: 0.92f,
+                rollingResistanceSpeedFactor: 0.0125f,
+                coupledDrivelineDragNm: 3.0f,
+                coupledDrivelineViscousDragNmPerKrpm: 2.3f,
+                engineOverrunIdleLossFraction: 0.22f,
+                engineBrakeTransferEfficiency: 0.18f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle11, "Ducati Panigale V4",
                 hasWipers: 0, surfaceTractionFactor: 0.10f, deceleration: 0.18f, topSpeed: 242.0f,
                 idleFreq: 22050, topFreq: 60000, shiftFreq: 35000, gears: 6, steering: 1.04f,
-                idleRpm: 1200f, maxRpm: 15000f, revLimiter: 14500f, autoShiftRpm: 14500f * 0.92f, engineBraking: 0.20f,
-                massKg: 191f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 121f, tireGripCoefficient: 1.12f,
-                peakTorqueNm: 121f, peakTorqueRpm: 10000f, idleTorqueNm: 121f * 0.3f, redlineTorqueNm: 121f * 0.25f,
-                dragCoefficient: 0.40f, frontalAreaM2: 0.56f, rollingResistanceCoefficient: 0.014f, launchRpm: 3900f,
-                engineInertiaKgm2: 0.09f, engineFrictionTorqueNm: 7f, drivelineCouplingRate: 12f,
-                finalDriveRatio: 6.60f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
+                idleRpm: 1200f, maxRpm: 15000f, revLimiter: 14500f, autoShiftRpm: 14500f * 0.92f, engineBraking: 0.06f,
+                massKg: 191f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 380f, tireGripCoefficient: 1.12f,
+                peakTorqueNm: 121f, peakTorqueRpm: 10000f, idleTorqueNm: 121f * 0.36f, redlineTorqueNm: 121f * 0.25f,
+                dragCoefficient: 0.39f, frontalAreaM2: 0.56f, rollingResistanceCoefficient: 0.0142f, launchRpm: 3900f,
+                engineInertiaKgm2: 0.042f, engineFrictionTorqueNm: 5.0f, drivelineCouplingRate: 12f,
+                finalDriveRatio: 6.35f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(200, 60, 17), lateralGripCoefficient: 0.77f, highSpeedStability: 0.45f,
                 wheelbaseM: 1.469f, maxSteerDeg: 35f, widthM: 0.806f, lengthM: 2.110f,
-                powerFactor: 0.80f, gearRatios: PanigaleV4Ratios!, brakeStrength: 1.0f,
+                powerFactor: 1.08f, gearRatios: PanigaleV4Ratios!, brakeStrength: 1.0f,
                 highSpeedSteerGain: 0.81f, highSpeedSteerStartKph: 115f, highSpeedSteerFullKph: 190f,
                 combinedGripPenalty: 0.90f, slipAnglePeakDeg: 6.7f, slipAngleFalloff: 1.02f,
                 turnResponse: 0.94f, massSensitivity: 0.95f, downforceGripGain: 0.03f,
                 cornerStiffnessFront: 1.42f, cornerStiffnessRear: 0.98f, yawInertiaScale: 1.06f, steeringCurve: 1.06f, transientDamping: 1.38f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(5, true, Auto6Upshifts, upshiftRpmFraction: 0.90f),
-                coastDragBaseMps2: 0.17f,
-                coastDragLinearPerMps: 0.009f),
+                sideAreaM2: 0.88f,
+                rollingResistanceSpeedFactor: 0.0120f,
+                coupledDrivelineDragNm: 2.8f,
+                coupledDrivelineViscousDragNmPerKrpm: 2.2f,
+                engineOverrunIdleLossFraction: 0.28f,
+                engineBrakeTransferEfficiency: 0.17f),
 
             new OfficialVehicleSpec(
                 CarType.Vehicle12, "Yamaha YZF-R1",
                 hasWipers: 0, surfaceTractionFactor: 0.085f, deceleration: 0.18f, topSpeed: 219.0f,
                 idleFreq: 22050, topFreq: 27550, shiftFreq: 23550, gears: 6, steering: 1.10f,
-                idleRpm: 1100f, maxRpm: 14500f, revLimiter: 14000f, autoShiftRpm: 14000f * 0.92f, engineBraking: 0.24f,
-                massKg: 201f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 113.3f, tireGripCoefficient: 1.10f,
-                peakTorqueNm: 112.4f, peakTorqueRpm: 11500f, idleTorqueNm: 112.4f * 0.3f, redlineTorqueNm: 112.4f * 0.25f,
-                dragCoefficient: 0.41f, frontalAreaM2: 0.57f, rollingResistanceCoefficient: 0.014f, launchRpm: 3900f,
-                engineInertiaKgm2: 0.09f, engineFrictionTorqueNm: 7f, drivelineCouplingRate: 12f,
-                finalDriveRatio: 6.50f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
+                idleRpm: 1100f, maxRpm: 14500f, revLimiter: 14000f, autoShiftRpm: 14000f * 0.92f, engineBraking: 0.07f,
+                massKg: 201f, drivetrainEfficiency: 0.92f, engineBrakingTorqueNm: 315f, tireGripCoefficient: 1.10f,
+                peakTorqueNm: 112.4f, peakTorqueRpm: 11500f, idleTorqueNm: 112.4f * 0.36f, redlineTorqueNm: 112.4f * 0.25f,
+                dragCoefficient: 0.40f, frontalAreaM2: 0.57f, rollingResistanceCoefficient: 0.0144f, launchRpm: 3900f,
+                engineInertiaKgm2: 0.044f, engineFrictionTorqueNm: 5.0f, drivelineCouplingRate: 12f,
+                finalDriveRatio: 6.25f, reverseMaxSpeedKph: 35f, reversePowerFactor: 0.55f, reverseGearRatio: 3.2f,
                 tireCircumferenceM: TireCircumferenceM(190, 55, 17), lateralGripCoefficient: 0.75f, highSpeedStability: 0.47f,
                 wheelbaseM: 1.405f, maxSteerDeg: 35f, widthM: 0.690f, lengthM: 2.055f,
-                powerFactor: 0.78f, gearRatios: R1Ratios!, brakeStrength: 1.0f,
+                powerFactor: 1.03f, gearRatios: R1Ratios!, brakeStrength: 1.0f,
                 highSpeedSteerGain: 0.82f, highSpeedSteerStartKph: 115f, highSpeedSteerFullKph: 190f,
                 combinedGripPenalty: 0.91f, slipAnglePeakDeg: 6.5f, slipAngleFalloff: 1.01f,
                 turnResponse: 0.95f, massSensitivity: 0.95f, downforceGripGain: 0.03f,
                 cornerStiffnessFront: 1.44f, cornerStiffnessRear: 0.95f, yawInertiaScale: 1.08f, steeringCurve: 1.05f, transientDamping: 1.40f,
                 primaryTransmissionType: TransmissionType.Manual, supportedTransmissionTypes: ManualOnly,
                 transmissionPolicy: Policy(5, true, Auto6Upshifts, upshiftRpmFraction: 0.88f),
-                coastDragBaseMps2: 0.18f,
-                coastDragLinearPerMps: 0.010f)
+                sideAreaM2: 0.90f,
+                rollingResistanceSpeedFactor: 0.0122f,
+                coupledDrivelineDragNm: 2.9f,
+                coupledDrivelineViscousDragNmPerKrpm: 2.2f,
+                engineOverrunIdleLossFraction: 0.22f,
+                engineBrakeTransferEfficiency: 0.18f)
         };
 
     }
 }
+
 
 

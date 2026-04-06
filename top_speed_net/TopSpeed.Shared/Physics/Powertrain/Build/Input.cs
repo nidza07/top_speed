@@ -6,7 +6,6 @@ namespace TopSpeed.Physics.Powertrain
     public readonly struct BuildInput
     {
         public BuildInput(
-            float deceleration,
             float massKg,
             float drivetrainEfficiency,
             float engineBrakingTorqueNm,
@@ -24,7 +23,9 @@ namespace TopSpeed.Physics.Powertrain
             float redlineTorqueNm,
             float dragCoefficient,
             float frontalAreaM2,
+            float sideAreaM2,
             float rollingResistanceCoefficient,
+            float rollingResistanceSpeedFactor,
             float launchRpm,
             float reversePowerFactor,
             float reverseGearRatio,
@@ -35,8 +36,8 @@ namespace TopSpeed.Physics.Powertrain
             int gears,
             CurveProfile torqueCurve,
             float[]? gearRatios = null,
-            float coastDragBaseMps2 = -1f,
-            float coastDragLinearPerMps = -1f,
+            float coupledDrivelineDragNm = -1f,
+            float coupledDrivelineViscousDragNmPerKrpm = -1f,
             float frictionLinearNmPerKrpm = -1f,
             float frictionQuadraticNmPerKrpm2 = -1f,
             float idleControlWindowRpm = -1f,
@@ -47,7 +48,6 @@ namespace TopSpeed.Physics.Powertrain
             float overrunCurveExponent = -1f,
             float engineBrakeTransferEfficiency = -1f)
         {
-            Deceleration = deceleration;
             MassKg = massKg;
             DrivetrainEfficiency = drivetrainEfficiency;
             EngineBrakingTorqueNm = engineBrakingTorqueNm;
@@ -65,7 +65,9 @@ namespace TopSpeed.Physics.Powertrain
             RedlineTorqueNm = redlineTorqueNm;
             DragCoefficient = dragCoefficient;
             FrontalAreaM2 = frontalAreaM2;
+            SideAreaM2 = sideAreaM2;
             RollingResistanceCoefficient = rollingResistanceCoefficient;
+            RollingResistanceSpeedFactor = rollingResistanceSpeedFactor;
             LaunchRpm = launchRpm;
             ReversePowerFactor = reversePowerFactor;
             ReverseGearRatio = reverseGearRatio;
@@ -76,8 +78,8 @@ namespace TopSpeed.Physics.Powertrain
             Gears = gears;
             TorqueCurve = torqueCurve ?? throw new ArgumentNullException(nameof(torqueCurve));
             GearRatios = gearRatios;
-            CoastDragBaseMps2 = coastDragBaseMps2;
-            CoastDragLinearPerMps = coastDragLinearPerMps;
+            CoupledDrivelineDragNm = coupledDrivelineDragNm;
+            CoupledDrivelineViscousDragNmPerKrpm = coupledDrivelineViscousDragNmPerKrpm;
             FrictionLinearNmPerKrpm = frictionLinearNmPerKrpm;
             FrictionQuadraticNmPerKrpm2 = frictionQuadraticNmPerKrpm2;
             IdleControlWindowRpm = idleControlWindowRpm;
@@ -89,7 +91,6 @@ namespace TopSpeed.Physics.Powertrain
             EngineBrakeTransferEfficiency = engineBrakeTransferEfficiency;
         }
 
-        public float Deceleration { get; }
         public float MassKg { get; }
         public float DrivetrainEfficiency { get; }
         public float EngineBrakingTorqueNm { get; }
@@ -107,7 +108,9 @@ namespace TopSpeed.Physics.Powertrain
         public float RedlineTorqueNm { get; }
         public float DragCoefficient { get; }
         public float FrontalAreaM2 { get; }
+        public float SideAreaM2 { get; }
         public float RollingResistanceCoefficient { get; }
+        public float RollingResistanceSpeedFactor { get; }
         public float LaunchRpm { get; }
         public float ReversePowerFactor { get; }
         public float ReverseGearRatio { get; }
@@ -118,8 +121,8 @@ namespace TopSpeed.Physics.Powertrain
         public int Gears { get; }
         public CurveProfile TorqueCurve { get; }
         public float[]? GearRatios { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float FrictionLinearNmPerKrpm { get; }
         public float FrictionQuadraticNmPerKrpm2 { get; }
         public float IdleControlWindowRpm { get; }

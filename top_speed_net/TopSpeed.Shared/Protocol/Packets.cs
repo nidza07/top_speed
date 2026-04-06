@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TopSpeed.Data;
 
 namespace TopSpeed.Protocol
@@ -128,8 +129,9 @@ namespace TopSpeed.Protocol
     {
         public byte NrOfLaps;
         public string TrackName = string.Empty;
-        public TrackWeather TrackWeather;
         public TrackAmbience TrackAmbience;
+        public string DefaultWeatherProfileId = TrackWeatherProfile.DefaultProfileId;
+        public IReadOnlyDictionary<string, TrackWeatherProfile> WeatherProfiles = new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase);
         public ushort TrackLength;
         public TrackDefinition[] Definitions = Array.Empty<TrackDefinition>();
     }

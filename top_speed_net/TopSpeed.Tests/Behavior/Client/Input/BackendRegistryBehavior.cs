@@ -83,4 +83,25 @@ public sealed class BackendRegistryBehaviorTests
         ex.Message.Should().Contain("unsupported");
         ex.Message.Should().Contain("throwing");
     }
+
+    [Fact]
+    public void CreateController_IncludesUnsupportedReason_WhenFactoryProvidesDiagnostics()
+    {
+        var registry = new BackendRegistry(
+            new IKeyboardBackendFactory[]
+            {
+                new InputHarness.FakeKeyboardFactory("keyboard", 1, true, new InputHarness.FakeKeyboardDevice())
+            },
+            new IControllerBackendFactory[]
+            {
+                new InputHarness.FakeControllerFactory("sdl", priority: 100, supported: false, created: null, unsupportedReason: "SDL3 could not be loaded")
+            });
+
+        var act = () => registry.CreateController(IntPtr.Zero);
+
+        act.Should()
+            .Throw<InvalidOperationException>()
+            .Which.Message.Should()
+            .Contain("SDL3 could not be loaded");
+    }
 }

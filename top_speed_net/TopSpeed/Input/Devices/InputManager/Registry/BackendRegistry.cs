@@ -41,7 +41,7 @@ namespace TopSpeed.Input
                 var factory = _keyboardFactories[i];
                 if (!factory.IsSupported())
                 {
-                    attempts.Add($"{factory.Id}: unsupported");
+                    attempts.Add(FormatUnsupported(factory));
                     continue;
                 }
 
@@ -71,7 +71,7 @@ namespace TopSpeed.Input
                 var factory = _controllerFactories[i];
                 if (!factory.IsSupported())
                 {
-                    attempts.Add($"{factory.Id}: unsupported");
+                    attempts.Add(FormatUnsupported(factory));
                     continue;
                 }
 
@@ -99,6 +99,28 @@ namespace TopSpeed.Input
                 return "none";
 
             return string.Join(", ", attempts);
+        }
+
+        private static string FormatUnsupported(object factory)
+        {
+            if (factory is IBackendSupportDiagnostics diagnostics)
+            {
+                var reason = diagnostics.GetUnsupportedReason();
+                if (!string.IsNullOrWhiteSpace(reason))
+                    return $"{GetFactoryId(factory)}: unsupported ({reason})";
+            }
+
+            return $"{GetFactoryId(factory)}: unsupported";
+        }
+
+        private static string GetFactoryId(object factory)
+        {
+            return factory switch
+            {
+                IKeyboardBackendFactory keyboard => keyboard.Id,
+                IControllerBackendFactory controller => controller.Id,
+                _ => factory.GetType().Name
+            };
         }
     }
 }

@@ -11,16 +11,19 @@ namespace TopSpeed.Physics.Powertrain
             float throttle,
             float brake,
             float surfaceTractionModifier,
-            float surfaceDecelerationModifier,
+            float surfaceBrakeModifier,
+            float surfaceRollingResistanceModifier,
             float longitudinalGripFactor,
             int gear,
             bool inReverse,
+            bool isNeutral,
             float drivelineCouplingFactor,
             float creepAccelerationMps2,
             float currentEngineRpm,
             bool requestDrive,
             bool requestBrake,
             bool applyEngineBraking,
+            ResistanceEnvironment resistanceEnvironment,
             float? driveRatioOverride = null,
             float driveAccelerationScale = 1f)
         {
@@ -30,16 +33,19 @@ namespace TopSpeed.Physics.Powertrain
             Throttle = throttle;
             Brake = brake;
             SurfaceTractionModifier = surfaceTractionModifier;
-            SurfaceDecelerationModifier = surfaceDecelerationModifier;
+            SurfaceBrakeModifier = surfaceBrakeModifier;
+            SurfaceRollingResistanceModifier = surfaceRollingResistanceModifier;
             LongitudinalGripFactor = longitudinalGripFactor;
             Gear = gear;
             InReverse = inReverse;
+            IsNeutral = isNeutral;
             DrivelineCouplingFactor = drivelineCouplingFactor;
             CreepAccelerationMps2 = creepAccelerationMps2;
             CurrentEngineRpm = currentEngineRpm;
             RequestDrive = requestDrive;
             RequestBrake = requestBrake;
             ApplyEngineBraking = applyEngineBraking;
+            ResistanceEnvironment = resistanceEnvironment;
             DriveRatioOverride = driveRatioOverride;
             DriveAccelerationScale = driveAccelerationScale;
         }
@@ -50,16 +56,19 @@ namespace TopSpeed.Physics.Powertrain
         public float Throttle { get; }
         public float Brake { get; }
         public float SurfaceTractionModifier { get; }
-        public float SurfaceDecelerationModifier { get; }
+        public float SurfaceBrakeModifier { get; }
+        public float SurfaceRollingResistanceModifier { get; }
         public float LongitudinalGripFactor { get; }
         public int Gear { get; }
         public bool InReverse { get; }
+        public bool IsNeutral { get; }
         public float DrivelineCouplingFactor { get; }
         public float CreepAccelerationMps2 { get; }
         public float CurrentEngineRpm { get; }
         public bool RequestDrive { get; }
         public bool RequestBrake { get; }
         public bool ApplyEngineBraking { get; }
+        public ResistanceEnvironment ResistanceEnvironment { get; }
         public float? DriveRatioOverride { get; }
         public float DriveAccelerationScale { get; }
     }
@@ -73,8 +82,9 @@ namespace TopSpeed.Physics.Powertrain
             float totalDecelKph,
             float brakeDecelKph,
             float engineBrakeDecelKph,
-            float passiveResistanceDecelKph,
-            float chassisCoastDecelKph)
+            float aerodynamicDecelKph,
+            float rollingResistanceDecelKph,
+            float drivelineDragDecelKph)
         {
             SpeedDeltaKph = speedDeltaKph;
             CoupledDriveRpm = coupledDriveRpm;
@@ -82,8 +92,9 @@ namespace TopSpeed.Physics.Powertrain
             TotalDecelKph = totalDecelKph;
             BrakeDecelKph = brakeDecelKph;
             EngineBrakeDecelKph = engineBrakeDecelKph;
-            PassiveResistanceDecelKph = passiveResistanceDecelKph;
-            ChassisCoastDecelKph = chassisCoastDecelKph;
+            AerodynamicDecelKph = aerodynamicDecelKph;
+            RollingResistanceDecelKph = rollingResistanceDecelKph;
+            DrivelineDragDecelKph = drivelineDragDecelKph;
         }
 
         public float SpeedDeltaKph { get; }
@@ -92,7 +103,8 @@ namespace TopSpeed.Physics.Powertrain
         public float TotalDecelKph { get; }
         public float BrakeDecelKph { get; }
         public float EngineBrakeDecelKph { get; }
-        public float PassiveResistanceDecelKph { get; }
-        public float ChassisCoastDecelKph { get; }
+        public float AerodynamicDecelKph { get; }
+        public float RollingResistanceDecelKph { get; }
+        public float DrivelineDragDecelKph { get; }
     }
 }

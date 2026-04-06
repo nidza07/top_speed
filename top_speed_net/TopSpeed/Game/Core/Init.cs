@@ -102,6 +102,7 @@ namespace TopSpeed.Game
             ApplyAudioSettings();
             _needsCalibration = _settings.UsageHints && _settings.ScreenReaderRateMs <= 0f;
             input.NoControllerDetected += HandleNoControllerDetected;
+            input.ControllerBackendUnavailable += HandleControllerBackendUnavailable;
             input.SetDeviceMode(_settings.DeviceMode);
         }
 

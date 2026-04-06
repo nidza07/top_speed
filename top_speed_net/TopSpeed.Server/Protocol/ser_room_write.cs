@@ -1,4 +1,6 @@
 using System;
+using System.Collections.Generic;
+using TopSpeed.Data;
 using TopSpeed.Protocol;
 
 namespace TopSpeed.Server.Protocol
@@ -9,25 +11,92 @@ namespace TopSpeed.Server.Protocol
         {
             var maxLength = Math.Min(track.TrackLength, (ushort)ProtocolConstants.MaxMultiTrackLength);
             var definitionCount = Math.Min(track.Definitions.Length, maxLength);
-            var payload = 1 + 12 + 1 + 1 + 2 + (definitionCount * (1 + 1 + 1 + 4));
+            var weatherProfiles = NormalizeWeatherProfiles(track.WeatherProfiles, track.DefaultWeatherProfileId);
+            var profileCount = Math.Min(weatherProfiles.Count, byte.MaxValue);
+            var payload = 1 + 12 + 1 + 2 + 2 + PacketWriter.MeasureString16(track.DefaultWeatherProfileId) + 1;
+            for (var i = 0; i < profileCount; i++)
+                payload += MeasureWeatherProfile(weatherProfiles[i]);
+            for (var i = 0; i < definitionCount; i++)
+                payload += MeasureDefinition(track.Definitions[i]);
             var buffer = WritePacketHeader(Command.LoadCustomTrack, payload);
             var writer = new PacketWriter(buffer);
             writer.WriteByte(ProtocolConstants.Version);
             writer.WriteByte((byte)Command.LoadCustomTrack);
             writer.WriteByte(track.NrOfLaps);
             writer.WriteFixedString(track.TrackName, 12);
-            writer.WriteByte((byte)track.TrackWeather);
             writer.WriteByte((byte)track.TrackAmbience);
             writer.WriteUInt16(maxLength);
+            writer.WriteString16(track.DefaultWeatherProfileId ?? string.Empty);
+            writer.WriteByte((byte)profileCount);
+            for (var i = 0; i < profileCount; i++)
+                WriteWeatherProfile(ref writer, weatherProfiles[i]);
             for (var i = 0; i < definitionCount; i++)
-            {
-                var def = track.Definitions[i];
-                writer.WriteByte((byte)def.Type);
-                writer.WriteByte((byte)def.Surface);
-                writer.WriteByte((byte)def.Noise);
-                writer.WriteSingle(def.Length);
-            }
+                WriteDefinition(ref writer, track.Definitions[i]);
             return buffer;
+        }
+
+        private static int MeasureWeatherProfile(TrackWeatherProfile profile)
+        {
+            return 2 + PacketWriter.MeasureString16(profile.Id) + 1 + (11 * 4);
+        }
+
+        private static int MeasureDefinition(TrackDefinition definition)
+        {
+            return 1 + 1 + 1 + 4 + 2 + PacketWriter.MeasureString16(definition.WeatherProfileId ?? string.Empty) + 4;
+        }
+
+        private static void WriteWeatherProfile(ref PacketWriter writer, TrackWeatherProfile profile)
+        {
+            writer.WriteString16(profile.Id);
+            writer.WriteByte((byte)profile.Kind);
+            writer.WriteSingle(profile.LongitudinalWindMps);
+            writer.WriteSingle(profile.LateralWindMps);
+            writer.WriteSingle(profile.AirDensityKgPerM3);
+            writer.WriteSingle(profile.DraftingFactor);
+            writer.WriteSingle(profile.TemperatureC);
+            writer.WriteSingle(profile.Humidity);
+            writer.WriteSingle(profile.PressureKpa);
+            writer.WriteSingle(profile.VisibilityM);
+            writer.WriteSingle(profile.RainGain);
+            writer.WriteSingle(profile.WindGain);
+            writer.WriteSingle(profile.StormGain);
+        }
+
+        private static void WriteDefinition(ref PacketWriter writer, TrackDefinition definition)
+        {
+            writer.WriteByte((byte)definition.Type);
+            writer.WriteByte((byte)definition.Surface);
+            writer.WriteByte((byte)definition.Noise);
+            writer.WriteSingle(definition.Length);
+            writer.WriteString16(definition.WeatherProfileId ?? string.Empty);
+            writer.WriteSingle(definition.WeatherTransitionSeconds);
+        }
+
+        private static IReadOnlyList<TrackWeatherProfile> NormalizeWeatherProfiles(
+            IReadOnlyDictionary<string, TrackWeatherProfile> weatherProfiles,
+            string defaultWeatherProfileId)
+        {
+            var list = new List<TrackWeatherProfile>(weatherProfiles?.Count ?? 0);
+            if (weatherProfiles != null)
+            {
+                foreach (var pair in weatherProfiles)
+                    list.Add(pair.Value);
+            }
+
+            var defaultProfileId = string.IsNullOrWhiteSpace(defaultWeatherProfileId)
+                ? TrackWeatherProfile.DefaultProfileId
+                : defaultWeatherProfileId;
+            if (list.FindIndex(profile => string.Equals(profile.Id, defaultProfileId, StringComparison.OrdinalIgnoreCase)) < 0)
+                list.Insert(0, TrackWeatherProfile.CreatePreset(defaultProfileId, TrackWeather.Sunny));
+
+            if (list.Count == 0)
+            {
+                list.Add(TrackWeatherProfile.CreatePreset(
+                    defaultProfileId,
+                    TrackWeather.Sunny));
+            }
+
+            return list;
         }
 
         public static byte[] WritePlayerJoined(PacketPlayerJoined joined)

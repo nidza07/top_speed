@@ -39,8 +39,9 @@ namespace TopSpeed.Server.Network
             {
                 NrOfLaps = room.TrackData.Laps,
                 TrackName = room.TrackData.UserDefined ? "custom" : room.TrackName,
-                TrackWeather = room.TrackData.Weather,
                 TrackAmbience = room.TrackData.Ambience,
+                DefaultWeatherProfileId = room.TrackData.DefaultWeatherProfileId,
+                WeatherProfiles = room.TrackData.WeatherProfiles,
                 TrackLength = trackLength,
                 Definitions = room.TrackData.Definitions
             }), PacketStream.Room);

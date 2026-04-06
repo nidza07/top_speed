@@ -14,6 +14,7 @@ namespace TopSpeed.Data
             string sectionId,
             Dictionary<string, string> segmentRooms,
             Dictionary<string, IReadOnlyList<string>> segmentSounds,
+            Dictionary<string, string> segmentWeatherRefs,
             List<TrackTsmIssue> issues)
         {
             if (key == "type")
@@ -60,6 +61,25 @@ namespace TopSpeed.Data
                 return;
             }
 
+            if (key == "weather")
+            {
+                var weatherProfileId = NormalizeNullable(value);
+                if (weatherProfileId == null)
+                    issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Segment weather profile id cannot be empty.")));
+                else
+                    segmentWeatherRefs[sectionId] = weatherProfileId;
+                return;
+            }
+
+            if (key == "weather_transition_seconds")
+            {
+                if (!TryParseFloat(value, out var transitionSeconds))
+                    issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid weather transition seconds '{0}'.", value)));
+                else if (float.IsNaN(transitionSeconds) || float.IsInfinity(transitionSeconds) || transitionSeconds < 0f)
+                    issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather transition seconds must be finite and non-negative.")));
+                return;
+            }
+
             if (key == "room" || key == "room_profile" || key == "room_preset")
             {
                 var roomId = NormalizeNullable(value);
@@ -88,6 +108,64 @@ namespace TopSpeed.Data
 
             if (!IsMetadataKey(key))
                 issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Unknown segment key '{0}'.", key)));
+        }
+
+        private static void ValidateWeatherField(string key, string value, int lineNumber, List<TrackTsmIssue> issues)
+        {
+            if (key == "kind")
+            {
+                if (!TryParseWeatherKind(value, out _))
+                    issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid weather kind '{0}'.", value)));
+                return;
+            }
+
+            if (key == "longitudinal_wind_mps" ||
+                key == "lateral_wind_mps" ||
+                key == "temperature_c")
+            {
+                if (!TryParseFloat(value, out _))
+                    issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid weather value '{0}' for key '{1}'.", value, key)));
+                return;
+            }
+
+            if (!TryParseFloat(value, out var numericValue) || float.IsNaN(numericValue) || float.IsInfinity(numericValue))
+            {
+                issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid weather value '{0}' for key '{1}'.", value, key)));
+                return;
+            }
+
+            switch (key)
+            {
+                case "air_density":
+                    if (numericValue <= 0f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather key '{0}' must be greater than zero.", key)));
+                    return;
+                case "drafting_factor":
+                    if (numericValue <= 0f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather key '{0}' must be greater than zero.", key)));
+                    return;
+                case "humidity":
+                    if (numericValue < 0f || numericValue > 1f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Humidity must be between 0 and 1.")));
+                    return;
+                case "pressure_kpa":
+                    if (numericValue <= 0f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather key '{0}' must be greater than zero.", key)));
+                    return;
+                case "visibility_m":
+                    if (numericValue <= 0f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather key '{0}' must be greater than zero.", key)));
+                    return;
+                case "rain_gain":
+                case "wind_gain":
+                case "storm_gain":
+                    if (numericValue < 0f)
+                        issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Weather key '{0}' must be non-negative.", key)));
+                    return;
+            }
+
+            if (!IsMetadataKey(key))
+                issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Unknown weather key '{0}'.", key)));
         }
 
         private static void ValidateRoomField(string key, string value, int lineNumber, List<TrackTsmIssue> issues)
@@ -311,20 +389,6 @@ namespace TopSpeed.Data
         {
             return key.StartsWith("meta", StringComparison.OrdinalIgnoreCase) ||
                    key.StartsWith("metadata", StringComparison.OrdinalIgnoreCase);
-        }
-
-        private static bool IsValidWeather(string raw)
-        {
-            if (TryParseInt(raw, out var weatherInt))
-                return weatherInt >= 0 && weatherInt <= 3;
-            var normalized = NormalizeLookupToken(raw);
-            return normalized == "sunny" ||
-                   normalized == "rain" ||
-                   normalized == "rainy" ||
-                   normalized == "wind" ||
-                   normalized == "windy" ||
-                   normalized == "storm" ||
-                   normalized == "stormy";
         }
 
         private static bool IsValidAmbience(string raw)

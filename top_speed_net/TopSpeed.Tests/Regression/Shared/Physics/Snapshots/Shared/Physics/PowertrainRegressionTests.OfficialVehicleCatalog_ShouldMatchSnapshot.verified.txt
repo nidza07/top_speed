@@ -6,18 +6,22 @@
     ConfiguredTopSpeedKph: 276.0,
     TopGearKph: 277.8,
     PreviousGearKph: 237.7,
-    CoastDragBaseMps2: 0.21,
-    CoastDragLinearPerMps: 0.011
+    SideAreaM2: 4.02,
+    RollingResistanceSpeedFactor: 0.011,
+    CoupledDrivelineDragNm: 16.8,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.9
   },
   {
     Vehicle: Porsche 911 GT3 RS,
     Transmission: Dct,
     Gears: 7,
     ConfiguredTopSpeedKph: 286.0,
-    TopGearKph: 291.4,
-    PreviousGearKph: 267.6,
-    CoastDragBaseMps2: 0.19,
-    CoastDragLinearPerMps: 0.011
+    TopGearKph: 285.1,
+    PreviousGearKph: 262.3,
+    SideAreaM2: 3.62,
+    RollingResistanceSpeedFactor: 0.011,
+    CoupledDrivelineDragNm: 15.5,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.4
   },
   {
     Vehicle: Fiat 500,
@@ -26,8 +30,10 @@
     ConfiguredTopSpeedKph: 136.0,
     TopGearKph: 138.7,
     PreviousGearKph: 120.6,
-    CoastDragBaseMps2: 0.1,
-    CoastDragLinearPerMps: 0.006
+    SideAreaM2: 3.78,
+    RollingResistanceSpeedFactor: 0.011,
+    CoupledDrivelineDragNm: 14.2,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.1
   },
   {
     Vehicle: Mini Cooper S,
@@ -36,8 +42,10 @@
     ConfiguredTopSpeedKph: 198.0,
     TopGearKph: 203.9,
     PreviousGearKph: 178.4,
-    CoastDragBaseMps2: 0.11,
-    CoastDragLinearPerMps: 0.007
+    SideAreaM2: 3.88,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 15.1,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.4
   },
   {
     Vehicle: Ford Mustang 1969,
@@ -46,8 +54,10 @@
     ConfiguredTopSpeedKph: 168.0,
     TopGearKph: 171.0,
     PreviousGearKph: 137.9,
-    CoastDragBaseMps2: 0.12,
-    CoastDragLinearPerMps: 0.007
+    SideAreaM2: 4.55,
+    RollingResistanceSpeedFactor: 0.013,
+    CoupledDrivelineDragNm: 16.5,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.8
   },
   {
     Vehicle: Toyota Camry,
@@ -56,8 +66,10 @@
     ConfiguredTopSpeedKph: 190.0,
     TopGearKph: 201.4,
     PreviousGearKph: 167.0,
-    CoastDragBaseMps2: 0.2,
-    CoastDragLinearPerMps: 0.012
+    SideAreaM2: 4.12,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 15.5,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.6
   },
   {
     Vehicle: Lamborghini Aventador,
@@ -66,8 +78,10 @@
     ConfiguredTopSpeedKph: 288.0,
     TopGearKph: 293.4,
     PreviousGearKph: 273.8,
-    CoastDragBaseMps2: 0.21,
-    CoastDragLinearPerMps: 0.012
+    SideAreaM2: 3.92,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 17.0,
+    CoupledDrivelineViscousDragNmPerKrpm: 6.0
   },
   {
     Vehicle: BMW 3 Series,
@@ -76,8 +90,10 @@
     ConfiguredTopSpeedKph: 230.0,
     TopGearKph: 244.8,
     PreviousGearKph: 210.7,
-    CoastDragBaseMps2: 0.2,
-    CoastDragLinearPerMps: 0.011
+    SideAreaM2: 3.98,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 15.0,
+    CoupledDrivelineViscousDragNmPerKrpm: 5.4
   },
   {
     Vehicle: Mercedes Sprinter,
@@ -86,37 +102,45 @@
     ConfiguredTopSpeedKph: 145.0,
     TopGearKph: 151.6,
     PreviousGearKph: 129.4,
-    CoastDragBaseMps2: 0.24,
-    CoastDragLinearPerMps: 0.014
+    SideAreaM2: 6.1,
+    RollingResistanceSpeedFactor: 0.019,
+    CoupledDrivelineDragNm: 21.5,
+    CoupledDrivelineViscousDragNmPerKrpm: 7.8
   },
   {
     Vehicle: Kawasaki Ninja ZX-10R,
     Transmission: Manual,
     Gears: 6,
     ConfiguredTopSpeedKph: 216.0,
-    TopGearKph: 215.9,
-    PreviousGearKph: 200.6,
-    CoastDragBaseMps2: 0.18,
-    CoastDragLinearPerMps: 0.01
+    TopGearKph: 212.1,
+    PreviousGearKph: 199.2,
+    SideAreaM2: 0.92,
+    RollingResistanceSpeedFactor: 0.013,
+    CoupledDrivelineDragNm: 3.0,
+    CoupledDrivelineViscousDragNmPerKrpm: 2.3
   },
   {
     Vehicle: Ducati Panigale V4,
     Transmission: Manual,
     Gears: 6,
     ConfiguredTopSpeedKph: 242.0,
-    TopGearKph: 241.9,
-    PreviousGearKph: 224.4,
-    CoastDragBaseMps2: 0.17,
-    CoastDragLinearPerMps: 0.009
+    TopGearKph: 241.0,
+    PreviousGearKph: 224.2,
+    SideAreaM2: 0.88,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 2.8,
+    CoupledDrivelineViscousDragNmPerKrpm: 2.2
   },
   {
     Vehicle: Yamaha YZF-R1,
     Transmission: Manual,
     Gears: 6,
     ConfiguredTopSpeedKph: 219.0,
-    TopGearKph: 218.6,
-    PreviousGearKph: 203.2,
-    CoastDragBaseMps2: 0.18,
-    CoastDragLinearPerMps: 0.01
+    TopGearKph: 220.0,
+    PreviousGearKph: 205.0,
+    SideAreaM2: 0.9,
+    RollingResistanceSpeedFactor: 0.012,
+    CoupledDrivelineDragNm: 2.9,
+    CoupledDrivelineViscousDragNmPerKrpm: 2.2
   }
 ]

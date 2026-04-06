@@ -54,8 +54,12 @@ namespace TopSpeed.Vehicles
         private float _redlineTorqueNm;
         private float _dragCoefficient;
         private float _frontalAreaM2;
+        private float _sideAreaM2;
         private float _rollingResistanceCoefficient;
+        private float _rollingResistanceSpeedFactor;
         private float _launchRpm;
+        private float _coupledDrivelineDragNm;
+        private float _coupledDrivelineViscousDragNmPerKrpm;
         private float _engineInertiaKgm2;
         private float _engineFrictionTorqueNm;
         private float _drivelineCouplingRate;

@@ -59,12 +59,12 @@ namespace TopSpeed.Vehicles
             return IsFinite(value) ? value : fallback;
         }
 
-        private float CalculateBrakeDecel(float brakeInput, float surfaceDecelMod)
+        private float CalculateBrakeDecel(float brakeInput, float surfaceBrakeMod)
         {
             return Calculator.BrakeDecelKph(
                 _powertrainConfiguration,
                 brakeInput,
-                surfaceDecelMod);
+                surfaceBrakeMod);
         }
 
         private float GetLapStartPosition(float position)

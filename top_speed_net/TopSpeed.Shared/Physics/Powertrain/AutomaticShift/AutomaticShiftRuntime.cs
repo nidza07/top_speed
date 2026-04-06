@@ -121,6 +121,8 @@ namespace TopSpeed.Physics.Powertrain
                 throttle,
                 surfaceTractionModifier,
                 longitudinalGripFactor,
+                rollingResistanceModifier: 1f,
+                resistanceEnvironment: ResistanceEnvironment.Calm,
                 driveRatioOverride);
         }
     }

@@ -94,6 +94,17 @@ jobs:
       with:
         dotnet-version: 8.0.x # Installs .NET 8 SDK (includes msbuild capable of building net472)
 
+    - name: Setup Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.x'
+
+    - name: Install doc render dependencies
+      shell: pwsh
+      run: |
+        python -m pip install --upgrade pip
+        python -m pip install markdown
+
     - name: Restore dependencies
       run: dotnet restore TopSpeed.sln
 

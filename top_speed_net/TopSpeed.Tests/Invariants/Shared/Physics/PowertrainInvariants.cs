@@ -11,13 +11,16 @@ namespace TopSpeed.Tests
     public sealed class PowertrainInvariantTests
     {
         [Property(MaxTest = 100, Arbitrary = new[] { typeof(PowertrainArbitraries) })]
-        public void PassiveResistance_ShouldBeFiniteAndNonNegative(PowertrainScenario scenario)
+        public void CalmAirPassiveResistance_ShouldBeFiniteAndNonNegative(PowertrainScenario scenario)
         {
             var config = scenario.BuildConfig();
-            var decel = Calculator.PassiveResistanceDecelKph(config, scenario.SpeedMps, 1f);
+            var aerodynamic = Calculator.AerodynamicDecelKph(config, scenario.SpeedMps, ResistanceEnvironment.Calm);
+            var rolling = Calculator.RollingResistanceDecelKph(config, scenario.SpeedMps, 1f);
 
-            (!float.IsNaN(decel) && !float.IsInfinity(decel)).Should().BeTrue();
-            decel.Should().BeGreaterThanOrEqualTo(0f);
+            (!float.IsNaN(aerodynamic) && !float.IsInfinity(aerodynamic)).Should().BeTrue();
+            (!float.IsNaN(rolling) && !float.IsInfinity(rolling)).Should().BeTrue();
+            aerodynamic.Should().BeGreaterThanOrEqualTo(0f);
+            rolling.Should().BeGreaterThanOrEqualTo(0f);
         }
 
         [Property(MaxTest = 100, Arbitrary = new[] { typeof(PowertrainArbitraries) })]
@@ -29,9 +32,9 @@ namespace TopSpeed.Tests
             for (var i = 0; i < scenario.Steps; i++)
             {
                 var speedMps = speedKph / 3.6f;
-                var passive = Calculator.PassiveResistanceDecelKph(config, speedMps, 1f);
-                var chassis = Calculator.ChassisCoastDecelKph(config, speedMps, 1f);
-                speedKph = Math.Max(0f, speedKph - ((passive + chassis) * scenario.ElapsedSeconds));
+                var aerodynamic = Calculator.AerodynamicDecelKph(config, speedMps, ResistanceEnvironment.Calm);
+                var rolling = Calculator.RollingResistanceDecelKph(config, speedMps, 1f);
+                speedKph = Math.Max(0f, speedKph - ((aerodynamic + rolling) * scenario.ElapsedSeconds));
             }
 
             (!float.IsNaN(speedKph) && !float.IsInfinity(speedKph)).Should().BeTrue();
@@ -49,7 +52,9 @@ namespace TopSpeed.Tests
                 speedMps: scenario.SpeedMps,
                 throttle: scenario.Throttle,
                 surfaceTractionModifier: 1f,
-                longitudinalGripFactor: 0f);
+                longitudinalGripFactor: 0f,
+                rollingResistanceModifier: 1f,
+                resistanceEnvironment: ResistanceEnvironment.Calm);
 
             (!float.IsNaN(accel) && !float.IsInfinity(accel)).Should().BeTrue();
             accel.Should().BeLessThanOrEqualTo(0f);
@@ -57,13 +62,14 @@ namespace TopSpeed.Tests
     }
 
     public sealed record PowertrainScenario(
-        float Deceleration,
         float MassKg,
         float DragCoefficient,
         float FrontalAreaM2,
+        float SideAreaM2,
         float RollingResistanceCoefficient,
-        float CoastDragBaseMps2,
-        float CoastDragLinearPerMps,
+        float RollingResistanceSpeedFactor,
+        float CoupledDrivelineDragNm,
+        float CoupledDrivelineViscousDragNmPerKrpm,
         float SpeedMps,
         float Throttle,
         int Gear,
@@ -91,7 +97,9 @@ namespace TopSpeed.Tests
                 redlineTorqueNm: 150f,
                 dragCoefficient: DragCoefficient,
                 frontalAreaM2: FrontalAreaM2,
+                sideAreaM2: SideAreaM2,
                 rollingResistanceCoefficient: RollingResistanceCoefficient,
+                rollingResistanceSpeedFactor: RollingResistanceSpeedFactor,
                 launchRpm: 2200f,
                 reversePowerFactor: 0.55f,
                 reverseGearRatio: 3.2f,
@@ -101,8 +109,8 @@ namespace TopSpeed.Tests
                 gears: 6,
                 gearRatios: new[] { 3.60f, 2.10f, 1.50f, 1.15f, 0.95f, 0.82f },
                 torqueCurve: torqueCurve,
-                coastDragBaseMps2: CoastDragBaseMps2,
-                coastDragLinearPerMps: CoastDragLinearPerMps);
+                coupledDrivelineDragNm: CoupledDrivelineDragNm,
+                coupledDrivelineViscousDragNmPerKrpm: CoupledDrivelineViscousDragNmPerKrpm);
         }
     }
 
@@ -111,26 +119,28 @@ namespace TopSpeed.Tests
         public static FsCheck.Arbitrary<PowertrainScenario> PowertrainScenario()
         {
             var generator =
-                from decel in Gen.Choose(10, 45)
                 from mass in Gen.Choose(700, 2600)
                 from drag in Gen.Choose(22, 42)
                 from area in Gen.Choose(16, 30)
+                from sideArea in Gen.Choose(30, 65)
                 from rr in Gen.Choose(10, 18)
-                from baseDrag in Gen.Choose(8, 18)
-                from linearDrag in Gen.Choose(3, 10)
+                from rrSpeedFactor in Gen.Choose(0, 30)
+                from drivelineDrag in Gen.Choose(5, 40)
+                from drivelineViscous in Gen.Choose(0, 20)
                 from speed in Gen.Choose(0, 80)
                 from throttle in Gen.Choose(0, 100)
                 from gear in Gen.Choose(1, 6)
                 from steps in Gen.Choose(1, 200)
                 from elapsed in Gen.Choose(1, 10)
                 select new PowertrainScenario(
-                    Deceleration: decel / 100f,
                     MassKg: mass,
                     DragCoefficient: drag / 100f,
                     FrontalAreaM2: area / 10f,
+                    SideAreaM2: sideArea / 10f,
                     RollingResistanceCoefficient: rr / 1000f,
-                    CoastDragBaseMps2: baseDrag / 100f,
-                    CoastDragLinearPerMps: linearDrag / 1000f,
+                    RollingResistanceSpeedFactor: rrSpeedFactor / 1000f,
+                    CoupledDrivelineDragNm: drivelineDrag,
+                    CoupledDrivelineViscousDragNmPerKrpm: drivelineViscous,
                     SpeedMps: speed,
                     Throttle: throttle / 100f,
                     Gear: gear,

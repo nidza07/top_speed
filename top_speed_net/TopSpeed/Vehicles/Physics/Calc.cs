@@ -23,7 +23,8 @@ namespace TopSpeed.Vehicles
         {
             var modifiers = SurfaceModel.Resolve(_surface, _surfaceTractionFactor, _deceleration);
             _currentSurfaceTractionFactor = modifiers.Traction;
-            _currentDeceleration = modifiers.Deceleration;
+            _currentSurfaceBrakeFactor = modifiers.Brake;
+            _currentSurfaceRollingResistanceFactor = modifiers.RollingResistance;
             _currentSurfaceLateralMultiplier = modifiers.LateralSpeedMultiplier;
             _speedDiff = 0f;
         }

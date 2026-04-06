@@ -1,4 +1,6 @@
+using System;
 using System.Collections.Generic;
+using System.Linq;
 using TopSpeed.Physics.Powertrain;
 using TopSpeed.Protocol;
 using TopSpeed.Vehicles;
@@ -28,6 +30,47 @@ namespace TopSpeed.Tests
                 engineInertiaKgm2: 0.24f,
                 engineFrictionTorqueNm: 20f,
                 drivelineCouplingRate: 12f);
+
+        public static EngineModel BuildEngine(OfficialVehicleSpec spec)
+        {
+            var torqueCurve = TopSpeed.Physics.Torque.CurveFactory.FromLegacy(
+                spec.IdleRpm,
+                spec.RevLimiter,
+                spec.PeakTorqueRpm,
+                spec.IdleTorqueNm,
+                spec.PeakTorqueNm,
+                spec.RedlineTorqueNm);
+
+            return new EngineModel(
+                spec.IdleRpm,
+                spec.MaxRpm,
+                spec.RevLimiter,
+                spec.AutoShiftRpm,
+                spec.EngineBraking,
+                spec.TopSpeed,
+                spec.FinalDriveRatio,
+                spec.TireCircumferenceM,
+                spec.Gears,
+                spec.GearRatios,
+                spec.PeakTorqueNm,
+                spec.PeakTorqueRpm,
+                spec.IdleTorqueNm,
+                spec.RedlineTorqueNm,
+                spec.EngineBrakingTorqueNm,
+                spec.PowerFactor,
+                spec.EngineInertiaKgm2,
+                spec.EngineFrictionTorqueNm,
+                spec.DrivelineCouplingRate,
+                torqueCurve,
+                engineOverrunIdleLossFraction: spec.EngineOverrunIdleLossFraction >= 0f ? spec.EngineOverrunIdleLossFraction : 0.35f,
+                engineFrictionLinearNmPerKrpm: spec.FrictionLinearNmPerKrpm >= 0f ? spec.FrictionLinearNmPerKrpm : 0f,
+                engineFrictionQuadraticNmPerKrpm2: spec.FrictionQuadraticNmPerKrpm2 >= 0f ? spec.FrictionQuadraticNmPerKrpm2 : 0f,
+                idleControlWindowRpm: spec.IdleControlWindowRpm >= 0f ? spec.IdleControlWindowRpm : 150f,
+                idleControlGainNmPerRpm: spec.IdleControlGainNmPerRpm >= 0f ? spec.IdleControlGainNmPerRpm : 0.08f,
+                minCoupledRiseIdleRpmPerSecond: spec.MinCoupledRiseIdleRpmPerSecond >= 0f ? spec.MinCoupledRiseIdleRpmPerSecond : 2200f,
+                minCoupledRiseFullRpmPerSecond: spec.MinCoupledRiseFullRpmPerSecond >= 0f ? spec.MinCoupledRiseFullRpmPerSecond : 6200f,
+                overrunCurveExponent: spec.OverrunCurveExponent >= 0f ? spec.OverrunCurveExponent : 1f);
+        }
 
         public static EngineTrace SimulateDisengagedRevBlip()
         {
@@ -93,6 +136,46 @@ namespace TopSpeed.Tests
                 DistanceMeters: Rounding.F(engine.DistanceMeters, 2)));
 
             return new EngineTrace("BackDrivenCombustionOff", samples);
+        }
+
+        public static OfficialFreeRevTrace SimulateOfficialDisengagedFreeRev(OfficialVehicleSpec spec, float durationSeconds = 1.25f)
+        {
+            var engine = BuildEngine(spec);
+            engine.StartEngine();
+            var samples = new List<EngineSample>();
+            var totalSteps = Math.Max(1, (int)Math.Ceiling(durationSeconds / 0.05f));
+
+            for (var i = 0; i < totalSteps; i++)
+                StepSync(engine, 100, EngineCouplingMode.Disengaged, 0f, 0f, samples, i);
+
+            return new OfficialFreeRevTrace(
+                spec.Name,
+                InitialRpm: Rounding.F(spec.IdleRpm, 1),
+                FinalRpm: Rounding.F(engine.Rpm, 1),
+                PeakRpm: Rounding.F(samples.Count > 0 ? samples.Max(s => s.Rpm) : engine.Rpm, 1),
+                Samples: samples);
+        }
+
+        public static OfficialFreeRevLiftTrace SimulateOfficialDisengagedFreeRevLift(OfficialVehicleSpec spec, float throttleSeconds = 1.0f, float releaseSeconds = 1.0f)
+        {
+            var engine = BuildEngine(spec);
+            engine.StartEngine();
+            var samples = new List<EngineSample>();
+            var throttleSteps = Math.Max(1, (int)Math.Ceiling(throttleSeconds / 0.05f));
+            var releaseSteps = Math.Max(1, (int)Math.Ceiling(releaseSeconds / 0.05f));
+
+            for (var i = 0; i < throttleSteps; i++)
+                StepSync(engine, 100, EngineCouplingMode.Disengaged, 0f, 0f, samples, i);
+
+            var rpmAtLift = engine.Rpm;
+            for (var i = 0; i < releaseSteps; i++)
+                StepSync(engine, 0, EngineCouplingMode.Disengaged, 0f, 0f, samples, throttleSteps + i);
+
+            return new OfficialFreeRevLiftTrace(
+                spec.Name,
+                RpmAtLift: Rounding.F(rpmAtLift, 1),
+                FinalRpm: Rounding.F(engine.Rpm, 1),
+                Samples: samples);
         }
 
         public static IReadOnlyList<CarType> AutomaticVehicles => new[]
@@ -181,21 +264,24 @@ namespace TopSpeed.Tests
                     new LongitudinalStepInput(
                         powertrain,
                         elapsed,
-                        speedMps,
-                        throttle,
-                        brake: 0f,
-                        surfaceTractionModifier: 1f,
-                        surfaceDecelerationModifier: 1f,
-                        longitudinalGripFactor: 1f,
-                        launchGear,
-                        inReverse: false,
-                        drivelineCouplingFactor: coupling,
-                        creepAccelerationMps2: autoOutput.CreepAccelerationMps2,
-                        currentEngineRpm: engine.Rpm,
-                        requestDrive: true,
-                        requestBrake: false,
-                        applyEngineBraking: false,
-                        driveRatioOverride: autoOutput.EffectiveDriveRatio > 0f ? autoOutput.EffectiveDriveRatio : (float?)null));
+                    speedMps,
+                    throttle,
+                    brake: 0f,
+                    surfaceTractionModifier: 1f,
+                    surfaceBrakeModifier: 1f,
+                    surfaceRollingResistanceModifier: 1f,
+                    longitudinalGripFactor: 1f,
+                    launchGear,
+                    inReverse: false,
+                    isNeutral: false,
+                    drivelineCouplingFactor: coupling,
+                    creepAccelerationMps2: autoOutput.CreepAccelerationMps2,
+                    currentEngineRpm: engine.Rpm,
+                    requestDrive: true,
+                    requestBrake: false,
+                    applyEngineBraking: false,
+                    resistanceEnvironment: ResistanceEnvironment.Calm,
+                    driveRatioOverride: autoOutput.EffectiveDriveRatio > 0f ? autoOutput.EffectiveDriveRatio : (float?)null));
 
                 speedMps = System.Math.Max(0f, speedMps + (longitudinal.SpeedDeltaKph / 3.6f));
                 var speedKph = speedMps * 3.6f;
@@ -269,6 +355,8 @@ namespace TopSpeed.Tests
     }
 
     internal sealed record EngineTrace(string Scenario, IReadOnlyList<EngineSample> Samples);
+    internal sealed record OfficialFreeRevTrace(string Vehicle, float InitialRpm, float FinalRpm, float PeakRpm, IReadOnlyList<EngineSample> Samples);
+    internal sealed record OfficialFreeRevLiftTrace(string Vehicle, float RpmAtLift, float FinalRpm, IReadOnlyList<EngineSample> Samples);
 
     internal sealed record EngineSample(int Step, float Rpm, float Horsepower, float DistanceMeters);
 

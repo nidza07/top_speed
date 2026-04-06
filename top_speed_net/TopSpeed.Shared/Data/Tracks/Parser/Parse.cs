@@ -19,10 +19,21 @@ namespace TopSpeed.Data
                 p.Id,
                 p.Width,
                 p.Height,
+                p.WeatherProfileId,
+                p.WeatherTransitionSeconds,
                 p.RoomId,
                 p.RoomOverrides.HasAny ? p.RoomOverrides : null,
                 p.SoundSourceIds,
                 p.Metadata));
+        }
+
+        private static void FlushPending(ref WeatherBuilder? pendingWeather, Dictionary<string, TrackWeatherProfile> weatherProfiles)
+        {
+            if (!pendingWeather.HasValue)
+                return;
+            var p = pendingWeather.Value;
+            pendingWeather = null;
+            weatherProfiles[p.Id] = p.Build();
         }
 
         private static void FlushPending(ref RoomBuilder? pendingRoom, Dictionary<string, TrackRoomDefinition> rooms)
@@ -43,25 +54,37 @@ namespace TopSpeed.Data
             sounds[p.Id] = p.Build();
         }
 
-        private static TrackWeather ParseWeather(IReadOnlyDictionary<string, string> meta)
+        private static bool TryParseWeatherKind(string raw, out TrackWeather value)
         {
-            if (!meta.TryGetValue("weather", out var raw))
-                return TrackWeather.Sunny;
+            value = TrackWeather.Sunny;
             if (TryParseInt(raw, out var weatherInt) && weatherInt >= 0 && weatherInt <= 3)
-                return (TrackWeather)weatherInt;
+            {
+                value = (TrackWeather)weatherInt;
+                return true;
+            }
+
             switch (NormalizeLookupToken(raw))
             {
                 case "rain":
                 case "rainy":
-                    return TrackWeather.Rain;
+                    value = TrackWeather.Rain;
+                    return true;
                 case "wind":
                 case "windy":
-                    return TrackWeather.Wind;
+                    value = TrackWeather.Wind;
+                    return true;
                 case "storm":
                 case "stormy":
-                    return TrackWeather.Storm;
+                    value = TrackWeather.Storm;
+                    return true;
                 default:
-                    return TrackWeather.Sunny;
+                    if (NormalizeLookupToken(raw) == "sunny")
+                    {
+                        value = TrackWeather.Sunny;
+                        return true;
+                    }
+
+                    return false;
             }
         }
 

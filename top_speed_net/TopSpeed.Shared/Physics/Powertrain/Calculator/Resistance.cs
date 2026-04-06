@@ -7,48 +7,36 @@ namespace TopSpeed.Physics.Powertrain
         public static float BrakeDecelKph(
             Config config,
             float brakeInput,
-            float surfaceDecelerationModifier)
+            float surfaceBrakeModifier)
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
             if (brakeInput <= 0f)
                 return 0f;
 
-            var grip = Math.Max(0.1f, config.TireGripCoefficient * surfaceDecelerationModifier);
+            var grip = Math.Max(0.1f, config.TireGripCoefficient * surfaceBrakeModifier);
             var decelMps2 = Clamp(brakeInput, 0f, 1f) * config.BrakeStrength * grip * Gravity;
             return decelMps2 * 3.6f;
         }
 
-        public static float PassiveResistanceDecelKph(
+        public static float AerodynamicDecelKph(
             Config config,
             float speedMps,
-            float surfaceDecelerationModifier)
+            in ResistanceEnvironment environment)
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
-            if (speedMps <= 0f)
-                return 0f;
-
-            var resistiveForce = ResistiveForce(config, speedMps);
-            var decelMps2 = resistiveForce / Math.Max(1f, config.MassKg);
-            decelMps2 *= Math.Max(0f, surfaceDecelerationModifier);
-            return Math.Max(0f, decelMps2 * 3.6f);
+            return (ResistanceModel.AerodynamicForce(config, speedMps, in environment) / Math.Max(1f, config.MassKg)) * 3.6f;
         }
 
-        public static float ChassisCoastDecelKph(
+        public static float RollingResistanceDecelKph(
             Config config,
             float speedMps,
-            float surfaceDecelerationModifier)
+            float rollingResistanceModifier)
         {
             if (config == null)
                 throw new ArgumentNullException(nameof(config));
-            if (speedMps <= 0f)
-                return 0f;
-
-            var baseLossMps2 = config.CoastDragBaseMps2;
-            var viscousLossMps2 = config.CoastDragLinearPerMps * speedMps;
-            var coastLossMps2 = (baseLossMps2 + viscousLossMps2) * Math.Max(0f, surfaceDecelerationModifier);
-            return Math.Max(0f, coastLossMps2 * 3.6f);
+            return (ResistanceModel.RollingResistanceForce(config, speedMps, rollingResistanceModifier) / Math.Max(1f, config.MassKg)) * 3.6f;
         }
 
         public static float EngineBrakeDecelKph(
@@ -56,7 +44,7 @@ namespace TopSpeed.Physics.Powertrain
             int gear,
             bool inReverse,
             float speedMps,
-            float surfaceDecelerationModifier,
+            float surfaceBrakeModifier,
             float currentEngineRpm,
             float? driveRatioOverride = null)
         {
@@ -87,18 +75,8 @@ namespace TopSpeed.Physics.Powertrain
             var reflectedEngineInertia = config.EngineInertiaKgm2 * totalDriveRatio * totalDriveRatio;
             var equivalentMassFromEngineInertia = reflectedEngineInertia / Math.Max(0.0001f, config.WheelRadiusM * config.WheelRadiusM);
             var effectiveMass = config.MassKg + Math.Max(0f, equivalentMassFromEngineInertia);
-            var decelMps2 = (wheelForce / effectiveMass) * surfaceDecelerationModifier;
+            var decelMps2 = (wheelForce / effectiveMass) * surfaceBrakeModifier;
             return Math.Max(0f, decelMps2 * 3.6f);
-        }
-
-        public static float ResistiveForce(Config config, float speedMps)
-        {
-            if (config == null)
-                throw new ArgumentNullException(nameof(config));
-
-            var dragForce = 0.5f * AirDensityKgPerM3 * config.DragCoefficient * config.FrontalAreaM2 * speedMps * speedMps;
-            var rollingForce = config.RollingResistanceCoefficient * config.MassKg * Gravity;
-            return dragForce + rollingForce;
         }
 
         private static float RpmForRatio(Config config, float speedMps, float ratio)

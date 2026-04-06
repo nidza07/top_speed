@@ -10,12 +10,15 @@ namespace TopSpeed.Data
         {
             var sectionKind = string.Empty;
             var segmentIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            var weatherIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var roomIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var soundIds = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
             var segmentRooms = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var segmentSounds = new Dictionary<string, IReadOnlyList<string>>(StringComparer.OrdinalIgnoreCase);
+            var segmentWeatherRefs = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var soundStartAreas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
             var soundEndAreas = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
+            string? defaultWeatherProfileId = null;
             var currentSectionId = string.Empty;
 
             int lineNumber = 0;
@@ -33,6 +36,7 @@ namespace TopSpeed.Data
 
                     if (sectionKind != "meta" &&
                         sectionKind != "segment" &&
+                        sectionKind != "weather" &&
                         sectionKind != "room" &&
                         sectionKind != "sound")
                     {
@@ -41,7 +45,7 @@ namespace TopSpeed.Data
                         continue;
                     }
 
-                    if ((sectionKind == "segment" || sectionKind == "room" || sectionKind == "sound") &&
+                    if ((sectionKind == "segment" || sectionKind == "weather" || sectionKind == "room" || sectionKind == "sound") &&
                         currentSectionId.Length == 0)
                     {
                         issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Section '{0}' requires an id.", sectionKind)));
@@ -55,6 +59,11 @@ namespace TopSpeed.Data
                             issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Duplicate segment id '{0}'.", currentSectionId)));
                         if (!segmentSounds.ContainsKey(currentSectionId))
                             segmentSounds[currentSectionId] = Array.Empty<string>();
+                    }
+                    else if (sectionKind == "weather")
+                    {
+                        if (!weatherIds.Add(currentSectionId))
+                            issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Duplicate weather id '{0}'.", currentSectionId)));
                     }
                     else if (sectionKind == "room")
                     {
@@ -93,8 +102,8 @@ namespace TopSpeed.Data
                 switch (sectionKind)
                 {
                     case "meta":
-                        if (key == "weather" && !IsValidWeather(value))
-                            issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid weather value '{0}'.", value)));
+                        if (key == "weather")
+                            defaultWeatherProfileId = NormalizeNullable(value);
                         else if (key == "ambience" && !IsValidAmbience(value))
                             issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, lineNumber, Localized("Invalid ambience value '{0}'.", value)));
                         break;
@@ -107,7 +116,11 @@ namespace TopSpeed.Data
                             currentSectionId,
                             segmentRooms,
                             segmentSounds,
+                            segmentWeatherRefs,
                             issues);
+                        break;
+                    case "weather":
+                        ValidateWeatherField(key, value, lineNumber, issues);
                         break;
                     case "room":
                         ValidateRoomField(key, value, lineNumber, issues);
@@ -127,6 +140,21 @@ namespace TopSpeed.Data
 
             if (segmentIds.Count == 0)
                 issues.Add(new TrackTsmIssue(TrackTsmIssueSeverity.Error, 0, Localized("Track must include at least one [segment:<id>] section.")));
+
+            if (string.IsNullOrWhiteSpace(defaultWeatherProfileId))
+            {
+                issues.Add(new TrackTsmIssue(
+                    TrackTsmIssueSeverity.Error,
+                    0,
+                    Localized("Track [meta] must define a weather profile reference, for example 'weather = default'.")));
+            }
+            else if (!weatherIds.Contains(defaultWeatherProfileId!))
+            {
+                issues.Add(new TrackTsmIssue(
+                    TrackTsmIssueSeverity.Error,
+                    0,
+                    Localized("Track default weather profile '{0}' does not match any [weather:{0}] section.", (object)defaultWeatherProfileId!)));
+            }
 
             foreach (var pair in segmentRooms)
             {
@@ -153,6 +181,17 @@ namespace TopSpeed.Data
                             0,
                             Localized("Segment '{0}' references sound source '{1}', but no matching [sound:{1}] section exists.", pair.Key, soundId)));
                     }
+                }
+            }
+
+            foreach (var pair in segmentWeatherRefs)
+            {
+                if (!weatherIds.Contains(pair.Value))
+                {
+                    issues.Add(new TrackTsmIssue(
+                        TrackTsmIssueSeverity.Error,
+                        0,
+                        Localized("Segment '{0}' references weather profile '{1}', but no matching [weather:{1}] section exists.", pair.Key, pair.Value)));
                 }
             }
 

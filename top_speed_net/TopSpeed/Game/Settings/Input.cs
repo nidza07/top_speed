@@ -24,6 +24,26 @@ namespace TopSpeed.Game
             _dialogs.Show(dialog);
         }
 
+        private void HandleControllerBackendUnavailable(string reason)
+        {
+            SetDevice(InputDeviceMode.Keyboard);
+
+            var dialog = new Dialog(
+                LocalizationService.Mark("Controller backend unavailable"),
+                LocalizationService.Format(
+                    LocalizationService.Mark("The SDL controller backend could not be initialized. The game has reverted to keyboard input.\n\nReason: {0}"),
+                    reason),
+                QuestionId.Ok,
+                items: null,
+                onResult: null,
+                new DialogButton(QuestionId.Ok, LocalizationService.Mark("OK")))
+            {
+                FocusFirstButtonByDefault = false
+            };
+
+            _dialogs.Show(dialog);
+        }
+
         private void ShowRestoreDefaultsDialog()
         {
             var dialog = new Dialog(

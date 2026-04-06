@@ -42,6 +42,18 @@ namespace TopSpeed.Data
                 return;
             }
 
+            if (key == "weather")
+            {
+                builder.WeatherProfileId = NormalizeNullable(value);
+                return;
+            }
+
+            if (key == "weather_transition_seconds" && TryParseFloat(value, out var transitionSeconds))
+            {
+                builder.WeatherTransitionSeconds = transitionSeconds < 0f ? 0f : transitionSeconds;
+                return;
+            }
+
             if (key == "room" || key == "room_profile" || key == "room_preset")
             {
                 builder.RoomId = NormalizeNullable(value);
@@ -58,6 +70,92 @@ namespace TopSpeed.Data
             }
 
             builder.Metadata[key] = value;
+        }
+
+        private static void ParseWeatherKey(ref WeatherBuilder builder, string key, string value)
+        {
+            if (key == "kind" && TryParseWeatherKind(value, out var kind))
+            {
+                var profile = TrackWeatherProfile.CreatePreset(builder.Id, kind);
+                builder.Kind = profile.Kind;
+                builder.LongitudinalWindMps = profile.LongitudinalWindMps;
+                builder.LateralWindMps = profile.LateralWindMps;
+                builder.AirDensityKgPerM3 = profile.AirDensityKgPerM3;
+                builder.DraftingFactor = profile.DraftingFactor;
+                builder.TemperatureC = profile.TemperatureC;
+                builder.Humidity = profile.Humidity;
+                builder.PressureKpa = profile.PressureKpa;
+                builder.VisibilityM = profile.VisibilityM;
+                builder.RainGain = profile.RainGain;
+                builder.WindGain = profile.WindGain;
+                builder.StormGain = profile.StormGain;
+                return;
+            }
+
+            if (key == "longitudinal_wind_mps" && TryParseFloat(value, out var longitudinalWind))
+            {
+                builder.LongitudinalWindMps = longitudinalWind;
+                return;
+            }
+
+            if (key == "lateral_wind_mps" && TryParseFloat(value, out var lateralWind))
+            {
+                builder.LateralWindMps = lateralWind;
+                return;
+            }
+
+            if (key == "air_density" && TryParseFloat(value, out var airDensity))
+            {
+                builder.AirDensityKgPerM3 = airDensity;
+                return;
+            }
+
+            if (key == "drafting_factor" && TryParseFloat(value, out var draftingFactor))
+            {
+                builder.DraftingFactor = draftingFactor;
+                return;
+            }
+
+            if (key == "temperature_c" && TryParseFloat(value, out var temperature))
+            {
+                builder.TemperatureC = temperature;
+                return;
+            }
+
+            if (key == "humidity" && TryParseFloat(value, out var humidity))
+            {
+                builder.Humidity = humidity;
+                return;
+            }
+
+            if (key == "pressure_kpa" && TryParseFloat(value, out var pressure))
+            {
+                builder.PressureKpa = pressure;
+                return;
+            }
+
+            if (key == "visibility_m" && TryParseFloat(value, out var visibility))
+            {
+                builder.VisibilityM = visibility;
+                return;
+            }
+
+            if (key == "rain_gain" && TryParseFloat(value, out var rainGain))
+            {
+                builder.RainGain = rainGain;
+                return;
+            }
+
+            if (key == "wind_gain" && TryParseFloat(value, out var windGain))
+            {
+                builder.WindGain = windGain;
+                return;
+            }
+
+            if (key == "storm_gain" && TryParseFloat(value, out var stormGain))
+            {
+                builder.StormGain = stormGain;
+            }
         }
 
         private static void ParseRoomKey(ref RoomBuilder builder, string key, string value)

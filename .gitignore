@@ -18,8 +18,8 @@ x64/
 [Aa][Rr][Mm]/
 [Aa][Rr][Mm]64/
 bld/
-[Bb]in/
-[Oo]bj/
+**/[Bb]in*/
+**/[Oo]bj*/
 [Ll]og/
 [Ll]ogs/
 
@@ -54,6 +54,5 @@ TestResult.xml
 nunit-*.xml
 top_speed_net/SteamAudio.NET/Natives/steamaudio/**
 
-top_speed_net/TopSpeed/bin/**
 features.txt
 top_speed_net/tolk/build-win64-static/

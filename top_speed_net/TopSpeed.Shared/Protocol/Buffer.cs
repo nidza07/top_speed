@@ -58,6 +58,17 @@ namespace TopSpeed.Protocol
             var nullIndex = value.IndexOf('\0');
             return nullIndex >= 0 ? value.Substring(0, nullIndex) : value.Trim();
         }
+
+        public string ReadString16()
+        {
+            var length = ReadUInt16();
+            if (length == 0)
+                return string.Empty;
+
+            var value = Encoding.UTF8.GetString(_data, _offset, length);
+            _offset += length;
+            return value;
+        }
     }
 
     public struct PacketWriter
@@ -126,6 +137,25 @@ namespace TopSpeed.Protocol
             for (var i = count; i < length; i++)
                 _buffer[_offset + i] = 0;
             _offset += length;
+        }
+
+        public void WriteString16(string value)
+        {
+            var text = value ?? string.Empty;
+            var length = MeasureString16(text);
+            WriteUInt16((ushort)length);
+            if (length == 0)
+                return;
+
+            var bytes = Encoding.UTF8.GetBytes(text);
+            Array.Copy(bytes, 0, _buffer, _offset, length);
+            _offset += length;
+        }
+
+        public static int MeasureString16(string value)
+        {
+            var text = value ?? string.Empty;
+            return Encoding.UTF8.GetByteCount(text);
         }
     }
 }

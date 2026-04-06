@@ -24,8 +24,10 @@ internal static class BotPhysicsHarness
                     WheelRadiusM: Rounding.F(config.WheelRadiusM, 3),
                     FirstGearRatio: Rounding.F(config.GearRatios[0], 3),
                     TopGearRatio: Rounding.F(config.GearRatios[config.Gears - 1], 3),
-                    CoastDragBaseMps2: Rounding.F(config.CoastDragBaseMps2),
-                    CoastDragLinearPerMps: Rounding.F(config.CoastDragLinearPerMps),
+                    SideAreaM2: Rounding.F(config.SideAreaM2),
+                    RollingResistanceSpeedFactor: Rounding.F(config.RollingResistanceSpeedFactor),
+                    CoupledDrivelineDragNm: Rounding.F(config.CoupledDrivelineDragNm),
+                    CoupledDrivelineViscousDragNmPerKrpm: Rounding.F(config.CoupledDrivelineViscousDragNmPerKrpm),
                     SurfaceTractionFactor: Rounding.F(config.SurfaceTractionFactor),
                     Deceleration: Rounding.F(config.Deceleration));
             })
@@ -144,7 +146,9 @@ internal sealed record BotCatalogSnapshot(
     float WheelRadiusM,
     float FirstGearRatio,
     float TopGearRatio,
-    float CoastDragBaseMps2,
-    float CoastDragLinearPerMps,
+    float SideAreaM2,
+    float RollingResistanceSpeedFactor,
+    float CoupledDrivelineDragNm,
+    float CoupledDrivelineViscousDragNmPerKrpm,
     float SurfaceTractionFactor,
     float Deceleration);

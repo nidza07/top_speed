@@ -54,7 +54,7 @@ namespace TS.Sdl
         public static string GetError()
         {
             if (!IsAvailable)
-                return "SDL3 library is not available.";
+                return Library.LastError;
 
             return Utf8.FromNative(SDL_GetError()) ?? string.Empty;
         }

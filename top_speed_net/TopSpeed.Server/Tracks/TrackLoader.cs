@@ -15,7 +15,7 @@ namespace TopSpeed.Server.Tracks
             if (TrackCatalog.BuiltIn.TryGetValue(nameOrPath, out var builtIn))
             {
                 var laps = ResolveLaps(nameOrPath, defaultLaps);
-                return new TrackData(builtIn.UserDefined, builtIn.Weather, builtIn.Ambience, builtIn.Definitions, laps);
+                return builtIn.WithLaps(laps);
             }
 
             var data = ReadCustomTrackData(nameOrPath, logger);

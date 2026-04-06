@@ -28,7 +28,9 @@ namespace TopSpeed.Bots
             float redlineTorqueNm,
             float dragCoefficient,
             float frontalAreaM2,
+            float sideAreaM2,
             float rollingResistanceCoefficient,
+            float rollingResistanceSpeedFactor,
             float launchRpm,
             float reversePowerFactor,
             float reverseGearRatio,
@@ -62,8 +64,8 @@ namespace TopSpeed.Bots
             TransmissionPolicy? transmissionPolicy = null,
             TransmissionType activeTransmissionType = TransmissionType.Atc,
             AutomaticDrivelineTuning? automaticTuning = null,
-            float coastDragBaseMps2 = -1f,
-            float coastDragLinearPerMps = -1f,
+            float coupledDrivelineDragNm = -1f,
+            float coupledDrivelineViscousDragNmPerKrpm = -1f,
             float frictionLinearNmPerKrpm = -1f,
             float frictionQuadraticNmPerKrpm2 = -1f,
             float idleControlWindowRpm = -1f,
@@ -76,46 +78,47 @@ namespace TopSpeed.Bots
         {
             var build = PowertrainBuild.Create(
                 new BuildInput(
-                    deceleration,
-                    massKg,
-                    drivetrainEfficiency,
-                    engineBrakingTorqueNm,
-                    tireGripCoefficient,
-                    brakeStrength,
-                    wheelRadiusM,
-                    engineBraking,
-                    idleRpm,
-                    revLimiter,
-                    finalDriveRatio,
-                    powerFactor,
-                    peakTorqueNm,
-                    peakTorqueRpm,
-                    idleTorqueNm,
-                    redlineTorqueNm,
-                    dragCoefficient,
-                    frontalAreaM2,
-                    rollingResistanceCoefficient,
-                    launchRpm,
-                    reversePowerFactor,
-                    reverseGearRatio,
+                    massKg: massKg,
+                    drivetrainEfficiency: drivetrainEfficiency,
+                    engineBrakingTorqueNm: engineBrakingTorqueNm,
+                    tireGripCoefficient: tireGripCoefficient,
+                    brakeStrength: brakeStrength,
+                    wheelRadiusM: wheelRadiusM,
+                    engineBraking: engineBraking,
+                    idleRpm: idleRpm,
+                    revLimiter: revLimiter,
+                    finalDriveRatio: finalDriveRatio,
+                    powerFactor: powerFactor,
+                    peakTorqueNm: peakTorqueNm,
+                    peakTorqueRpm: peakTorqueRpm,
+                    idleTorqueNm: idleTorqueNm,
+                    redlineTorqueNm: redlineTorqueNm,
+                    dragCoefficient: dragCoefficient,
+                    frontalAreaM2: frontalAreaM2,
+                    sideAreaM2: sideAreaM2,
+                    rollingResistanceCoefficient: rollingResistanceCoefficient,
+                    rollingResistanceSpeedFactor: rollingResistanceSpeedFactor,
+                    launchRpm: launchRpm,
+                    reversePowerFactor: reversePowerFactor,
+                    reverseGearRatio: reverseGearRatio,
                     reverseMaxSpeedKph: 35f,
-                    engineInertiaKgm2,
-                    engineFrictionTorqueNm,
-                    drivelineCouplingRate,
-                    gears,
-                    torqueCurve,
-                    gearRatios,
-                    coastDragBaseMps2,
-                    coastDragLinearPerMps,
-                    frictionLinearNmPerKrpm,
-                    frictionQuadraticNmPerKrpm2,
-                    idleControlWindowRpm,
-                    idleControlGainNmPerRpm,
-                    minCoupledRiseIdleRpmPerSecond,
-                    minCoupledRiseFullRpmPerSecond,
-                    engineOverrunIdleLossFraction,
-                    overrunCurveExponent,
-                    engineBrakeTransferEfficiency));
+                    engineInertiaKgm2: engineInertiaKgm2,
+                    engineFrictionTorqueNm: engineFrictionTorqueNm,
+                    drivelineCouplingRate: drivelineCouplingRate,
+                    gears: gears,
+                    torqueCurve: torqueCurve,
+                    gearRatios: gearRatios,
+                    coupledDrivelineDragNm: coupledDrivelineDragNm,
+                    coupledDrivelineViscousDragNmPerKrpm: coupledDrivelineViscousDragNmPerKrpm,
+                    frictionLinearNmPerKrpm: frictionLinearNmPerKrpm,
+                    frictionQuadraticNmPerKrpm2: frictionQuadraticNmPerKrpm2,
+                    idleControlWindowRpm: idleControlWindowRpm,
+                    idleControlGainNmPerRpm: idleControlGainNmPerRpm,
+                    minCoupledRiseIdleRpmPerSecond: minCoupledRiseIdleRpmPerSecond,
+                    minCoupledRiseFullRpmPerSecond: minCoupledRiseFullRpmPerSecond,
+                    engineOverrunIdleLossFraction: engineOverrunIdleLossFraction,
+                    overrunCurveExponent: overrunCurveExponent,
+                    engineBrakeTransferEfficiency: engineBrakeTransferEfficiency));
 
             SurfaceTractionFactor = Math.Max(0.01f, surfaceTractionFactor);
             Deceleration = Math.Max(0.01f, deceleration);
@@ -137,15 +140,17 @@ namespace TopSpeed.Bots
             RedlineTorqueNm = build.Powertrain.RedlineTorqueNm;
             DragCoefficient = build.Powertrain.DragCoefficient;
             FrontalAreaM2 = build.Powertrain.FrontalAreaM2;
+            SideAreaM2 = build.Powertrain.SideAreaM2;
             RollingResistanceCoefficient = build.Powertrain.RollingResistanceCoefficient;
+            RollingResistanceSpeedFactor = build.Powertrain.RollingResistanceSpeedFactor;
             LaunchRpm = build.Powertrain.LaunchRpm;
             ReversePowerFactor = build.Powertrain.ReversePowerFactor;
             ReverseGearRatio = build.Powertrain.ReverseGearRatio;
             EngineInertiaKgm2 = build.Powertrain.EngineInertiaKgm2;
             EngineFrictionTorqueNm = build.Powertrain.EngineFrictionTorqueNm;
             DrivelineCouplingRate = build.Powertrain.DrivelineCouplingRate;
-            CoastDragBaseMps2 = build.CoastDragBaseMps2;
-            CoastDragLinearPerMps = build.CoastDragLinearPerMps;
+            CoupledDrivelineDragNm = build.CoupledDrivelineDragNm;
+            CoupledDrivelineViscousDragNmPerKrpm = build.CoupledDrivelineViscousDragNmPerKrpm;
             EngineFrictionLinearNmPerKrpm = build.FrictionLinearNmPerKrpm;
             EngineFrictionQuadraticNmPerKrpm2 = build.FrictionQuadraticNmPerKrpm2;
             IdleControlWindowRpm = build.IdleControlWindowRpm;
@@ -207,15 +212,17 @@ namespace TopSpeed.Bots
         public float RedlineTorqueNm { get; }
         public float DragCoefficient { get; }
         public float FrontalAreaM2 { get; }
+        public float SideAreaM2 { get; }
         public float RollingResistanceCoefficient { get; }
+        public float RollingResistanceSpeedFactor { get; }
         public float LaunchRpm { get; }
         public float ReversePowerFactor { get; }
         public float ReverseGearRatio { get; }
         public float EngineInertiaKgm2 { get; }
         public float EngineFrictionTorqueNm { get; }
         public float DrivelineCouplingRate { get; }
-        public float CoastDragBaseMps2 { get; }
-        public float CoastDragLinearPerMps { get; }
+        public float CoupledDrivelineDragNm { get; }
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; }
         public float EngineFrictionLinearNmPerKrpm { get; }
         public float EngineFrictionQuadraticNmPerKrpm2 { get; }
         public float IdleControlWindowRpm { get; }

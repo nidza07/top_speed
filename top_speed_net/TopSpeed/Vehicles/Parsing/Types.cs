@@ -96,10 +96,12 @@ namespace TopSpeed.Vehicles.Parsing
         public float RedlineTorqueNm { get; set; }
         public float DragCoefficient { get; set; }
         public float FrontalAreaM2 { get; set; }
+        public float SideAreaM2 { get; set; } = -1f;
         public float RollingResistanceCoefficient { get; set; }
+        public float RollingResistanceSpeedFactor { get; set; } = -1f;
         public float LaunchRpm { get; set; }
-        public float CoastDragBaseMps2 { get; set; } = -1f;
-        public float CoastDragLinearPerMps { get; set; } = -1f;
+        public float CoupledDrivelineDragNm { get; set; } = -1f;
+        public float CoupledDrivelineViscousDragNmPerKrpm { get; set; } = -1f;
         public float EngineInertiaKgm2 { get; set; }
         public float EngineFrictionTorqueNm { get; set; }
         public float EngineFrictionLinearNmPerKrpm { get; set; } = -1f;

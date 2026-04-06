@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using TopSpeed.Data;
 using TopSpeed.Protocol;
 
@@ -53,7 +54,7 @@ namespace TopSpeed.Network
         {
             packet = new PacketLoadCustomTrack();
             const int headerSize = 2;
-            const int baseSize = 1 + 12 + 1 + 1 + 2;
+            const int baseSize = 1 + 12 + 1 + 2;
             if (data.Length < headerSize + baseSize)
                 return false;
             if (data[0] != ProtocolConstants.Version || data[1] != (byte)Command.LoadCustomTrack)
@@ -63,11 +64,18 @@ namespace TopSpeed.Network
             reader.ReadByte();
             packet.NrOfLaps = reader.ReadByte();
             packet.TrackName = reader.ReadFixedString(12);
-            packet.TrackWeather = (TrackWeather)reader.ReadByte();
             packet.TrackAmbience = (TrackAmbience)reader.ReadByte();
             packet.TrackLength = reader.ReadUInt16();
-            var availableDefs = Math.Max(0, (data.Length - headerSize - baseSize) / 7);
-            var definitionCount = Math.Min(packet.TrackLength, (ushort)availableDefs);
+            packet.DefaultWeatherProfileId = reader.ReadString16();
+            var profileCount = reader.ReadByte();
+            var weatherProfiles = new Dictionary<string, TrackWeatherProfile>(StringComparer.OrdinalIgnoreCase);
+            for (var i = 0; i < profileCount; i++)
+            {
+                var profile = ReadWeatherProfile(ref reader);
+                weatherProfiles[profile.Id] = profile;
+            }
+
+            var definitionCount = packet.TrackLength;
             var definitions = new TrackDefinition[definitionCount];
             for (var i = 0; i < definitionCount; i++)
             {
@@ -75,11 +83,47 @@ namespace TopSpeed.Network
                 var surface = (TrackSurface)reader.ReadByte();
                 var noise = (TrackNoise)reader.ReadByte();
                 var segmentLength = reader.ReadSingle();
-                definitions[i] = new TrackDefinition(type, surface, noise, segmentLength);
+                var weatherProfileId = reader.ReadString16();
+                var transitionSeconds = reader.ReadSingle();
+                definitions[i] = new TrackDefinition(
+                    type,
+                    surface,
+                    noise,
+                    segmentLength,
+                    segmentId: null,
+                    width: 0f,
+                    height: 0f,
+                    weatherProfileId: string.IsNullOrWhiteSpace(weatherProfileId) ? null : weatherProfileId,
+                    weatherTransitionSeconds: transitionSeconds,
+                    roomId: null,
+                    roomOverrides: null,
+                    soundSourceIds: null,
+                    metadata: null);
             }
 
+            packet.WeatherProfiles = weatherProfiles;
             packet.Definitions = definitions;
             return true;
+        }
+
+        private static TrackWeatherProfile ReadWeatherProfile(ref PacketReader reader)
+        {
+            var id = reader.ReadString16();
+            var kind = (TrackWeather)reader.ReadByte();
+            return new TrackWeatherProfile(
+                id,
+                kind,
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle(),
+                reader.ReadSingle());
         }
 
         public static bool TryReadRaceResults(byte[] data, out PacketRaceResults packet)

@@ -9,6 +9,7 @@ namespace TopSpeed.Input
     internal interface IInputService : IDisposable
     {
         event Action? NoControllerDetected;
+        event Action<string>? ControllerBackendUnavailable;
 
         InputState Current { get; }
         bool ActiveControllerIsRacingWheel { get; }

@@ -23,9 +23,6 @@ namespace TopSpeed.Tracks
         {
             ApplyAmbientVolume(_soundCrowd);
             ApplyAmbientVolume(_soundOcean);
-            ApplyAmbientVolume(_soundRain);
-            ApplyAmbientVolume(_soundWind);
-            ApplyAmbientVolume(_soundStorm);
             ApplyAmbientVolume(_soundDesert);
             ApplyAmbientVolume(_soundAirport);
             ApplyAmbientVolume(_soundAirplane);
@@ -37,6 +34,7 @@ namespace TopSpeed.Tracks
             ApplyAmbientVolume(_soundRiver);
             ApplyAmbientVolume(_soundHelicopter);
             ApplyAmbientVolume(_soundOwl);
+            ApplyWeatherAudio();
         }
 
         private void ApplyAmbientVolumeToTrackSounds()
