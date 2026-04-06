@@ -155,7 +155,7 @@ jobs:
         }
 
         Clear-ClientBuildState
-        dotnet build TopSpeed/TopSpeed.csproj --configuration Release --framework net10.0-windows --runtime win-x64
+        dotnet build TopSpeed/TopSpeed.csproj --configuration Release --framework net472
 
         Clear-ClientBuildState
         dotnet build TopSpeed/TopSpeed.csproj --configuration Release -p:RuntimeIdentifier=linux-x64
@@ -167,7 +167,7 @@ jobs:
       shell: powershell
       run: |
         $clientTargets = @(
-          @{ Source = "TopSpeed\bin\Release\net10.0\win-x64\*"; Destination = "${{ steps.release_info.outputs.game_zip_win }}" },
+          @{ Source = "TopSpeed\bin\Release\net472\*"; Destination = "${{ steps.release_info.outputs.game_zip_win }}" },
           @{ Source = "TopSpeed\bin\Release\net10.0\linux-x64\*"; Destination = "${{ steps.release_info.outputs.game_zip_linux }}" },
           @{ Source = "TopSpeed\bin\Release\net10.0\osx-x64\*"; Destination = "${{ steps.release_info.outputs.game_zip_osx }}" }
         )
