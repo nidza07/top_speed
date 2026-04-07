@@ -25,7 +25,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\win-x64\</PublishDir>
+    <PublishDir>bin/Publish/win-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxX64'">
@@ -33,7 +33,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-x64\</PublishDir>
+    <PublishDir>bin/Publish/linux-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseMacX64'">
@@ -41,7 +41,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\mac-x64\</PublishDir>
+    <PublishDir>bin/Publish/mac-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxArm64'">
@@ -49,7 +49,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-arm64\</PublishDir>
+    <PublishDir>bin/Publish/linux-arm64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxArm32'">
@@ -57,7 +57,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-arm32\</PublishDir>
+    <PublishDir>bin/Publish/linux-arm32/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxMuslX64'">
@@ -65,7 +65,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-musl-x64\</PublishDir>
+    <PublishDir>bin/Publish/linux-musl-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxMuslArm64'">
@@ -73,7 +73,7 @@
     <SelfContained>true</SelfContained>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-musl-arm64\</PublishDir>
+    <PublishDir>bin/Publish/linux-musl-arm64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(ServerPublishProfile)' == 'ReleaseLinuxX86FrameworkDependent'">
@@ -82,7 +82,7 @@
     <UseAppHost>false</UseAppHost>
     <PublishSingleFile>false</PublishSingleFile>
     <PublishTrimmed>false</PublishTrimmed>
-    <PublishDir>bin\Publish\linux-x86-fdd\</PublishDir>
+    <PublishDir>bin/Publish/linux-x86-fdd/</PublishDir>
   </PropertyGroup>
 
   <ItemGroup>
@@ -112,7 +112,7 @@
       <_ServerUpdaterBuildDir Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'">$(MSBuildThisFileDirectory)../Updater/bin/$(Configuration)/net472/</_ServerUpdaterBuildDir>
     </PropertyGroup>
     <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Build" Properties="Configuration=$(Configuration);TargetFramework=net472" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'" />
-    <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />
+    <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_ServerUpdaterPublishDir);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />
     <Copy SourceFiles="$(_ServerUpdaterBuildDir)$(_ServerUpdaterBinaryName)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'" />
     <Copy SourceFiles="$(_ServerUpdaterBuildDir)Updater.pdb" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472' and Exists('$(_ServerUpdaterBuildDir)Updater.pdb')" />
     <Copy SourceFiles="$(_ServerUpdaterPublishDir)$(_ServerUpdaterBinaryName)" DestinationFolder="$(TargetDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />
@@ -130,7 +130,7 @@
       <_ServerUpdaterBuildDir Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'">$(MSBuildThisFileDirectory)../Updater/bin/$(Configuration)/net472/</_ServerUpdaterBuildDir>
     </PropertyGroup>
     <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Build" Properties="Configuration=$(Configuration);TargetFramework=net472" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'" />
-    <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />
+    <MSBuild Projects="$(_ServerUpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_ServerUpdaterPublishDir);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />
     <Copy SourceFiles="$(_ServerUpdaterBuildDir)$(_ServerUpdaterBinaryName)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472'" />
     <Copy SourceFiles="$(_ServerUpdaterBuildDir)Updater.pdb" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net472' and Exists('$(_ServerUpdaterBuildDir)Updater.pdb')" />
     <Copy SourceFiles="$(_ServerUpdaterPublishDir)$(_ServerUpdaterBinaryName)" DestinationFolder="$(PublishDir)" SkipUnchangedFiles="true" Condition="'$(_ServerUpdaterTargetFramework)' == 'net10.0'" />

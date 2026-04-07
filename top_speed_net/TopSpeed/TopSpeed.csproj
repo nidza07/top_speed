@@ -33,16 +33,16 @@
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' and '$(RuntimeIdentifier)' == 'linux-x64'">
-    <PublishDir>bin\Publish\linux-x64\</PublishDir>
+    <PublishDir>bin/Publish/linux-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0' and '$(RuntimeIdentifier)' == 'osx-x64'">
     <MacBuildBundle>false</MacBuildBundle>
-    <PublishDir>bin\Publish\osx-x64\</PublishDir>
+    <PublishDir>bin/Publish/osx-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows' and '$(RuntimeIdentifier)' == 'win-x64'">
-    <PublishDir>bin\Publish\win-x64\</PublishDir>
+    <PublishDir>bin/Publish/win-x64/</PublishDir>
   </PropertyGroup>
 
   <PropertyGroup Condition="'$(TargetFramework)' == 'net10.0-windows' and '$(RuntimeIdentifier)' == 'win-x64'">
@@ -212,7 +212,7 @@
       <_UpdaterBinaryName Condition="'$(_UpdaterBinaryName)' == ''">Updater</_UpdaterBinaryName>
       <_UpdaterPublishDir>$(MSBuildThisFileDirectory)../Updater/bin/$(Configuration)/net10.0/$(RuntimeIdentifier)/publish/</_UpdaterPublishDir>
     </PropertyGroup>
-    <MSBuild Projects="$(_UpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" />
+    <MSBuild Projects="$(_UpdaterProjectPath)" Targets="Restore;Publish" Properties="Configuration=$(Configuration);TargetFramework=net10.0;RuntimeIdentifier=$(RuntimeIdentifier);PublishDir=$(_UpdaterPublishDir);UseNativeAotUpdater=$(UseNativeAotUpdater);UseTrimmedUpdater=$(UseTrimmedUpdater)" />
     <Copy SourceFiles="$(_UpdaterPublishDir)$(_UpdaterBinaryName)" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" />
     <Copy SourceFiles="$(_UpdaterPublishDir)Updater.pdb" DestinationFolder="$(OutDir)" SkipUnchangedFiles="true" Condition="Exists('$(_UpdaterPublishDir)Updater.pdb')" />
   </Target>
