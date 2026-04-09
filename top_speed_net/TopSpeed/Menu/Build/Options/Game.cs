@@ -58,10 +58,9 @@ namespace TopSpeed.Menu
                 new CheckBox(LocalizationService.Mark("Check for updates on startup"),
                     () => _settings.AutoCheckUpdates,
                     value => _settingsActions.UpdateSetting(() => _settings.AutoCheckUpdates = value),
-                    hint: LocalizationService.Mark("When checked, the game checks for updates automatically after the logo. Press ENTER to toggle.")),
-                BackItem()
+                    hint: LocalizationService.Mark("When checked, the game checks for updates automatically after the logo. Press ENTER to toggle."))
             };
-            return _menu.CreateMenu("options_game", items);
+            return _menu.CreateMenu("options_game", items, spec: ScreenSpec.Back);
         }
 
         private string BuildLanguageOptionText()

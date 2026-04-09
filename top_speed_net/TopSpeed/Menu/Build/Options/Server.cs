@@ -14,10 +14,9 @@ namespace TopSpeed.Menu
                         LocalizationService.Mark("Default server port: {0}"),
                         FormatServerPort(_settings.DefaultServerPort)),
                     MenuAction.None,
-                    onActivate: _server.BeginServerPortEntry),
-                BackItem()
+                    onActivate: _server.BeginServerPortEntry)
             };
-            return _menu.CreateMenu("options_server", items);
+            return _menu.CreateMenu("options_server", items, spec: ScreenSpec.Back);
         }
     }
 }

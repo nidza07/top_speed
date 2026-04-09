@@ -4,6 +4,7 @@ using System.IO;
 using TopSpeed.Audio;
 using TopSpeed.Core;
 using TopSpeed.Input;
+using TopSpeed.Localization;
 using TopSpeed.Speech;
 using TS.Audio;
 using TopSpeed.Input.Devices.Controller;
@@ -80,18 +81,19 @@ namespace TopSpeed.Menu
         }
 
         public Action<float>? MusicVolumeChanged { get; set; }
-        public Func<MenuCloseSource, bool>? CloseHandler { get; set; }
-        public SpeechService.SpeakFlag TitleSpeakFlag
-        {
-            get => ActiveView.TitleSpeakFlag;
-            set => ActiveView.TitleSpeakFlag = value;
-        }
+        public Func<CloseEvent, bool>? OnClose { get; set; }
 
         public int ScreenCount => _views.Count;
         internal bool HasMusic => !string.IsNullOrWhiteSpace(MusicFile);
         internal bool IsMusicPlaying => _music != null && _music.IsPlaying;
         internal void CancelPendingHint() => CancelHint();
-        internal bool TryHandleClose(MenuCloseSource source) => CloseHandler?.Invoke(source) == true;
+        internal bool TryHandleClose(in CloseEvent e)
+        {
+            if (ActiveView.Spec.OnClose?.Invoke(e) == true)
+                return true;
+
+            return OnClose?.Invoke(e) == true;
+        }
         internal string ActiveViewId => ActiveView.Id;
 
         public MenuScreen(
@@ -102,7 +104,8 @@ namespace TopSpeed.Menu
             string? title = null,
             Func<string>? titleProvider = null,
             Func<bool>? usageHintsEnabled = null,
-            Func<bool>? autoFocusFirstItemEnabled = null)
+            Func<bool>? autoFocusFirstItemEnabled = null,
+            ScreenSpec? spec = null)
         {
             Id = id;
             _audio = audio;
@@ -112,7 +115,7 @@ namespace TopSpeed.Menu
             _items = new List<MenuItem>();
             _views = new List<MenuView>();
             _defaultViewId = $"{id}:main";
-            var defaultView = new MenuView(_defaultViewId, items, title, titleProvider);
+            var defaultView = new MenuView(_defaultViewId, items, title, titleProvider, spec);
             _views.Add(defaultView);
             LoadActiveViewItems();
             _defaultMenuSoundRoot = Path.Combine(AssetPaths.SoundsRoot, "En", "Menu");
@@ -125,6 +128,12 @@ namespace TopSpeed.Menu
 
         public void SetScreens(IEnumerable<MenuView>? screens, string? initialScreenId = null)
         {
+            var fallbackItems = _views.Count > 0
+                ? _views[0].Items
+                : _items;
+            var fallbackTitle = _views.Count > 0 ? _views[0].Title : string.Empty;
+            var fallbackTitleProvider = _views.Count > 0 ? _views[0].TitleProvider : null;
+            var fallbackSpec = _views.Count > 0 ? _views[0].Spec : ScreenSpec.None;
             _views.Clear();
             if (screens != null)
             {
@@ -139,7 +148,7 @@ namespace TopSpeed.Menu
             }
 
             if (_views.Count == 0)
-                _views.Add(new MenuView(_defaultViewId, _items));
+                _views.Add(new MenuView(_defaultViewId, fallbackItems, fallbackTitle, fallbackTitleProvider, fallbackSpec));
 
             _viewIndex = ResolveScreenIndex(initialScreenId);
             LoadActiveViewItems();
@@ -242,6 +251,18 @@ namespace TopSpeed.Menu
                 if (item == null || item.IsHidden)
                     continue;
                 _items.Add(item);
+            }
+
+            var flags = ActiveView.Spec.Flags;
+            if ((flags & ScreenFlags.Back) != 0)
+                _items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
+
+            if ((flags & ScreenFlags.Close) != 0)
+            {
+                var closeText = string.IsNullOrWhiteSpace(ActiveView.Spec.CloseText)
+                    ? LocalizationService.Mark("Close")
+                    : ActiveView.Spec.CloseText!;
+                _items.Add(new MenuItem(closeText, MenuAction.None, flags: MenuItemFlags.Close));
             }
         }
     }

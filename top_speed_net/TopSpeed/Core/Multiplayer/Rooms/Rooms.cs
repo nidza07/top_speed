@@ -87,25 +87,31 @@ namespace TopSpeed.Core.Multiplayer
                     new[] { MultiplayerShortcutScopeId });
             }
 
-            _menu.SetCloseHandler(MultiplayerMenuKeys.Lobby, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.Lobby, _ =>
             {
                 OpenDisconnectConfirmation();
                 return true;
             });
 
-            _menu.SetCloseHandler(MultiplayerMenuKeys.RoomControls, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.RoomControls, _ =>
             {
+                if (!_state.Rooms.CurrentRoom.InRoom)
+                {
+                    _menu.ShowRoot(MultiplayerMenuKeys.Lobby);
+                    return true;
+                }
+
                 OpenLeaveRoomConfirmation();
                 return true;
             });
 
-            _menu.SetCloseHandler(MultiplayerMenuKeys.SavedServerForm, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.SavedServerForm, _ =>
             {
                 CloseSavedServerForm();
                 return true;
             });
 
-            _menu.SetCloseHandler(MultiplayerMenuKeys.RoomOptions, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.RoomOptions, _ =>
             {
                 CancelRoomOptionsChanges();
                 return false;
@@ -116,13 +122,7 @@ namespace TopSpeed.Core.Multiplayer
                 new[] { MultiplayerRoomRulesShortcutActionId },
                 LocalizationService.Mark("Room controls"));
 
-            _menu.SetCloseHandler(MultiplayerMenuKeys.LoadoutTransmission, _ =>
-            {
-                OpenLoadoutExitConfirmation();
-                return true;
-            });
-
-            _menu.SetCloseHandler(MultiplayerMenuKeys.LoadoutVehicle, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.LoadoutVehicle, _ =>
             {
                 OpenLoadoutExitConfirmation();
                 return true;

@@ -109,9 +109,9 @@ namespace TopSpeed.Menu
 
         private SpeechService.SpeakFlag ResolveTitleSpeakFlag()
         {
-            return ActiveView.TitleSpeakFlag == SpeechService.SpeakFlag.None
+            return ActiveView.TitleFlag == SpeechService.SpeakFlag.None
                 ? SpeechService.SpeakFlag.NoInterrupt
-                : ActiveView.TitleSpeakFlag;
+                : ActiveView.TitleFlag;
         }
     }
 }

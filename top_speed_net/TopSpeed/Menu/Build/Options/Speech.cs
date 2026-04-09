@@ -10,7 +10,7 @@ namespace TopSpeed.Menu
     {
         private MenuScreen BuildOptionsSpeechSettingsMenu()
         {
-            return _menu.CreateMenu("options_speech", BuildSpeechItems());
+            return _menu.CreateMenu("options_speech", BuildSpeechItems(), spec: ScreenSpec.Back);
         }
 
         internal void RefreshSpeechSettingsMenu()
@@ -73,7 +73,6 @@ namespace TopSpeed.Menu
                 MenuAction.None,
                 onActivate: _settingsActions.RecalibrateScreenReaderRate,
                 hint: LocalizationService.Mark("Measure your screen-reader speaking speed again so usage hints and delayed speech timings stay accurate. Press ENTER to start.")));
-            items.Add(BackItem());
             return items;
         }
 

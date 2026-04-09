@@ -37,7 +37,6 @@ namespace TopSpeed.Core.Multiplayer
                 items.Add(new MenuItem(FormatOnlinePlayerLabel(players[i]), MenuAction.None));
             }
 
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
             _menu.SetScreens(
                 MultiplayerMenuKeys.OnlinePlayers,
                 new[]
@@ -47,7 +46,8 @@ namespace TopSpeed.Core.Multiplayer
                         items,
                         LocalizationService.Format(
                             LocalizationService.Mark("{0} people are connected."),
-                            players.Length))
+                            players.Length),
+                        spec: ScreenSpec.Back)
                 },
                 OnlinePlayersScreenId);
         }

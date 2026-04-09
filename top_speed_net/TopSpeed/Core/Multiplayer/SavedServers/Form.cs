@@ -41,8 +41,7 @@ namespace TopSpeed.Core.Multiplayer
             var items = MenuFormBuilder.BuildItems(
                 controls,
                 saveLabel,
-                SaveSavedServerDraft,
-                LocalizationService.Mark("Go back"));
+                SaveSavedServerDraft);
             _menu.UpdateItems(MultiplayerMenuKeys.SavedServerForm, items, preserveSelection: true);
         }
 

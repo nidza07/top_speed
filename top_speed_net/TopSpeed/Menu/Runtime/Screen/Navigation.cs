@@ -22,7 +22,7 @@ namespace TopSpeed.Menu
             if (_viewIndex != 0)
             {
                 PrimaryView.ReplaceItems(items);
-                if (PrimaryView.PreserveSelection && PrimaryView.SavedSelection >= 0)
+                if (PrimaryView.KeepSelection && PrimaryView.SavedSelection >= 0)
                     PrimaryView.SavedSelection = Math.Max(0, Math.Min(PrimaryView.SavedSelection, PrimaryView.Items.Count - 1));
                 return;
             }
@@ -46,7 +46,7 @@ namespace TopSpeed.Menu
                 return;
             }
 
-            if (ActiveView.PreserveSelection && ActiveView.SavedSelection != NoSelection && _items.Count > 0)
+            if (ActiveView.KeepSelection && ActiveView.SavedSelection != NoSelection && _items.Count > 0)
             {
                 _index = Math.Max(0, Math.Min(ActiveView.SavedSelection, _items.Count - 1));
                 SaveSelectionForActiveView();
@@ -220,7 +220,7 @@ namespace TopSpeed.Menu
             var targetIndex = 0;
             if (_pendingFocusIndex.HasValue)
                 targetIndex = Math.Max(0, Math.Min(_items.Count - 1, _pendingFocusIndex.Value));
-            else if (ActiveView.PreserveSelection && ActiveView.SavedSelection != NoSelection)
+            else if (ActiveView.KeepSelection && ActiveView.SavedSelection != NoSelection)
                 targetIndex = Math.Max(0, Math.Min(_items.Count - 1, ActiveView.SavedSelection));
             _pendingFocusIndex = null;
             _index = targetIndex;
@@ -252,7 +252,7 @@ namespace TopSpeed.Menu
 
         private void SaveSelectionForActiveView()
         {
-            if (!ActiveView.PreserveSelection)
+            if (!ActiveView.KeepSelection)
                 return;
 
             ActiveView.SavedSelection = _index;
@@ -277,7 +277,7 @@ namespace TopSpeed.Menu
                 return;
             }
 
-            if (ActiveView.PreserveSelection && ActiveView.SavedSelection != NoSelection && _items.Count > 0)
+            if (ActiveView.KeepSelection && ActiveView.SavedSelection != NoSelection && _items.Count > 0)
             {
                 _index = Math.Max(0, Math.Min(ActiveView.SavedSelection, _items.Count - 1));
                 SaveSelectionForActiveView();

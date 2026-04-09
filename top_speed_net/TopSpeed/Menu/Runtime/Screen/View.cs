@@ -15,8 +15,7 @@ namespace TopSpeed.Menu
             IEnumerable<MenuItem> items,
             string? title = null,
             Func<string>? titleProvider = null,
-            bool preserveSelection = false,
-            SpeechService.SpeakFlag titleSpeakFlag = SpeechService.SpeakFlag.NoInterrupt)
+            ScreenSpec? spec = null)
         {
             if (string.IsNullOrWhiteSpace(id))
                 throw new ArgumentException("Screen id is required.", nameof(id));
@@ -24,17 +23,17 @@ namespace TopSpeed.Menu
             Id = id.Trim();
             Title = title ?? string.Empty;
             TitleProvider = titleProvider;
-            PreserveSelection = preserveSelection;
-            TitleSpeakFlag = titleSpeakFlag;
+            Spec = spec ?? ScreenSpec.None;
             ReplaceItems(items);
         }
 
         public string Id { get; }
         public string Title { get; set; }
         public Func<string>? TitleProvider { get; set; }
-        public bool PreserveSelection { get; set; }
-        public SpeechService.SpeakFlag TitleSpeakFlag { get; set; }
+        public ScreenSpec Spec { get; }
         public IReadOnlyList<MenuItem> Items => _items;
+        public bool KeepSelection => (Spec.Flags & ScreenFlags.KeepSelection) != 0;
+        public SpeechService.SpeakFlag TitleFlag => Spec.TitleFlag;
         public string DisplayTitle
         {
             get

@@ -32,7 +32,6 @@ namespace TopSpeed.Core.Multiplayer
             }
 
             items.Add(new MenuItem(LocalizationService.Mark("Add a new server"), MenuAction.None, onActivate: OpenAddSavedServerForm));
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
             _menu.UpdateItems(MultiplayerMenuKeys.SavedServers, items, preserveSelection: true);
         }
 

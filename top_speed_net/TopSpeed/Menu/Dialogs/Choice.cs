@@ -78,7 +78,7 @@ namespace TopSpeed.Menu
             _menu = menu ?? throw new ArgumentNullException(nameof(menu));
             _speak = speak ?? throw new ArgumentNullException(nameof(speak));
             _menu.Register(_menu.CreateMenu(MenuId, new[] { new MenuItem(LocalizationService.Mark("Choice"), MenuAction.None) }, string.Empty));
-            _menu.SetCloseHandler(MenuId, HandleClose);
+            _menu.SetClose(MenuId, HandleClose);
         }
 
         public bool IsChoiceMenu(string? currentMenuId)
@@ -124,7 +124,7 @@ namespace TopSpeed.Menu
             _menu.Push(MenuId, announcement, firstChoiceIndex);
         }
 
-        private bool HandleClose(MenuCloseSource _)
+        private bool HandleClose(CloseEvent _)
         {
             if (_activeDialog == null)
                 return false;

@@ -45,7 +45,6 @@ namespace TopSpeed.Core.Multiplayer
                 items.Add(new MenuItem(label, MenuAction.None, onActivate: () => SelectDiscoveredServer(info), suppressPostActivateAnnouncement: true));
             }
 
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
             _menu.UpdateItems(MultiplayerMenuKeys.DiscoveredServers, items);
             _menu.Push(MultiplayerMenuKeys.DiscoveredServers);
         }

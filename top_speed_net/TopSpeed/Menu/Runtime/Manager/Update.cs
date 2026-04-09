@@ -22,7 +22,7 @@ namespace TopSpeed.Menu
             var result = current.Update(input);
 
             if (result.BackRequested)
-                return HandleClose(current, MenuCloseSource.Shortcut);
+                return HandleClose(current, MenuCloseSource.Shortcut, CloseKind.Back);
 
             if (result.ActivatedItem == null)
                 return MenuAction.None;
@@ -33,8 +33,10 @@ namespace TopSpeed.Menu
             if (announcement != null)
                 current.CancelPendingHint();
             var stackChanged = _stack.Count != stackCount || _stack.Peek() != current;
-            if (item.Action == MenuAction.Back || item.IsCloseItem)
-                return HandleClose(current, MenuCloseSource.Item);
+            if (item.Action == MenuAction.Back)
+                return HandleClose(current, MenuCloseSource.Item, CloseKind.Back);
+            if (item.IsCloseItem)
+                return HandleClose(current, MenuCloseSource.Item, CloseKind.Close);
             if (!string.IsNullOrWhiteSpace(item.NextMenuId))
             {
                 Push(item.NextMenuId!);
@@ -57,9 +59,13 @@ namespace TopSpeed.Menu
             return true;
         }
 
-        private MenuAction HandleClose(MenuScreen current, MenuCloseSource source)
+        private MenuAction HandleClose(MenuScreen current, MenuCloseSource source, CloseKind kind)
         {
-            if (current.TryHandleClose(source))
+            var e = new CloseEvent(current.Id, current.ActiveViewId, source, kind);
+            if (current.TryHandleClose(e))
+                return MenuAction.None;
+
+            if (kind == CloseKind.Close)
                 return MenuAction.None;
 
             if (_stack.Count > 1)

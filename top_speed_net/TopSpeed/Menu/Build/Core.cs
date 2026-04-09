@@ -55,8 +55,7 @@ namespace TopSpeed.Menu
                 "shared_lobby_chat",
                 new[] { new MenuItem(LocalizationService.Mark("No messages yet."), MenuAction.None) },
                 title: LocalizationService.Mark("History"),
-                preserveSelection: true,
-                titleSpeakFlag: TopSpeed.Speech.SpeechService.SpeakFlag.None);
+                spec: ScreenSpec.KeepSelectionSilent);
         }
 
         public void RegisterAll()

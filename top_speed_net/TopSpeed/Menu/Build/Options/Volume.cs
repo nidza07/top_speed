@@ -64,11 +64,10 @@ namespace TopSpeed.Menu
                     LocalizationService.Mark("Online server event sounds"),
                     () => _settings.AudioVolumes.OnlineServerEventsPercent,
                     value => _settings.AudioVolumes.OnlineServerEventsPercent = value,
-                    LocalizationService.Mark("Controls server and multiplayer event sounds such as connection and other events.")),
-                BackItem()
+                    LocalizationService.Mark("Controls server and multiplayer event sounds such as connection and other events."))
             };
 
-            return _menu.CreateMenu("options_volume", items);
+            return _menu.CreateMenu("options_volume", items, spec: ScreenSpec.Back);
         }
 
         private Slider BuildVolumeSlider(string label, Func<int> getter, Action<int> setter, string hint)

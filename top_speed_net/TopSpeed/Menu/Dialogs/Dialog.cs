@@ -79,7 +79,7 @@ namespace TopSpeed.Menu
             _menu = menu ?? throw new ArgumentNullException(nameof(menu));
             _speak = speak ?? throw new ArgumentNullException(nameof(speak));
             _menu.Register(_menu.CreateMenu(MenuId, new[] { new MenuItem(LocalizationService.Mark("Dialog"), MenuAction.None) }, string.Empty));
-            _menu.SetCloseHandler(MenuId, HandleDialogClose);
+            _menu.SetClose(MenuId, HandleDialogClose);
         }
 
         public bool IsDialogMenu(string? currentMenuId)
@@ -153,7 +153,7 @@ namespace TopSpeed.Menu
             return items;
         }
 
-        private bool HandleDialogClose(MenuCloseSource _)
+        private bool HandleDialogClose(CloseEvent _)
         {
             if (_activeDialog == null)
                 return false;

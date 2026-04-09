@@ -54,8 +54,6 @@ namespace TopSpeed.Core.Multiplayer
                     items.Add(new MenuItem(label, MenuAction.None, onActivate: () => JoinRoom(roomCopy.RoomId)));
                 }
             }
-
-            items.Add(new MenuItem(LocalizationService.Mark("Return to multiplayer lobby"), MenuAction.Back));
             _menu.UpdateItems(MultiplayerMenuKeys.RoomBrowser, items);
         }
 

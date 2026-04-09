@@ -236,8 +236,7 @@ namespace TopSpeed.Core.Multiplayer
             {
                 new MenuItem(LocalizationService.Mark("Race track"), MenuAction.None, nextMenuId: MultiplayerMenuKeys.RoomTrackRace),
                 new MenuItem(LocalizationService.Mark("Street adventure"), MenuAction.None, nextMenuId: MultiplayerMenuKeys.RoomTrackAdventure),
-                new MenuItem(LocalizationService.Mark("Random"), MenuAction.None, onActivate: SelectRandomRoomTrackAny),
-                new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back)
+                new MenuItem(LocalizationService.Mark("Random"), MenuAction.None, onActivate: SelectRandomRoomTrackAny)
             };
 
             _menu.UpdateItems(MultiplayerMenuKeys.RoomTrackType, items);
@@ -254,7 +253,6 @@ namespace TopSpeed.Core.Multiplayer
             }
 
             items.Add(new MenuItem(LocalizationService.Mark("Random"), MenuAction.None, onActivate: () => SelectRandomRoomTrackCategory(category)));
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
             _menu.UpdateItems(menuId, items);
         }
 

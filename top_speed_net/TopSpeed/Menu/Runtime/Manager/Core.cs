@@ -128,10 +128,10 @@ namespace TopSpeed.Menu
             _shortcutCatalog.ResetBindings();
         }
 
-        public void SetCloseHandler(string id, Func<MenuCloseSource, bool>? closeHandler)
+        public void SetClose(string id, Func<CloseEvent, bool>? onClose)
         {
             var screen = GetScreen(id);
-            screen.CloseHandler = closeHandler;
+            screen.OnClose = onClose;
         }
 
     }

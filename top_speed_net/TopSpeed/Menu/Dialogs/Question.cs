@@ -89,7 +89,7 @@ namespace TopSpeed.Menu
         {
             _menu = menu ?? throw new ArgumentNullException(nameof(menu));
             _menu.Register(_menu.CreateMenu(MenuId, new[] { new MenuItem(LocalizationService.Mark("Question"), MenuAction.None) }, string.Empty));
-            _menu.SetCloseHandler(MenuId, HandleQuestionClose);
+            _menu.SetClose(MenuId, HandleQuestionClose);
         }
 
         public bool IsQuestionMenu(string? currentMenuId)
@@ -131,7 +131,7 @@ namespace TopSpeed.Menu
             _menu.Push(MenuId, announcement, defaultIndex);
         }
 
-        private bool HandleQuestionClose(MenuCloseSource _)
+        private bool HandleQuestionClose(CloseEvent _)
         {
             if (_activeQuestion == null)
                 return false;

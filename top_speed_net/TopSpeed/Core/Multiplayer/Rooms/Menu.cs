@@ -30,7 +30,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.InRoom)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("You are not currently inside a game room."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Return to multiplayer lobby"), MenuAction.None, onActivate: () => _menu.ShowRoot(MultiplayerMenuKeys.Lobby)));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomControls, items);
                 return;
             }
@@ -55,7 +54,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.InRoom)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("You are not currently inside a game room."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Return to room controls"), MenuAction.Back));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomOptions, items);
                 return;
             }
@@ -63,7 +61,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.IsHost)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("Only the host can change game options."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Return to room controls"), MenuAction.Back));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomOptions, items);
                 return;
             }
@@ -104,7 +101,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.InRoom)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("You are not currently inside a game room."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomGameRules, items);
                 return;
             }
@@ -112,7 +108,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.IsHost)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("Only the host can change game rules."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomGameRules, items);
                 return;
             }
@@ -122,7 +117,6 @@ namespace TopSpeed.Core.Multiplayer
                 GetRoomOptionsGhostModeEnabled,
                 SetRoomOptionsGhostModeEnabled,
                 hint: LocalizationService.Mark("When enabled, vehicle collisions are disabled and vehicles can pass through each other.")));
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
 
             var preserveSelection = string.Equals(_menu.CurrentId, MultiplayerMenuKeys.RoomGameRules, StringComparison.Ordinal);
             _menu.UpdateItems(MultiplayerMenuKeys.RoomGameRules, items, preserveSelection);
@@ -148,8 +142,7 @@ namespace TopSpeed.Core.Multiplayer
             {
                 new MenuItem(LocalizationService.Mark("Automatic transmission"), MenuAction.None, onActivate: () => SubmitLoadoutReady(true)),
                 new MenuItem(LocalizationService.Mark("Manual transmission"), MenuAction.None, onActivate: () => SubmitLoadoutReady(false)),
-                new MenuItem(LocalizationService.Mark("Random transmission mode"), MenuAction.None, onActivate: () => SubmitLoadoutReady(PickRandomLoadoutTransmission(_state.RoomDrafts.PendingLoadoutVehicleIndex))),
-                new MenuItem(LocalizationService.Mark("Go back to vehicle selection"), MenuAction.Back)
+                new MenuItem(LocalizationService.Mark("Random transmission mode"), MenuAction.None, onActivate: () => SubmitLoadoutReady(PickRandomLoadoutTransmission(_state.RoomDrafts.PendingLoadoutVehicleIndex)))
             };
             _menu.UpdateItems(MultiplayerMenuKeys.LoadoutTransmission, items);
         }
@@ -160,7 +153,6 @@ namespace TopSpeed.Core.Multiplayer
             if (!_state.Rooms.CurrentRoom.InRoom)
             {
                 items.Add(new MenuItem(LocalizationService.Mark("You are not currently inside a game room."), MenuAction.None));
-                items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
                 _menu.UpdateItems(MultiplayerMenuKeys.RoomPlayers, items);
                 return;
             }
@@ -184,7 +176,6 @@ namespace TopSpeed.Core.Multiplayer
                 }
             }
 
-            items.Add(new MenuItem(LocalizationService.Mark("Go back"), MenuAction.Back));
             var preserveSelection = string.Equals(_menu.CurrentId, MultiplayerMenuKeys.RoomPlayers, StringComparison.Ordinal);
             _menu.UpdateItems(MultiplayerMenuKeys.RoomPlayers, items, preserveSelection);
         }

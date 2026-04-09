@@ -67,9 +67,9 @@ namespace TopSpeed.Menu
                 screen.ApplyExternalMusicVolume(volume);
         }
 
-        public MenuScreen CreateMenu(string id, IEnumerable<MenuItem> items, string? title = null, Func<string>? titleProvider = null)
+        public MenuScreen CreateMenu(string id, IEnumerable<MenuItem> items, string? title = null, Func<string>? titleProvider = null, ScreenSpec? spec = null)
         {
-            var screen = new MenuScreen(id, items, _audio, _speech, title, titleProvider, _usageHintsEnabled, () => _menuAutoFocus)
+            var screen = new MenuScreen(id, items, _audio, _speech, title, titleProvider, _usageHintsEnabled, () => _menuAutoFocus, spec)
             {
                 WrapNavigation = _wrapNavigation,
                 MenuNavigatePanning = _menuNavigatePanning

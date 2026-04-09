@@ -43,10 +43,9 @@ namespace TopSpeed.Menu
                 new MenuItem(LocalizationService.Mark("Map menu shortcuts"),
                     MenuAction.None,
                     nextMenuId: ShortcutGroupsMenuId,
-                    onActivate: RebuildShortcutGroupsMenu),
-                BackItem()
+                    onActivate: RebuildShortcutGroupsMenu)
             };
-            return _menu.CreateMenu("options_controls", items);
+            return _menu.CreateMenu("options_controls", items, spec: ScreenSpec.Back);
         }
 
         private MenuScreen BuildOptionsControlsDeviceMenu()
@@ -55,15 +54,14 @@ namespace TopSpeed.Menu
             {
                 new MenuItem(LocalizationService.Mark("Keyboard"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Keyboard)),
                 new MenuItem(LocalizationService.Mark("Controller"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Controller)),
-                new MenuItem(LocalizationService.Mark("Both"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Both)),
-                BackItem()
+                new MenuItem(LocalizationService.Mark("Both"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Both))
             };
-            return _menu.CreateMenu("options_controls_device", items, LocalizationService.Mark("Select input device"));
+            return _menu.CreateMenu("options_controls_device", items, LocalizationService.Mark("Select input device"), spec: ScreenSpec.Back);
         }
 
         private MenuScreen BuildOptionsControlsKeyboardMenu()
         {
-            return _menu.CreateMenu("options_controls_keyboard", BuildMappingItems(InputMappingMode.Keyboard));
+            return _menu.CreateMenu("options_controls_keyboard", BuildMappingItems(InputMappingMode.Keyboard), spec: ScreenSpec.Back);
         }
 
         private MenuScreen BuildOptionsControlsControllerMenu()
@@ -126,32 +124,29 @@ namespace TopSpeed.Menu
                     hint: LocalizationService.Mark("Sets how much small steering movement is ignored around center. Default is 1 degree. Use LEFT or RIGHT to change."))
             };
 
-            items.AddRange(BuildMappingItems(InputMappingMode.Controller, includeBack: false));
-            items.Add(BackItem());
-            return _menu.CreateMenu("options_controls_controller", items);
+            items.AddRange(BuildMappingItems(InputMappingMode.Controller));
+            return _menu.CreateMenu("options_controls_controller", items, spec: ScreenSpec.Back);
         }
 
         private MenuScreen BuildOptionsControlsShortcutGroupsMenu()
         {
             var items = new List<MenuItem>
             {
-                new MenuItem(LocalizationService.Mark("Global shortcuts"), MenuAction.None),
-                BackItem()
+                new MenuItem(LocalizationService.Mark("Global shortcuts"), MenuAction.None)
             };
-            return _menu.CreateMenu(ShortcutGroupsMenuId, items, title: string.Empty);
+            return _menu.CreateMenu(ShortcutGroupsMenuId, items, title: string.Empty, spec: ScreenSpec.Back);
         }
 
         private MenuScreen BuildOptionsControlsShortcutBindingsMenu()
         {
             var items = new List<MenuItem>
             {
-                new MenuItem(LocalizationService.Mark("No shortcuts in this group."), MenuAction.None),
-                BackItem()
+                new MenuItem(LocalizationService.Mark("No shortcuts in this group."), MenuAction.None)
             };
-            return _menu.CreateMenu(ShortcutBindingsMenuId, items, title: string.Empty);
+            return _menu.CreateMenu(ShortcutBindingsMenuId, items, title: string.Empty, spec: ScreenSpec.Back);
         }
 
-        private List<MenuItem> BuildMappingItems(InputMappingMode mode, bool includeBack = true)
+        private List<MenuItem> BuildMappingItems(InputMappingMode mode)
         {
             var items = new List<MenuItem>();
             foreach (var action in _raceInput.KeyMap.Actions)
@@ -166,9 +161,6 @@ namespace TopSpeed.Menu
             }
 
             items.Add(BuildResetMappingsItem(mode));
-
-            if (includeBack)
-                items.Add(BackItem());
             return items;
         }
 
@@ -200,7 +192,6 @@ namespace TopSpeed.Menu
                     onActivate: () => OpenShortcutGroup(group)));
             }
 
-            items.Add(BackItem());
             _menu.UpdateItems(ShortcutGroupsMenuId, items, preserveSelection: true);
         }
 
@@ -222,7 +213,6 @@ namespace TopSpeed.Menu
             if (string.IsNullOrWhiteSpace(_activeShortcutGroupId))
             {
                 items.Add(new MenuItem(LocalizationService.Mark("No shortcut group selected."), MenuAction.None));
-                items.Add(BackItem());
                 _menu.UpdateItems(ShortcutBindingsMenuId, items, preserveSelection: true);
                 return false;
             }
@@ -246,7 +236,6 @@ namespace TopSpeed.Menu
             if (items.Count == 0)
                 return false;
 
-            items.Add(BackItem());
             _menu.UpdateItems(ShortcutBindingsMenuId, items, preserveSelection: true);
             return true;
         }
