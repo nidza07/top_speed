@@ -44,8 +44,7 @@ namespace TopSpeed.Menu
 
         public override string GetDisplayText()
         {
-            var typeLabel = LocalizationService.Translate(LocalizationService.Mark("radio button"));
-            return $"{GetBaseText()}; {typeLabel} {GetValueLabel(_getIndex())}";
+            return ItemText.Compose(GetBaseText(), LocalizationService.Mark("radio button"), GetValueLabel(_getIndex()));
         }
 
         public override string? ActivateAndGetAnnouncement()

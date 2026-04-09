@@ -10,7 +10,7 @@ namespace TopSpeed.Menu
     {
         private MenuScreen BuildOptionsSpeechSettingsMenu()
         {
-            return _menu.CreateMenu("options_speech", BuildSpeechItems(), spec: ScreenSpec.Back);
+            return BackMenu("options_speech", BuildSpeechItems());
         }
 
         internal void RefreshSpeechSettingsMenu()

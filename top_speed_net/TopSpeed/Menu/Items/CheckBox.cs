@@ -3,12 +3,8 @@ using TopSpeed.Localization;
 
 namespace TopSpeed.Menu
 {
-    internal sealed class CheckBox : MenuItem
+    internal sealed class CheckBox : ToggleItem
     {
-        private readonly Func<bool> _getValue;
-        private readonly Action<bool> _setValue;
-        private readonly Action<bool>? _onChanged;
-
         public CheckBox(
             string text,
             Func<bool> getValue,
@@ -19,26 +15,18 @@ namespace TopSpeed.Menu
             Action? onActivate = null,
             bool suppressPostActivateAnnouncement = false,
             string? hint = null)
-            : base(text, action, nextMenuId, onActivate, suppressPostActivateAnnouncement, hint)
+            : base(text, getValue, setValue, onChanged, action, nextMenuId, onActivate, suppressPostActivateAnnouncement, hint)
         {
-            _getValue = getValue ?? throw new ArgumentNullException(nameof(getValue));
-            _setValue = setValue ?? throw new ArgumentNullException(nameof(setValue));
-            _onChanged = onChanged;
         }
 
         public override string GetDisplayText()
         {
-            var typeLabel = LocalizationService.Translate(LocalizationService.Mark("check box"));
-            return $"{GetBaseText()} {typeLabel} {FormatValue(_getValue())}";
+            return Describe(LocalizationService.Mark("check box"), FormatValue(GetValue()), separated: false);
         }
 
         public override string? ActivateAndGetAnnouncement()
         {
-            var newValue = !_getValue();
-            _setValue(newValue);
-            _onChanged?.Invoke(newValue);
-            base.ActivateAndGetAnnouncement();
-            return FormatValue(newValue);
+            return Toggle(FormatValue);
         }
 
         private static string FormatValue(bool value)

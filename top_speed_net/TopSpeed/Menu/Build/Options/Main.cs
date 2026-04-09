@@ -45,7 +45,7 @@ namespace TopSpeed.Menu
                     onActivate: _settingsActions.ShowRestoreDefaultsDialog,
                     hint: LocalizationService.Mark("Reset all configurable settings back to their default values."))
             };
-            return _menu.CreateMenu("options_main", items, spec: ScreenSpec.Back);
+            return BackMenu("options_main", items);
         }
     }
 }

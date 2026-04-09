@@ -67,7 +67,7 @@ namespace TopSpeed.Menu
                     LocalizationService.Mark("Controls server and multiplayer event sounds such as connection and other events."))
             };
 
-            return _menu.CreateMenu("options_volume", items, spec: ScreenSpec.Back);
+            return BackMenu("options_volume", items);
         }
 
         private Slider BuildVolumeSlider(string label, Func<int> getter, Action<int> setter, string hint)

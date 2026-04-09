@@ -10,6 +10,8 @@ namespace TopSpeed.Menu
 {
     internal sealed partial class MenuRegistry
     {
+        private static readonly MenuItem[] EmptyItems = Array.Empty<MenuItem>();
+
         private static IReadOnlyList<string> LoadMenuSoundPresets()
         {
             var root = Path.Combine(AssetPaths.SoundsRoot, "menu");
@@ -61,6 +63,31 @@ namespace TopSpeed.Menu
             };
         }
 
+        private MenuScreen BackMenu(string id, IEnumerable<MenuItem> items, string? title = null)
+        {
+            return _menu.CreateMenu(id, items, title, spec: ScreenSpec.Back);
+        }
+
+        private MenuScreen EmptyMenu(string id, string? title = null, ScreenSpec? spec = null)
+        {
+            return _menu.CreateMenu(id, EmptyItems, title, spec: spec);
+        }
+
+        private MenuScreen EmptyBackMenu(string id, string? title = null)
+        {
+            return EmptyMenu(id, title, ScreenSpec.Back);
+        }
+
+        private MenuScreen ChatMenu(string id, string viewId, IEnumerable<MenuItem> items, string title, ScreenSpec? viewSpec = null, ScreenSpec? spec = null)
+        {
+            var menu = _menu.CreateMenu(id, items, title, spec: spec);
+            menu.SetScreens(new[]
+            {
+                new MenuView(viewId, items, title, spec: viewSpec),
+                _sharedLobbyChatScreen
+            }, viewId);
+            return menu;
+        }
     }
 }
 

@@ -60,7 +60,7 @@ namespace TopSpeed.Menu
                     value => _settingsActions.UpdateSetting(() => _settings.AutoCheckUpdates = value),
                     hint: LocalizationService.Mark("When checked, the game checks for updates automatically after the logo. Press ENTER to toggle."))
             };
-            return _menu.CreateMenu("options_game", items, spec: ScreenSpec.Back);
+            return BackMenu("options_game", items);
         }
 
         private string BuildLanguageOptionText()

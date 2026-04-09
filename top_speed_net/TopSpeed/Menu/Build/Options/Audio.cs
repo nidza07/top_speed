@@ -23,7 +23,7 @@ namespace TopSpeed.Menu
                     hint: LocalizationService.Mark("When checked, the game uses the device channel count and sample rate. Restart required. Press ENTER to toggle."))
             };
 
-            return _menu.CreateMenu("options_audio", items, spec: ScreenSpec.Back);
+            return BackMenu("options_audio", items);
         }
     }
 }

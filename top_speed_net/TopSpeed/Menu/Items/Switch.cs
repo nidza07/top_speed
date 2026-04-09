@@ -3,11 +3,8 @@ using TopSpeed.Localization;
 
 namespace TopSpeed.Menu
 {
-    internal sealed class Switch : MenuItem
+    internal sealed class Switch : ToggleItem
     {
-        private readonly Func<bool> _getValue;
-        private readonly Action<bool> _setValue;
-        private readonly Action<bool>? _onChanged;
         private readonly string _valueOn;
         private readonly string _valueOff;
 
@@ -23,7 +20,7 @@ namespace TopSpeed.Menu
             Action? onActivate = null,
             bool suppressPostActivateAnnouncement = false,
             string? hint = null)
-            : base(text, action, nextMenuId, onActivate, suppressPostActivateAnnouncement, hint)
+            : base(text, getValue, setValue, onChanged, action, nextMenuId, onActivate, suppressPostActivateAnnouncement, hint)
         {
             if (string.IsNullOrWhiteSpace(valueOn))
                 throw new ArgumentException("valueOn must be provided.", nameof(valueOn));
@@ -32,24 +29,16 @@ namespace TopSpeed.Menu
 
             _valueOn = valueOn;
             _valueOff = valueOff;
-            _getValue = getValue ?? throw new ArgumentNullException(nameof(getValue));
-            _setValue = setValue ?? throw new ArgumentNullException(nameof(setValue));
-            _onChanged = onChanged;
         }
 
         public override string GetDisplayText()
         {
-            var typeLabel = LocalizationService.Translate(LocalizationService.Mark("switch"));
-            return $"{GetBaseText()}; {typeLabel} {GetValueLabel(_getValue())}";
+            return Describe(LocalizationService.Mark("switch"), GetValueLabel(GetValue()));
         }
 
         public override string? ActivateAndGetAnnouncement()
         {
-            var newValue = !_getValue();
-            _setValue(newValue);
-            _onChanged?.Invoke(newValue);
-            base.ActivateAndGetAnnouncement();
-            return GetValueLabel(newValue);
+            return Toggle(GetValueLabel);
         }
 
         private string GetValueLabel(bool value)

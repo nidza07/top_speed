@@ -45,7 +45,7 @@ namespace TopSpeed.Menu
                     nextMenuId: ShortcutGroupsMenuId,
                     onActivate: RebuildShortcutGroupsMenu)
             };
-            return _menu.CreateMenu("options_controls", items, spec: ScreenSpec.Back);
+            return BackMenu("options_controls", items);
         }
 
         private MenuScreen BuildOptionsControlsDeviceMenu()
@@ -56,12 +56,12 @@ namespace TopSpeed.Menu
                 new MenuItem(LocalizationService.Mark("Controller"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Controller)),
                 new MenuItem(LocalizationService.Mark("Both"), MenuAction.Back, onActivate: () => _settingsActions.SetDevice(InputDeviceMode.Both))
             };
-            return _menu.CreateMenu("options_controls_device", items, LocalizationService.Mark("Select input device"), spec: ScreenSpec.Back);
+            return BackMenu("options_controls_device", items, LocalizationService.Mark("Select input device"));
         }
 
         private MenuScreen BuildOptionsControlsKeyboardMenu()
         {
-            return _menu.CreateMenu("options_controls_keyboard", BuildMappingItems(InputMappingMode.Keyboard), spec: ScreenSpec.Back);
+            return BackMenu("options_controls_keyboard", BuildMappingItems(InputMappingMode.Keyboard));
         }
 
         private MenuScreen BuildOptionsControlsControllerMenu()
@@ -125,7 +125,7 @@ namespace TopSpeed.Menu
             };
 
             items.AddRange(BuildMappingItems(InputMappingMode.Controller));
-            return _menu.CreateMenu("options_controls_controller", items, spec: ScreenSpec.Back);
+            return BackMenu("options_controls_controller", items);
         }
 
         private MenuScreen BuildOptionsControlsShortcutGroupsMenu()
@@ -134,7 +134,7 @@ namespace TopSpeed.Menu
             {
                 new MenuItem(LocalizationService.Mark("Global shortcuts"), MenuAction.None)
             };
-            return _menu.CreateMenu(ShortcutGroupsMenuId, items, title: string.Empty, spec: ScreenSpec.Back);
+            return BackMenu(ShortcutGroupsMenuId, items, title: string.Empty);
         }
 
         private MenuScreen BuildOptionsControlsShortcutBindingsMenu()
@@ -143,7 +143,7 @@ namespace TopSpeed.Menu
             {
                 new MenuItem(LocalizationService.Mark("No shortcuts in this group."), MenuAction.None)
             };
-            return _menu.CreateMenu(ShortcutBindingsMenuId, items, title: string.Empty, spec: ScreenSpec.Back);
+            return BackMenu(ShortcutBindingsMenuId, items, title: string.Empty);
         }
 
         private List<MenuItem> BuildMappingItems(InputMappingMode mode)

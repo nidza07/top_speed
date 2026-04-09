@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using TopSpeed.Speech;
 
 using TopSpeed.Localization;
 namespace TopSpeed.Menu
@@ -14,12 +13,12 @@ namespace TopSpeed.Menu
                 new MenuItem(LocalizationService.Mark("Manage saved servers"), MenuAction.None, onActivate: _server.OpenSavedServersManager),
                 new MenuItem(LocalizationService.Mark("Enter the IP address or domain manually"), MenuAction.None, onActivate: _server.BeginManualServerEntry)
             };
-            return _menu.CreateMenu("multiplayer", items, spec: ScreenSpec.Back);
+            return BackMenu("multiplayer", items);
         }
 
         private MenuScreen BuildMultiplayerServersMenu()
         {
-            return _menu.CreateMenu("multiplayer_servers", new MenuItem[0], LocalizationService.Mark("Available servers"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_servers", LocalizationService.Mark("Available servers"));
         }
 
         private MenuScreen BuildMultiplayerLobbyMenu()
@@ -31,141 +30,87 @@ namespace TopSpeed.Menu
                 new MenuItem(LocalizationService.Mark("Options"), MenuAction.None, nextMenuId: "options_main"),
                 new MenuItem(LocalizationService.Mark("Disconnect"), MenuAction.None, flags: MenuItemFlags.Close)
             };
-            var menu = _menu.CreateMenu("multiplayer_lobby", items, LocalizationService.Mark("Multiplayer lobby"));
-            menu.SetScreens(new[]
-            {
-                new MenuView("lobby_main", items, LocalizationService.Mark("Multiplayer lobby"), spec: ScreenSpec.Silent),
-                _sharedLobbyChatScreen
-            }, "lobby_main");
-            return menu;
+            return ChatMenu(
+                "multiplayer_lobby",
+                "lobby_main",
+                items,
+                LocalizationService.Mark("Multiplayer lobby"),
+                viewSpec: ScreenSpec.Silent);
         }
 
         private MenuScreen BuildMultiplayerSavedServersMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Add a new server"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_saved_servers", items, string.Empty, spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_saved_servers", string.Empty);
         }
 
         private MenuScreen BuildMultiplayerSavedServerFormMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Server form is loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_saved_server_form", items, LocalizationService.Mark("Server details"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_saved_server_form", LocalizationService.Mark("Server details"));
         }
 
         private MenuScreen BuildMultiplayerRoomsMenu()
         {
-            return _menu.CreateMenu("multiplayer_rooms", new MenuItem[0], LocalizationService.Mark("Available game rooms"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_rooms", LocalizationService.Mark("Available game rooms"));
         }
 
         private MenuScreen BuildMultiplayerCreateRoomMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Create room controls are loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_create_room", items);
+            return EmptyMenu("multiplayer_create_room");
         }
 
         private MenuScreen BuildMultiplayerRoomControlsMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Join a game room first"), MenuAction.None)
-            };
-            var menu = _menu.CreateMenu("multiplayer_room_controls", items, LocalizationService.Mark("Room controls"));
-            menu.SetScreens(new[]
-            {
-                new MenuView("room_controls_main", items, LocalizationService.Mark("Room controls"), spec: ScreenSpec.BackSilent),
-                _sharedLobbyChatScreen
-            }, "room_controls_main");
-            return menu;
+            return ChatMenu(
+                "multiplayer_room_controls",
+                "room_controls_main",
+                EmptyItems,
+                LocalizationService.Mark("Room controls"),
+                viewSpec: ScreenSpec.BackSilent);
         }
 
         private MenuScreen BuildMultiplayerRoomPlayersMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Join a game room first"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_players", items, LocalizationService.Mark("Players in room"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_players", LocalizationService.Mark("Players in room"));
         }
 
         private MenuScreen BuildMultiplayerOnlinePlayersMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("No players are currently connected."), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_online_players", items, LocalizationService.Mark("Online players"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_online_players", LocalizationService.Mark("Online players"));
         }
 
         private MenuScreen BuildMultiplayerRoomOptionsMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Join a game room first"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_options", items, string.Empty, spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_options", string.Empty);
         }
 
         private MenuScreen BuildMultiplayerRoomGameRulesMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Game rules are loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_game_rules", items, string.Empty, spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_game_rules", string.Empty);
         }
 
         private MenuScreen BuildMultiplayerRoomTrackTypeMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Race track"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_track_type", items, LocalizationService.Mark("Choose track type"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_track_type", LocalizationService.Mark("Choose track type"));
         }
 
         private MenuScreen BuildMultiplayerRoomTrackRaceMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Race tracks are loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_tracks_race", items, LocalizationService.Mark("Select a track"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_tracks_race", LocalizationService.Mark("Select a track"));
         }
 
         private MenuScreen BuildMultiplayerRoomTrackAdventureMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Adventure tracks are loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_room_tracks_adventure", items, LocalizationService.Mark("Select a track"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_room_tracks_adventure", LocalizationService.Mark("Select a track"));
         }
 
         private MenuScreen BuildMultiplayerLoadoutVehicleMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Vehicle selection is loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_loadout_vehicle", items, LocalizationService.Mark("Choose your vehicle"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_loadout_vehicle", LocalizationService.Mark("Choose your vehicle"));
         }
 
         private MenuScreen BuildMultiplayerLoadoutTransmissionMenu()
         {
-            var items = new List<MenuItem>
-            {
-                new MenuItem(LocalizationService.Mark("Transmission selection is loading"), MenuAction.None)
-            };
-            return _menu.CreateMenu("multiplayer_loadout_transmission", items, LocalizationService.Mark("Choose your transmission mode"), spec: ScreenSpec.Back);
+            return EmptyBackMenu("multiplayer_loadout_transmission", LocalizationService.Mark("Choose your transmission mode"));
         }
     }
 }

@@ -58,7 +58,7 @@ namespace TopSpeed.Menu
                     value => _settingsActions.UpdateSetting(() => _settings.Difficulty = (RaceDifficulty)value),
                     hint: LocalizationService.Mark("Choose the difficulty level for single races. Use LEFT or RIGHT to change."))
             };
-            return _menu.CreateMenu("options_race", items, spec: ScreenSpec.Back);
+            return BackMenu("options_race", items);
         }
 
         private MenuScreen BuildOptionsLapsMenu()
@@ -70,7 +70,7 @@ namespace TopSpeed.Menu
                 items.Add(new MenuItem(laps.ToString(), MenuAction.Back, onActivate: () => _settingsActions.UpdateSetting(() => _settings.NrOfLaps = value)));
             }
 
-            return _menu.CreateMenu("options_race_laps", items, LocalizationService.Mark("How many labs should the session be. This applys to single race, time trial and multiPlayer modes."), spec: ScreenSpec.Back);
+            return BackMenu("options_race_laps", items, LocalizationService.Mark("How many labs should the session be. This applys to single race, time trial and multiPlayer modes."));
         }
 
         private MenuScreen BuildOptionsComputersMenu()
@@ -82,7 +82,7 @@ namespace TopSpeed.Menu
                 items.Add(new MenuItem(count.ToString(), MenuAction.Back, onActivate: () => _settingsActions.UpdateSetting(() => _settings.NrOfComputers = value)));
             }
 
-            return _menu.CreateMenu("options_race_computers", items, LocalizationService.Mark("Number of computer players"), spec: ScreenSpec.Back);
+            return BackMenu("options_race_computers", items, LocalizationService.Mark("Number of computer players"));
         }
     }
 }

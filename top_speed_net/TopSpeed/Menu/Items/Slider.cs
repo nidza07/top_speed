@@ -65,8 +65,7 @@ namespace TopSpeed.Menu
 
         public override string GetDisplayText()
         {
-            var typeLabel = LocalizationService.Translate(LocalizationService.Mark("slider"));
-            return $"{GetBaseText()}; {typeLabel} {GetValueLabel(_getValue())}";
+            return ItemText.Compose(GetBaseText(), LocalizationService.Mark("slider"), GetValueLabel(_getValue()));
         }
 
         public override string? ActivateAndGetAnnouncement()

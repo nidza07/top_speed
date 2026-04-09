@@ -16,7 +16,7 @@ namespace TopSpeed.Menu
                     MenuAction.None,
                     onActivate: _server.BeginServerPortEntry)
             };
-            return _menu.CreateMenu("options_server", items, spec: ScreenSpec.Back);
+            return BackMenu("options_server", items);
         }
     }
 }

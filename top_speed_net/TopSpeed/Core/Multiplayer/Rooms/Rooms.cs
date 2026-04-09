@@ -87,46 +87,53 @@ namespace TopSpeed.Core.Multiplayer
                     new[] { MultiplayerShortcutScopeId });
             }
 
-            _menu.SetClose(MultiplayerMenuKeys.Lobby, _ =>
-            {
-                OpenDisconnectConfirmation();
-                return true;
-            });
-
-            _menu.SetClose(MultiplayerMenuKeys.RoomControls, _ =>
-            {
-                if (!_state.Rooms.CurrentRoom.InRoom)
-                {
-                    _menu.ShowRoot(MultiplayerMenuKeys.Lobby);
-                    return true;
-                }
-
-                OpenLeaveRoomConfirmation();
-                return true;
-            });
-
-            _menu.SetClose(MultiplayerMenuKeys.SavedServerForm, _ =>
-            {
-                CloseSavedServerForm();
-                return true;
-            });
-
-            _menu.SetClose(MultiplayerMenuKeys.RoomOptions, _ =>
-            {
-                CancelRoomOptionsChanges();
-                return false;
-            });
+            _menu.SetClose(MultiplayerMenuKeys.Lobby, HandleLobbyClose);
+            _menu.SetClose(MultiplayerMenuKeys.RoomControls, HandleRoomControlsClose);
+            _menu.SetClose(MultiplayerMenuKeys.SavedServerForm, HandleSavedServerFormClose);
+            _menu.SetClose(MultiplayerMenuKeys.RoomOptions, HandleRoomOptionsClose);
 
             _menu.SetMenuShortcutActions(
                 MultiplayerMenuKeys.RoomControls,
                 new[] { MultiplayerRoomRulesShortcutActionId },
                 LocalizationService.Mark("Room controls"));
 
-            _menu.SetClose(MultiplayerMenuKeys.LoadoutVehicle, _ =>
+            _menu.SetClose(MultiplayerMenuKeys.LoadoutVehicle, HandleLoadoutVehicleClose);
+        }
+
+        private bool HandleLobbyClose(CloseEvent _)
+        {
+            OpenDisconnectConfirmation();
+            return true;
+        }
+
+        private bool HandleRoomControlsClose(CloseEvent _)
+        {
+            if (!_state.Rooms.CurrentRoom.InRoom)
             {
-                OpenLoadoutExitConfirmation();
+                _menu.ShowRoot(MultiplayerMenuKeys.Lobby);
                 return true;
-            });
+            }
+
+            OpenLeaveRoomConfirmation();
+            return true;
+        }
+
+        private bool HandleSavedServerFormClose(CloseEvent _)
+        {
+            CloseSavedServerForm();
+            return true;
+        }
+
+        private bool HandleRoomOptionsClose(CloseEvent _)
+        {
+            CancelRoomOptionsChanges();
+            return false;
+        }
+
+        private bool HandleLoadoutVehicleClose(CloseEvent _)
+        {
+            OpenLoadoutExitConfirmation();
+            return true;
         }
 
         public void ShowMultiplayerMenuAfterRace()
