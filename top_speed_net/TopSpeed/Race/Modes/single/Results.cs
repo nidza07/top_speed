@@ -59,6 +59,7 @@ namespace TopSpeed.Race
             {
                 IsMultiplayer = false,
                 LocalPosition = localPosition,
+                LocalCrashCount = _localCrashCount,
                 Entries = entries.ToArray()
             };
         }

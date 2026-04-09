@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-09 13:11+0200\n"
+"POT-Creation-Date: 2026-04-09 17:13+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -30,6 +30,10 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Build\Options\Controls.cs:108
 msgid "5 degrees"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:108
+msgid "A cleaner lap would have been a much better choice."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Check.cs:115
@@ -162,6 +166,22 @@ msgstr ""
 msgid "At"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:91
+msgid "At least it only happened once."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:137
+msgid "At that point you were collecting crashes, not corners."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:144
+msgid "At that point, everyone could hear the mistakes."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:123
+msgid "At this rate the crash sound is becoming your theme music."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Connection\Connect.cs:63
 msgid "Attempting to connect, please wait..."
 msgstr ""
@@ -225,6 +245,21 @@ msgstr ""
 msgid "Available servers"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:189
+#, csharp-format
+msgid "Average lap time for this track: {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:166
+#, csharp-format
+msgid "Average time for this track over {0} laps: {1}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:165
+#, csharp-format
+msgid "Average {0}-lap time for this track: {1}."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Dialog.cs:63
 msgid "B"
 msgstr ""
@@ -240,6 +275,26 @@ msgstr ""
 #: D:\top_speed\top_speed_net\TopSpeed\Core\TrackList.cs:27
 #: D:\top_speed\top_speed_net\TopSpeed\Race\Core\Mode\Format.cs:75
 msgid "Belgium"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:183
+#, csharp-format
+msgid "Best lap for this track: {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:177
+#, csharp-format
+msgid "Best lap this run: {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:160
+#, csharp-format
+msgid "Best recorded run: {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:159
+#, csharp-format
+msgid "Best time so far: {0}."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Build\Options\Controls.cs:57
@@ -466,8 +521,8 @@ msgstr ""
 msgid "Choose your vehicle"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultDialogs.cs:52
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultDialogs.cs:83
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultDialogs.cs:54
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultDialogs.cs:75
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Check.cs:145
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Runtime\Screen\Core.cs:263
 msgid "Close"
@@ -566,6 +621,10 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Network\Connect\Connector\Poll.cs:102
 msgid "Connection refused due to protocol mismatch."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:96
+msgid "Consider that your one free mistake for the session."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Wizard.cs:16
@@ -1004,6 +1063,10 @@ msgstr ""
 msgid "Escape"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:147
+msgid "Even the walls were probably tired of this by the end."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:36
 msgid "Excellent driving. You beat your previous best time."
 msgstr ""
@@ -1074,6 +1137,11 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Build\Options\Controls.cs:33
 msgid "Fastest (0.25 seconds)"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:184
+#, csharp-format
+msgid "Fastest recorded lap on this track: {0}."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Dialog.cs:17
@@ -1474,6 +1542,14 @@ msgstr ""
 msgid "Lap percentage {0} percent"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:172
+msgid "Lap statistics:"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:171
+msgid "Lap summary:"
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Race\Core\Mode\Requests.cs:72
 #, csharp-format
 msgid "Lap {0}"
@@ -1666,7 +1742,7 @@ msgstr ""
 msgid "Minus"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:24
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:25
 #, csharp-format
 msgid "Missing file: {0}"
 msgstr ""
@@ -1900,6 +1976,10 @@ msgstr ""
 msgid "Normal"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:97
+msgid "Not a clean run, but still recoverable."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Connection\Ping.cs:13
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Coordinator\Chat\Input.cs:15
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Coordinator\Chat\Input.cs:32
@@ -1919,6 +1999,10 @@ msgstr ""
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Rooms\Online.cs:19
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Rooms\Options.cs:57
 msgid "Not connected to a server."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:105
+msgid "Not ideal, but still salvageable."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Interfaces.cs:30
@@ -1971,6 +2055,14 @@ msgstr ""
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Calibration.cs:30
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Menu\Calibration.cs:34
 msgid "Ok"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:94
+msgid "One crash is still too many, but it could be worse."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:80
+msgid "One crash."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Coordinator\Core.cs:25
@@ -2176,11 +2268,6 @@ msgstr ""
 msgid "Press the new key for {0}."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:86
-#, csharp-format
-msgid "Previous best time: {0}."
-msgstr ""
-
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Build\Core.cs:121
 msgid "Previous chat category"
 msgstr ""
@@ -2211,7 +2298,7 @@ msgstr ""
 msgid "Quick start"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:103
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:105
 msgid "Quick start."
 msgstr ""
 
@@ -2677,6 +2764,10 @@ msgstr ""
 msgid "Semicolon"
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:143
+msgid "Seriously? You could have done much better than that."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\SavedServers\Form.cs:89
 msgid "Server IP or host cannot be empty."
 msgstr ""
@@ -2822,7 +2913,7 @@ msgstr ""
 msgid "Single race difficulty"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:104
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:106
 msgid "Single race."
 msgstr ""
 
@@ -3027,6 +3118,10 @@ msgstr ""
 msgid "That control is already in use."
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:148
+msgid "That crash count takes real effort, and not the good kind."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Shortcuts\Mapping.cs:82
 msgid "That key is already in use in this shortcut group."
 msgstr ""
@@ -3037,6 +3132,50 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Input\Mapping\Handler\Keyboard.cs:17
 msgid "That key is reserved."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:113
+msgid "That many hits should have taught you something by now."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:125
+msgid "That much contact should come with a repair bill."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:120
+msgid "That was a suspicious amount of impact testing."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:104
+msgid "That was already more wall than race."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:109
+msgid "That was enough crashing to make the suspension nervous."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:132
+msgid "That was less racing and more recurring demolition."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:145
+msgid "That was not a clean race. That was one long damage report."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:93
+msgid "That was not elegant, but it was only one mistake."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:99
+msgid "That was one hit too many for a good lap."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:127
+msgid "That was too much crashing for anyone to call it bad luck."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:122
+msgid "That was well past a small mistake and into a pattern."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Settings\Input.cs:34
@@ -3050,6 +3189,30 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\Apply\Core.cs:16
 msgid "The audio section is missing. Defaults were used for audio settings."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:119
+msgid "The barriers are starting to recognize you."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:106
+msgid "The barriers noticed you early."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:133
+msgid "The car deserved a calmer driver than that."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:124
+msgid "The car finished the race despite your repeated attempts to stop it."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:95
+msgid "The car flinched, and so should you."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:114
+msgid "The car was trying to race. You were trying something else."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Connection\Connect.cs:183
@@ -3098,6 +3261,10 @@ msgstr ""
 msgid "The key {0} has invalid value {1}, which was replaced with {2}."
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:135
+msgid "The mechanics are going to need a very long evening."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\Apply\Core.cs:41
 msgid ""
 "The network section is missing. Defaults were used for network settings."
@@ -3129,11 +3296,11 @@ msgstr ""
 msgid "The selected media file does not exist."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:165
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:167
 msgid "The selected track could not be loaded. The race was not started."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:60
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:61
 msgid "The selected vehicle does not support the selected transmission mode."
 msgstr ""
 
@@ -3160,11 +3327,15 @@ msgstr ""
 msgid "The speech section is missing. Defaults were used for speech settings."
 msgstr ""
 
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:110
+msgid "The track gave you several chances, and you used them creatively."
+msgstr ""
+
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\Apply\Core.cs:31
 msgid "The ui section is missing. Defaults were used for menu settings."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:20
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:21
 msgid "The update could not be installed automatically."
 msgstr ""
 
@@ -3184,17 +3355,21 @@ msgstr ""
 msgid "The update package could not be downloaded."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:34
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:35
 msgid "The update package file was not found."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:59
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:60
 msgid "The updater could not be started."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Settings\Manager\ParseErrors.cs:16
 #, csharp-format
 msgid "The value '{0}' for the key '{1}' could not be parsed as Boolean. {2}"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:136
+msgid "There was commitment, just not to staying on the road."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Menu\Dialogs\Choice.cs:70
@@ -3235,7 +3410,7 @@ msgstr ""
 msgid "Time trial complete."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:84
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:86
 msgid "Time trial."
 msgstr ""
 
@@ -3284,7 +3459,12 @@ msgstr ""
 msgid "Track file not found: {0}"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:164
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:190
+#, csharp-format
+msgid "Track lap average: {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:166
 msgid "Track load error"
 msgstr ""
 
@@ -3311,7 +3491,7 @@ msgstr ""
 msgid "Track: {0}"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:59
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Setup.cs:60
 msgid "Transmission not supported"
 msgstr ""
 
@@ -3471,15 +3651,15 @@ msgstr ""
 msgid "Update package '{0}' was not found in the latest release."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:33
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:34
 msgid "Update package missing"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:58
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:59
 msgid "Updater launch failed"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:19
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:20
 msgid "Updater not found"
 msgstr ""
 
@@ -3729,18 +3909,39 @@ msgstr ""
 msgid "You are now host of this game."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:35
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Updates\Install.cs:36
 msgid "You can download the update again or install manually."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:80
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:79
+msgid "You crashed once."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:85
+#, csharp-format
+msgid "You crashed {0} times."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:154
 #, csharp-format
 msgid "You finished in {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:146
+msgid "You fought the course all the way through and still lost."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:92
+msgid "You gave the wall a quick hello and moved on."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Chat\HistoryText.cs:11
 #, csharp-format
 msgid "You joined {0}."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:112
+msgid "You kept finding the wrong line and proving it."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Rooms\Actions.cs:264
@@ -3749,6 +3950,34 @@ msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Chat\HistoryText.cs:17
 msgid "You left the game room."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:98
+msgid "You made it through with one clear mistake and no excuse."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:121
+msgid "You spent a lot of time negotiating with walls and losing."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:138
+msgid "You spent more time recovering than driving cleanly."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:134
+msgid "You treated the entire event like an extended crash montage."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:126
+msgid "You were driving like the brakes were optional."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:111
+msgid "You were driving like the corners had something against you."
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:107
+msgid "You were supposed to follow the road, not sample it repeatedly."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Network\Connect\Connector\Helpers.cs:125
@@ -3771,12 +4000,12 @@ msgstr ""
 msgid "Your new result details:"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:85
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:178
 #, csharp-format
-msgid "Your previous best record was: {0}."
+msgid "Your quickest lap this run: {0}."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:79
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:153
 #, csharp-format
 msgid "Your time: {0}."
 msgstr ""
@@ -4187,6 +4416,11 @@ msgstr ""
 #: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultFmt.cs:49
 #, csharp-format
 msgid "{0} and {1}"
+msgstr ""
+
+#: D:\top_speed\top_speed_net\TopSpeed\Game\Race\Results\ResultCatalog.cs:86
+#, csharp-format
+msgid "{0} crashes."
 msgstr ""
 
 #: D:\top_speed\top_speed_net\TopSpeed\Core\Multiplayer\Rooms\Browser.cs:71

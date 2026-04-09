@@ -13,6 +13,7 @@ namespace TopSpeed.Race
         public RaceResultMode Mode { get; set; } = RaceResultMode.Race;
         public bool IsMultiplayer { get; set; }
         public int LocalPosition { get; set; }
+        public int LocalCrashCount { get; set; }
         public bool TimeTrialBeatRecord { get; set; }
         public int TimeTrialLapCount { get; set; }
         public int TimeTrialCurrentRunMs { get; set; }

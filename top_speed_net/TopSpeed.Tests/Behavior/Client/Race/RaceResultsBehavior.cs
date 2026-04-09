@@ -58,6 +58,32 @@ public sealed class RaceResultsBehaviorTests
     }
 
     [Fact]
+    public void Build_Race_Appends_Local_Crash_Summary()
+    {
+        var dialogs = new ResultDialogs(new Pick(_ => 0), new ResultFmt(new Pick(_ => 0)));
+        var summary = new RaceResultSummary
+        {
+            Mode = RaceResultMode.Race,
+            LocalPosition = 2,
+            LocalCrashCount = 15,
+            Entries = new[]
+            {
+                new RaceResultEntry
+                {
+                    Name = "Alice",
+                    Position = 1,
+                    TimeMs = 61000
+                }
+            }
+        };
+
+        var plan = dialogs.Build(summary);
+
+        plan.Dialog.Items.Should().HaveCount(2);
+        plan.Dialog.Items[1].Text.Should().Be("You crashed 15 times. Seriously? You could have done much better than that.");
+    }
+
+    [Fact]
     public void Build_TimeTrial_NoRecord_Includes_PreviousBest()
     {
         var dialogs = new ResultDialogs(new Pick(_ => 0), new ResultFmt(new Pick(_ => 0)));

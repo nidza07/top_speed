@@ -8,7 +8,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: PACKAGE VERSION\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-04-09 13:11+0200\n"
+"POT-Creation-Date: 2026-04-09 17:13+0200\n"
 "PO-Revision-Date: YEAR-MO-DA HO:MI+ZONE\n"
 "Last-Translator: FULL NAME <EMAIL@ADDRESS>\n"
 "Language-Team: LANGUAGE <LL@li.org>\n"
@@ -271,7 +271,7 @@ msgstr ""
 msgid "Display server and protocol versions."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:100
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:102
 #, csharp-format
 msgid "Download failed with status code {0}."
 msgstr ""
@@ -280,12 +280,12 @@ msgstr ""
 msgid "Download failed."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:174
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:176
 #, csharp-format
 msgid "Download failed: {0}"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:165
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:167
 msgid "Download timed out or was canceled."
 msgstr ""
 
@@ -1072,11 +1072,11 @@ msgstr ""
 msgid "The server will be shut down immediately by the host."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:36
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:38
 msgid "The update info file could not be read."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:40
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:42
 msgid "The update info file has an invalid server version format."
 msgstr ""
 
@@ -1178,7 +1178,7 @@ msgstr ""
 msgid "Unknown sound key '{0}'."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:245
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:247
 msgid "Unknown update error."
 msgstr ""
 
@@ -1191,16 +1191,16 @@ msgstr ""
 msgid "Update check failed."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:75
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:77
 #, csharp-format
 msgid "Update check failed: {0}"
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:71
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:73
 msgid "Update check timed out."
 msgstr ""
 
-#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:54
+#: D:\top_speed\top_speed_net\TopSpeed.Server\Updates\Service.cs:56
 #, csharp-format
 msgid "Update package '{0}' was not found in the latest release."
 msgstr ""

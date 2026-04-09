@@ -16,6 +16,7 @@ internal static class ResultHarness
             {
                 Mode = RaceResultMode.Race,
                 LocalPosition = 1,
+                LocalCrashCount = 5,
                 Entries = new[]
                 {
                     new RaceResultEntry

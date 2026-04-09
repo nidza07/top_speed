@@ -82,6 +82,7 @@ namespace TopSpeed.Race
         protected float _elapsedTotal;
         protected int _raceTime;
         protected int _highscore;
+        protected int _localCrashCount;
         protected bool _started;
         protected bool _finished;
         protected bool _engineStarted;
@@ -94,6 +95,7 @@ namespace TopSpeed.Race
         private bool _hasLastRoadTypeAtPosition;
         protected long _oldStopwatchMs;
         protected long _stopwatchDiffMs;
+        private CarState _lastRecordedCarState;
         private Vector3 _lastListenerPosition;
         private bool _listenerInitialized;
 

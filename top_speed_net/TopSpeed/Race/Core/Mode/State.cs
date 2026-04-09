@@ -40,6 +40,7 @@ namespace TopSpeed.Race
             _lastRoadTypeAtPosition = TrackType.Straight;
             _hasLastRoadTypeAtPosition = false;
             _car.ManualTransmission = _manualTransmission;
+            _lastRecordedCarState = _car.State;
             _listenerInitialized = false;
             _lastListenerPosition = Vector3.Zero;
             ApplyActivePanelInputAccess();

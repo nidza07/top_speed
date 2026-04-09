@@ -43,6 +43,8 @@ namespace TopSpeed.Game
                 items.Add(new DialogItem(_fmt.Line(entry)));
             }
 
+            AppendCrashSummary(items, summary.LocalCrashCount);
+
             var dialog = new Dialog(
                 title,
                 caption,
@@ -73,6 +75,51 @@ namespace TopSpeed.Game
                 new DialogButton(QuestionId.Close, LocalizationService.Mark("Close")));
 
             return new ResultPlan(dialog, playWin: beatRecord);
+        }
+
+        private void AppendCrashSummary(List<DialogItem> items, int crashCount)
+        {
+            if (crashCount <= 0)
+                return;
+
+            string text;
+            if (crashCount == 1)
+            {
+                text = CombineCrashText(
+                    _pick.One(ResultCatalog.CrashOncePrefixes),
+                    _pick.One(ResultCatalog.CrashOnceRemarks));
+            }
+            else if (crashCount <= 3)
+            {
+                text = CombineCrashText(
+                    LocalizationService.Format(_pick.One(ResultCatalog.CrashPluralPrefixes), crashCount),
+                    _pick.One(ResultCatalog.CrashFewRemarks));
+            }
+            else if (crashCount <= 7)
+            {
+                text = CombineCrashText(
+                    LocalizationService.Format(_pick.One(ResultCatalog.CrashPluralPrefixes), crashCount),
+                    _pick.One(ResultCatalog.CrashSeveralRemarks));
+            }
+            else if (crashCount <= 14)
+            {
+                text = CombineCrashText(
+                    LocalizationService.Format(_pick.One(ResultCatalog.CrashPluralPrefixes), crashCount),
+                    _pick.One(ResultCatalog.CrashManyRemarks));
+            }
+            else
+            {
+                text = CombineCrashText(
+                    LocalizationService.Format(_pick.One(ResultCatalog.CrashPluralPrefixes), crashCount),
+                    _pick.One(ResultCatalog.CrashDisasterRemarks));
+            }
+
+            items.Add(new DialogItem(text));
+        }
+
+        private static string CombineCrashText(string prefix, string remark)
+        {
+            return string.Concat(prefix, " ", remark);
         }
 
         private void AppendTimeTrialRunSummary(List<DialogItem> items, RaceResultSummary summary)

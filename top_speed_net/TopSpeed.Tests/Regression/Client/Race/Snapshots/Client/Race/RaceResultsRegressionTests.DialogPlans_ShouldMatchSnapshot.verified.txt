@@ -10,6 +10,9 @@
         },
         {
           Text: Bob: position 2, time 1 minute and 4 seconds.
+        },
+        {
+          Text: You crashed 5 times. The barriers are starting to recognize you.
         }
       ]
     }

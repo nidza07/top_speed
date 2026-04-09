@@ -3,6 +3,7 @@ using TopSpeed.Data;
 using TopSpeed.Input;
 using TopSpeed.Tracks;
 using TopSpeed.Localization;
+using TopSpeed.Vehicles;
 
 namespace TopSpeed.Race
 {
@@ -19,9 +20,21 @@ namespace TopSpeed.Race
             var road = _track.RoadAtPosition(_car.PositionY);
             HandleTurnEndCue(road);
             _car.Evaluate(road);
+            TrackLocalCrashState();
             UpdateAudioListener(elapsed);
             if (_track.NextRoad(_car.PositionY, _car.Speed, (int)_settings.CurveAnnouncement, out var nextRoad))
                 CallNextRoad(nextRoad);
+        }
+
+        private void TrackLocalCrashState()
+        {
+            var currentState = _car.State;
+            var wasCrashing = _lastRecordedCarState == CarState.Crashing || _lastRecordedCarState == CarState.Crashed;
+            var isCrashing = currentState == CarState.Crashing || currentState == CarState.Crashed;
+            if (!wasCrashing && isCrashing)
+                _localCrashCount++;
+
+            _lastRecordedCarState = currentState;
         }
 
         private void TryAnnounceGearShift(int previousGear)

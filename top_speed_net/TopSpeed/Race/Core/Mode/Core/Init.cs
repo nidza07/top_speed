@@ -66,6 +66,7 @@ namespace TopSpeed.Race
             _speakTime = 0.0f;
             _unkeyQueue = 0;
             _highscore = 0;
+            _localCrashCount = 0;
             _sayTimeLength = 0.0f;
 
             var runtimeObjects = CreateRuntimeObjects(track, trackData, userDefined, vehicle, vehicleFile);
