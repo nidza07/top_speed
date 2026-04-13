@@ -27,5 +27,38 @@ namespace TopSpeed.Core
         {
             return RuntimeAssetPathResolver.ResolveExistingPath(Root, segments);
         }
+
+        public static string? ResolveLanguageSoundPath(string language, string key)
+        {
+            if (string.IsNullOrWhiteSpace(language) || string.IsNullOrWhiteSpace(key))
+                return null;
+
+            var relative = key.Replace('\\', Path.DirectorySeparatorChar).Replace('/', Path.DirectorySeparatorChar);
+            if (string.IsNullOrWhiteSpace(Path.GetExtension(relative)))
+                relative += ".ogg";
+            return ResolveExistingPath("Sounds", language, relative);
+        }
+
+        public static string? ResolveLanguageSoundPathWithFallback(string language, string key, string fallbackLanguage = "en")
+        {
+            var path = ResolveLanguageSoundPath(language, key);
+            if (path != null)
+                return path;
+
+            if (string.IsNullOrWhiteSpace(fallbackLanguage))
+                return null;
+            if (string.Equals(language, fallbackLanguage, StringComparison.OrdinalIgnoreCase))
+                return null;
+
+            return ResolveLanguageSoundPath(fallbackLanguage, key);
+        }
+
+        public static string? ResolveLegacySoundPath(string fileName)
+        {
+            if (string.IsNullOrWhiteSpace(fileName))
+                return null;
+
+            return ResolveExistingPath("Sounds", "Legacy", fileName);
+        }
     }
 }

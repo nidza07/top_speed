@@ -43,15 +43,15 @@ namespace TopSpeed.Runtime
             if (!Directory.Exists(parentPath))
                 return null;
 
-            var exactPath = Path.Combine(parentPath, childName);
-            if (Directory.Exists(exactPath) || File.Exists(exactPath))
-                return exactPath;
-
             foreach (var entryPath in Directory.EnumerateFileSystemEntries(parentPath))
             {
                 if (string.Equals(Path.GetFileName(entryPath), childName, StringComparison.OrdinalIgnoreCase))
                     return entryPath;
             }
+
+            var exactPath = Path.Combine(parentPath, childName);
+            if (Directory.Exists(exactPath) || File.Exists(exactPath))
+                return exactPath;
 
             return null;
         }

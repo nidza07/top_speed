@@ -19,7 +19,12 @@ namespace TopSpeed.Tests
                 "en",
                 "music\\theme4.ogg");
 
-            resolved.Should().Be(fixture.SoundPath);
+            resolved.Should().NotBeNull();
+            File.Exists(resolved!).Should().BeTrue();
+            string.Equals(
+                Path.GetFullPath(resolved),
+                Path.GetFullPath(fixture.SoundPath),
+                StringComparison.OrdinalIgnoreCase).Should().BeTrue();
         }
 
         private sealed class AssetFixture : IDisposable

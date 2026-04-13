@@ -18,11 +18,12 @@ namespace TopSpeed.Game
 {
     internal sealed partial class Game
     {
-        public Game(IWindowHost window, ITextInputService textInput, IFileDialogs fileDialogs)
+        public Game(IWindowHost window, ITextInputService textInput, IFileDialogs fileDialogs, IClipboardService clipboard)
         {
             _window = window ?? throw new ArgumentNullException(nameof(window));
             _textInput = textInput ?? throw new ArgumentNullException(nameof(textInput));
             _fileDialogs = fileDialogs ?? throw new ArgumentNullException(nameof(fileDialogs));
+            _clipboard = clipboard ?? throw new ArgumentNullException(nameof(clipboard));
             _settingsManager = new SettingsManager();
             var settingsLoad = _settingsManager.Load();
             _settings = settingsLoad.Settings;

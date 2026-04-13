@@ -41,6 +41,7 @@ namespace TopSpeed.Game
         private readonly IWindowHost _window;
         private readonly ITextInputService _textInput;
         private readonly IFileDialogs _fileDialogs;
+        private readonly IClipboardService _clipboard;
         private readonly IGameAudio _audio;
         private readonly IGameSpeech _speech;
         private readonly IInputService _input;
