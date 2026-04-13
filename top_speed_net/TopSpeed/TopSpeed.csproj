@@ -203,7 +203,7 @@
       <Link>languages\client\%(RecursiveDir)%(Filename)%(Extension)</Link>
       <TargetPath>languages\client\%(RecursiveDir)%(Filename)%(Extension)</TargetPath>
     </Content>
-    <Content Include="..\..\docs\**\*" Exclude="..\..\docs\**\*.md;..\..\docs\render_docs.py">
+    <Content Include="..\..\docs\**\*.html">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
       <CopyToPublishDirectory>PreserveNewest</CopyToPublishDirectory>
       <Link>docs\%(RecursiveDir)%(Filename)%(Extension)</Link>
@@ -212,7 +212,21 @@
   </ItemGroup>
 
   <Target Name="RenderDocsHtml" BeforeTargets="Build" Condition="Exists('$(MSBuildThisFileDirectory)..\..\docs\render_docs.py')">
-    <Exec Command="python &quot;$(MSBuildThisFileDirectory)..\..\docs\render_docs.py&quot;" ContinueOnError="WarnAndContinue" />
+    <Exec Command="python &quot;$(MSBuildThisFileDirectory)..\..\docs\render_docs.py&quot; --all" ContinueOnError="WarnAndContinue" />
+  </Target>
+
+  <Target Name="CleanMarkdownDocsFromOutput" AfterTargets="Build">
+    <ItemGroup Condition="Exists('$(OutDir)docs')">
+      <_OutputMarkdownDocs Include="$(OutDir)docs\**\*.md" />
+    </ItemGroup>
+    <Delete Files="@(_OutputMarkdownDocs)" />
+  </Target>
+
+  <Target Name="CleanMarkdownDocsFromPublish" AfterTargets="Publish">
+    <ItemGroup Condition="Exists('$(PublishDir)docs')">
+      <_PublishMarkdownDocs Include="$(PublishDir)docs\**\*.md" />
+    </ItemGroup>
+    <Delete Files="@(_PublishMarkdownDocs)" />
   </Target>
 
   <Target Name="CopyUpdater" AfterTargets="Build" Condition="'$(SkipClientUpdaterBuild)' != 'true' and '$(TargetFramework)' == 'net472'">
